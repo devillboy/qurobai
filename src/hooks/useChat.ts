@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { toast } from "@/hooks/use-toast";
 
 export interface Message {
   id: string;
@@ -7,101 +8,108 @@ export interface Message {
   timestamp: Date;
 }
 
-// Simulated AI responses (replace with actual LLM endpoint)
-const simulateResponse = async (userMessage: string): Promise<string> => {
-  // Simulate typing delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
-  const responses: Record<string, string> = {
-    code: `Here's a clean, efficient solution:
-
-\`\`\`typescript
-// Example: Async data fetching with error handling
-async function fetchData<T>(url: string): Promise<T> {
+async function streamChat({
+  messages,
+  onDelta,
+  onDone,
+  onError,
+}: {
+  messages: Array<{ role: string; content: string }>;
+  onDelta: (deltaText: string) => void;
+  onDone: () => void;
+  onError: (error: Error) => void;
+}) {
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(\`HTTP error! status: \${response.status}\`);
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages }),
+    });
+
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      const errorMessage = errorData.error || `Request failed with status ${resp.status}`;
+      
+      if (resp.status === 429) {
+        throw new Error("Rate limit exceeded. Please wait a moment and try again.");
+      }
+      if (resp.status === 402) {
+        throw new Error("Usage limit reached. Please add credits to your account.");
+      }
+      throw new Error(errorMessage);
     }
-    return await response.json();
+
+    if (!resp.body) {
+      throw new Error("No response body");
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let textBuffer = "";
+    let streamDone = false;
+
+    while (!streamDone) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      textBuffer += decoder.decode(value, { stream: true });
+
+      // Process line-by-line as data arrives
+      let newlineIndex: number;
+      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+        let line = textBuffer.slice(0, newlineIndex);
+        textBuffer = textBuffer.slice(newlineIndex + 1);
+
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (line.startsWith(":") || line.trim() === "") continue;
+        if (!line.startsWith("data: ")) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") {
+          streamDone = true;
+          break;
+        }
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) onDelta(content);
+        } catch {
+          // Incomplete JSON - put it back and wait for more data
+          textBuffer = line + "\n" + textBuffer;
+          break;
+        }
+      }
+    }
+
+    // Final flush
+    if (textBuffer.trim()) {
+      for (let raw of textBuffer.split("\n")) {
+        if (!raw) continue;
+        if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+        if (raw.startsWith(":") || raw.trim() === "") continue;
+        if (!raw.startsWith("data: ")) continue;
+        const jsonStr = raw.slice(6).trim();
+        if (jsonStr === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) onDelta(content);
+        } catch {
+          // Ignore partial leftovers
+        }
+      }
+    }
+
+    onDone();
   } catch (error) {
-    console.error('Fetch failed:', error);
-    throw error;
+    onError(error instanceof Error ? error : new Error("Unknown error"));
   }
 }
-\`\`\`
-
-This implementation includes type safety, proper error handling, and follows modern async/await patterns.`,
-
-    explain: `Let me break this down in simple terms:
-
-**Key Concepts:**
-1. **Foundation** - The basic building blocks that make everything work
-2. **Architecture** - How components connect and communicate
-3. **Optimization** - Making it fast and efficient
-
-Think of it like building with LEGO - each piece has a purpose, and when combined correctly, they create something powerful.
-
-Would you like me to dive deeper into any specific aspect?`,
-
-    brainstorm: `Here are some creative ideas to consider:
-
-🚀 **Bold Ideas:**
-- Implement a real-time collaboration feature
-- Add AI-powered suggestions based on user behavior
-- Create an interactive visualization dashboard
-
-💡 **Quick Wins:**
-- Streamline the onboarding flow
-- Add keyboard shortcuts for power users
-- Implement smart caching for better performance
-
-🎯 **Strategic Moves:**
-- Build an API for third-party integrations
-- Create a plugin ecosystem
-- Develop mobile-first responsive designs
-
-Which direction resonates most with your goals?`,
-
-    debug: `Let me help you debug this issue:
-
-**Diagnostic Steps:**
-1. Check the console for error messages
-2. Verify all dependencies are correctly imported
-3. Confirm the data types match expectations
-
-**Common Fixes:**
-- Ensure async operations are properly awaited
-- Check for null/undefined values before accessing properties
-- Verify API endpoints return expected data structure
-
-Share the specific error or code snippet, and I'll provide a targeted solution!`,
-  };
-
-  const lowerMessage = userMessage.toLowerCase();
-
-  if (lowerMessage.includes("code") || lowerMessage.includes("write")) {
-    return responses.code;
-  } else if (lowerMessage.includes("explain") || lowerMessage.includes("how")) {
-    return responses.explain;
-  } else if (lowerMessage.includes("idea") || lowerMessage.includes("brainstorm")) {
-    return responses.brainstorm;
-  } else if (lowerMessage.includes("debug") || lowerMessage.includes("fix") || lowerMessage.includes("error")) {
-    return responses.debug;
-  }
-
-  return `I understand you're asking about: "${userMessage}"
-
-As a free, self-hosted AI assistant, I'm designed to help with:
-• **Coding** - Write, review, and debug code
-• **Explanations** - Break down complex topics
-• **Brainstorming** - Generate creative solutions
-• **Problem-solving** - Debug issues and find fixes
-
-This is a demo interface. To enable full AI capabilities, connect to your self-hosted LLM backend (vLLM, Ollama, or Text-Generation-Inference).
-
-How can I assist you today?`;
-};
 
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -118,36 +126,56 @@ export const useChat = () => {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    try {
-      // Simulate streaming by adding chars progressively
-      const response = await simulateResponse(content);
+    const assistantMessageId = crypto.randomUUID();
+    let assistantContent = "";
 
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
+    // Create empty assistant message
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
         role: "assistant",
         content: "",
         timestamp: new Date(),
-      };
+      },
+    ]);
 
-      setMessages((prev) => [...prev, assistantMessage]);
+    // Build message history for API
+    const messageHistory = [...messages, userMessage].map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
 
-      // Simulate streaming effect
-      for (let i = 0; i <= response.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 10));
+    await streamChat({
+      messages: messageHistory,
+      onDelta: (delta) => {
+        assistantContent += delta;
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === assistantMessage.id
-              ? { ...msg, content: response.slice(0, i) }
+            msg.id === assistantMessageId
+              ? { ...msg, content: assistantContent }
               : msg
           )
         );
-      }
-    } catch (error) {
-      console.error("Chat error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      },
+      onDone: () => {
+        setIsLoading(false);
+      },
+      onError: (error) => {
+        console.error("Chat error:", error);
+        setIsLoading(false);
+        
+        // Remove empty assistant message on error
+        setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
+        
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+  }, [messages]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
