@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Message {
   id: string;
@@ -58,7 +60,6 @@ async function streamChat({
       if (done) break;
       textBuffer += decoder.decode(value, { stream: true });
 
-      // Process line-by-line as data arrives
       let newlineIndex: number;
       while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
         let line = textBuffer.slice(0, newlineIndex);
@@ -79,14 +80,12 @@ async function streamChat({
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) onDelta(content);
         } catch {
-          // Incomplete JSON - put it back and wait for more data
           textBuffer = line + "\n" + textBuffer;
           break;
         }
       }
     }
 
-    // Final flush
     if (textBuffer.trim()) {
       for (let raw of textBuffer.split("\n")) {
         if (!raw) continue;
@@ -99,9 +98,7 @@ async function streamChat({
           const parsed = JSON.parse(jsonStr);
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) onDelta(content);
-        } catch {
-          // Ignore partial leftovers
-        }
+        } catch {}
       }
     }
 
@@ -111,11 +108,74 @@ async function streamChat({
   }
 }
 
-export const useChat = () => {
+export const useChat = (conversationId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
-  const sendMessage = useCallback(async (content: string) => {
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (conversationId && user) {
+      loadMessages(conversationId);
+    } else {
+      setMessages([]);
+    }
+  }, [conversationId, user]);
+
+  const loadMessages = async (convId: string) => {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("conversation_id", convId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error loading messages:", error);
+    } else {
+      setMessages(
+        data.map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          timestamp: new Date(m.created_at),
+        }))
+      );
+    }
+  };
+
+  const saveMessage = async (
+    convId: string,
+    role: "user" | "assistant",
+    content: string
+  ) => {
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: convId,
+      role,
+      content,
+    });
+
+    if (error) {
+      console.error("Error saving message:", error);
+    }
+
+    // Update conversation title if first user message
+    if (role === "user" && messages.length === 0) {
+      const title = content.slice(0, 50) + (content.length > 50 ? "..." : "");
+      await supabase
+        .from("conversations")
+        .update({ title, updated_at: new Date().toISOString() })
+        .eq("id", convId);
+    } else {
+      await supabase
+        .from("conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", convId);
+    }
+  };
+
+  const sendMessage = useCallback(async (content: string, convId: string) => {
+    if (!content.trim() || isLoading || !user || !convId) return;
+
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
@@ -126,10 +186,12 @@ export const useChat = () => {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
+    // Save user message to database
+    await saveMessage(convId, "user", content);
+
     const assistantMessageId = crypto.randomUUID();
     let assistantContent = "";
 
-    // Create empty assistant message
     setMessages((prev) => [
       ...prev,
       {
@@ -140,7 +202,6 @@ export const useChat = () => {
       },
     ]);
 
-    // Build message history for API
     const messageHistory = [...messages, userMessage].map((m) => ({
       role: m.role,
       content: m.content,
@@ -158,16 +219,16 @@ export const useChat = () => {
           )
         );
       },
-      onDone: () => {
+      onDone: async () => {
         setIsLoading(false);
+        if (assistantContent) {
+          await saveMessage(convId, "assistant", assistantContent);
+        }
       },
       onError: (error) => {
         console.error("Chat error:", error);
         setIsLoading(false);
-        
-        // Remove empty assistant message on error
         setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
-        
         toast({
           title: "Error",
           description: error.message,
@@ -175,7 +236,7 @@ export const useChat = () => {
         });
       },
     });
-  }, [messages]);
+  }, [messages, isLoading, user]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);

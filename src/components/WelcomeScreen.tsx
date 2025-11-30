@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Sparkles, Zap, Shield, Code2 } from "lucide-react";
+import { Bot, Zap, Shield, Upload, MessageSquare, Code2 } from "lucide-react";
 import { QuickActions } from "./QuickActions";
 
 interface WelcomeScreenProps {
@@ -7,9 +7,10 @@ interface WelcomeScreenProps {
 }
 
 const features = [
-  { icon: Zap, text: "Lightning fast" },
-  { icon: Shield, text: "100% Private" },
-  { icon: Code2, text: "Open Source" },
+  { icon: Zap, text: "Lightning Fast" },
+  { icon: Shield, text: "Secure & Private" },
+  { icon: Upload, text: "File Uploads" },
+  { icon: Code2, text: "Code Expert" },
 ];
 
 export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
@@ -22,8 +23,8 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
         transition={{ type: "spring", duration: 0.8 }}
         className="relative mb-8"
       >
-        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/30 flex items-center justify-center glow-primary">
-          <Sparkles className="w-12 h-12 text-primary" />
+        <div className="w-24 h-24 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center glow-primary">
+          <Bot className="w-12 h-12 text-primary" />
         </div>
         {/* Orbiting dots */}
         <motion.div
@@ -38,7 +39,7 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
           transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
           className="absolute inset-0"
         >
-          <div className="absolute top-1/2 -right-2 w-1.5 h-1.5 rounded-full bg-accent/60" />
+          <div className="absolute top-1/2 -right-2 w-1.5 h-1.5 rounded-full bg-primary/40" />
         </motion.div>
       </motion.div>
 
@@ -49,11 +50,13 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
         transition={{ delay: 0.2 }}
       >
         <h2 className="text-3xl sm:text-4xl font-bold mb-3">
-          Welcome to <span className="text-gradient-primary">Nova</span>
+          Welcome to <span className="text-gradient-primary">QurobAi</span>
         </h2>
-        <p className="text-muted-foreground max-w-md mx-auto mb-6">
-          Your intelligent AI assistant, powered by open-source models.
-          Completely free, private, and self-hostable.
+        <p className="text-muted-foreground max-w-md mx-auto mb-2">
+          Your intelligent AI assistant, ready to help with anything.
+        </p>
+        <p className="text-sm text-muted-foreground/60">
+          Created by Soham from India
         </p>
       </motion.div>
 
@@ -62,7 +65,7 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="flex flex-wrap justify-center gap-3 mb-10"
+        className="flex flex-wrap justify-center gap-3 my-8"
       >
         {features.map((feature, index) => (
           <div
@@ -82,7 +85,7 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
         transition={{ delay: 0.4 }}
         className="w-full max-w-lg"
       >
-        <p className="text-sm text-muted-foreground mb-4">Quick start</p>
+        <p className="text-sm text-muted-foreground mb-4">Try asking me</p>
         <QuickActions onSelect={onQuickAction} />
       </motion.div>
     </div>
