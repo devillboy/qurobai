@@ -1,15 +1,29 @@
-import { useRef, useEffect } from "react";
-import { AnimatedBackground } from "@/components/AnimatedBackground";
-import { Header } from "@/components/Header";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ChatMessage, TypingIndicator } from "@/components/ChatMessage";
-import { ChatInput } from "@/components/ChatInput";
+import { ChatInputEnhanced } from "@/components/ChatInputEnhanced";
+import { ChatSidebar } from "@/components/ChatSidebar";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { useChat } from "@/hooks/useChat";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
-  const { messages, isLoading, sendMessage } = useChat();
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { messages, isLoading, sendMessage, clearMessages } = useChat(currentConversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -18,23 +32,89 @@ const Index = () => {
     }
   }, [messages]);
 
-  const handleQuickAction = (prompt: string) => {
-    sendMessage(prompt);
+  const handleNewChat = async () => {
+    if (!user) return;
+
+    // Create new conversation
+    const { data, error } = await supabase
+      .from("conversations")
+      .insert({ user_id: user.id, title: "New Chat" })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating conversation:", error);
+      return;
+    }
+
+    setCurrentConversationId(data.id);
+    clearMessages();
   };
 
-  return (
-    <div className="min-h-screen relative">
-      <AnimatedBackground />
-      <Header />
+  const handleSelectConversation = (id: string) => {
+    setCurrentConversationId(id);
+  };
 
-      <main className="relative z-10 pt-20 pb-8 min-h-screen flex flex-col">
-        <div className="flex-1 max-w-3xl w-full mx-auto px-4 flex flex-col">
+  const handleSendMessage = async (message: string) => {
+    if (!user) return;
+
+    let convId = currentConversationId;
+
+    // Create conversation if none exists
+    if (!convId) {
+      const { data, error } = await supabase
+        .from("conversations")
+        .insert({ user_id: user.id, title: "New Chat" })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating conversation:", error);
+        return;
+      }
+
+      convId = data.id;
+      setCurrentConversationId(convId);
+    }
+
+    sendMessage(message, convId);
+  };
+
+  const handleQuickAction = (prompt: string) => {
+    handleSendMessage(prompt);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <div className="h-screen flex bg-background">
+      {/* Sidebar */}
+      <ChatSidebar
+        currentConversationId={currentConversationId}
+        onSelectConversation={handleSelectConversation}
+        onNewChat={handleNewChat}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 max-w-3xl w-full mx-auto px-4 py-6 flex flex-col">
           {messages.length === 0 ? (
             <WelcomeScreen onQuickAction={handleQuickAction} />
           ) : (
             <div
               ref={scrollRef}
-              className="flex-1 overflow-y-auto py-6 space-y-4 scrollbar-thin"
+              className="flex-1 overflow-y-auto space-y-6 pb-4"
             >
               {messages.map((message) => (
                 <ChatMessage
@@ -54,12 +134,15 @@ const Index = () => {
             </div>
           )}
 
-          {/* Input area - sticky at bottom */}
+          {/* Input area */}
           <div className="mt-auto pt-4">
-            <ChatInput onSend={sendMessage} isLoading={isLoading} />
+            <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} />
           </div>
         </div>
       </main>
+
+      {/* Settings Dialog */}
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 };
