@@ -5,6 +5,7 @@ import { ChatMessage, TypingIndicator } from "@/components/ChatMessage";
 import { ChatInputEnhanced } from "@/components/ChatInputEnhanced";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import ModelIndicator from "@/components/ModelIndicator";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +14,7 @@ import { Loader2 } from "lucide-react";
 const Index = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { messages, isLoading, sendMessage, clearMessages } = useChat(currentConversationId);
+  const { messages, isLoading, sendMessage, clearMessages, currentModel } = useChat(currentConversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -108,6 +109,10 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
+        <div className="p-4 border-b max-w-3xl w-full mx-auto">
+          <ModelIndicator currentModel={currentModel} />
+        </div>
+        
         <div className="flex-1 max-w-3xl w-full mx-auto px-4 py-6 flex flex-col">
           {messages.length === 0 ? (
             <WelcomeScreen onQuickAction={handleQuickAction} />

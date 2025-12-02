@@ -14,11 +14,13 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 async function streamChat({
   messages,
+  userId,
   onDelta,
   onDone,
   onError,
 }: {
   messages: Array<{ role: string; content: string }>;
+  userId?: string;
   onDelta: (deltaText: string) => void;
   onDone: () => void;
   onError: (error: Error) => void;
@@ -30,7 +32,7 @@ async function streamChat({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({ messages, userId }),
     });
 
     if (!resp.ok) {
@@ -111,7 +113,21 @@ async function streamChat({
 export const useChat = (conversationId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentModel, setCurrentModel] = useState<string>("Qurob 2");
   const { user } = useAuth();
+
+  // Load user's model on mount
+  useEffect(() => {
+    if (user) {
+      loadUserModel();
+    }
+  }, [user]);
+
+  const loadUserModel = async () => {
+    if (!user) return;
+    const { data } = await supabase.rpc("get_user_model", { user_id: user.id });
+    if (data) setCurrentModel(data);
+  };
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -209,6 +225,7 @@ export const useChat = (conversationId: string | null) => {
 
     await streamChat({
       messages: messageHistory,
+      userId: user?.id,
       onDelta: (delta) => {
         assistantContent += delta;
         setMessages((prev) =>
@@ -224,6 +241,8 @@ export const useChat = (conversationId: string | null) => {
         if (assistantContent) {
           await saveMessage(convId, "assistant", assistantContent);
         }
+        // Refresh model info after chat
+        loadUserModel();
       },
       onError: (error) => {
         console.error("Chat error:", error);
@@ -247,5 +266,6 @@ export const useChat = (conversationId: string | null) => {
     isLoading,
     sendMessage,
     clearMessages,
+    currentModel,
   };
 };

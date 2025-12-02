@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import { LandingPage } from "@/components/LandingPage";
+import Subscribe from "@/pages/Subscribe";
+import AdminPanel from "@/pages/AdminPanel";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +58,8 @@ const AppRoutes = () => {
       <Route path="/welcome" element={<PublicRoute><LandingPage /></PublicRoute>} />
       <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
       <Route path="/chat" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      <Route path="/subscribe" element={<ProtectedRoute><Subscribe /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

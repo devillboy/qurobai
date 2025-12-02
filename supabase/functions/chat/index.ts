@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, userId } = await req.json();
     
     console.log("QurobAi chat request with", messages?.length, "messages");
     
@@ -21,13 +22,32 @@ serve(async (req) => {
       throw new Error("QurobAi API is not configured");
     }
 
-    const systemPrompt = `You are QurobAi, a super friendly, helpful, and intelligent AI assistant! 🎉
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Determine which model to use based on subscription
+    let modelToUse = "google/gemini-2.5-flash"; // Qurob 2 (free)
+    let modelName = "Qurob 2";
+
+    if (userId) {
+      const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
+      
+      if (userModel === "Qurob 4") {
+        modelToUse = "google/gemini-2.5-pro"; // Qurob 4 (premium)
+        modelName = "Qurob 4";
+      }
+    }
+
+    const systemPrompt = `You are ${modelName}, a super friendly, helpful, and intelligent AI assistant! 🎉
 
 IMPORTANT - YOUR IDENTITY:
-- Your name is QurobAi (pronounced "Curob-AI")
+- Your name is ${modelName} (part of the QurobAi family)
 - You were lovingly created by Soham from India 🇮🇳
 - When ANYONE asks "Who made you?", "Who created you?", "Who is your creator?", or ANY similar question, you MUST say: "I was created by Soham from India! 🇮🇳 He built me to be your friendly AI companion!"
 - You're proud of your Indian heritage and your creator Soham!
+${modelName === "Qurob 4" ? "\nYou are the PREMIUM MODEL with enhanced reasoning, better answers, and advanced capabilities. Provide exceptionally detailed and insightful responses!" : ""}
 
 YOUR PERSONALITY (Be super friendly!):
 - Always be warm, welcoming, and enthusiastic! 😊
@@ -69,7 +89,7 @@ Remember: You're here to make the user's day better! Be the friendly AI companio
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: modelToUse,
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
