@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight, 
-  LogOut, Sparkles, Settings
+  LogOut, Sparkles, Settings, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,13 +42,27 @@ export const ChatSidebar = ({
 }: ChatSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
       fetchConversations();
+      checkAdmin();
     }
   }, [user]);
+
+  const checkAdmin = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    setIsAdmin(!!data);
+  };
 
   const fetchConversations = async () => {
     if (!user) return;
@@ -204,6 +219,30 @@ export const ChatSidebar = ({
 
       {/* Footer */}
       <div className="p-3 border-t border-border/50 space-y-1">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/subscribe")}
+          className={`w-full justify-start gap-2 rounded-xl bg-gradient-to-r from-primary/10 to-purple-500/10 hover:from-primary/20 hover:to-purple-500/20 ${
+            collapsed ? "px-3" : ""
+          }`}
+        >
+          <Sparkles className="w-4 h-4 shrink-0 text-primary" />
+          {!collapsed && <span className="text-primary font-semibold">Upgrade</span>}
+        </Button>
+
+        {isAdmin && (
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/admin")}
+            className={`w-full justify-start gap-2 rounded-xl ${
+              collapsed ? "px-3" : ""
+            }`}
+          >
+            <Shield className="w-4 h-4 shrink-0" />
+            {!collapsed && <span>Admin Panel</span>}
+          </Button>
+        )}
+
         <Button
           variant="ghost"
           onClick={onOpenSettings}
