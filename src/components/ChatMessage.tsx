@@ -1,6 +1,6 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, User, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 
 interface ChatMessageProps {
@@ -20,7 +20,12 @@ const CodeBlock = ({ code, language }: { code: string; language: string }) => {
   };
 
   return (
-    <div className="relative my-4 rounded-xl overflow-hidden bg-[#1e1e2e] border border-border/30 shadow-lg">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="relative my-4 rounded-xl overflow-hidden bg-[#1e1e2e] border border-border/30 shadow-lg"
+    >
       <div className="flex items-center justify-between px-4 py-2 bg-[#181825] border-b border-border/20">
         <span className="text-xs font-medium text-purple-400">{language || "code"}</span>
         <Button
@@ -43,12 +48,25 @@ const CodeBlock = ({ code, language }: { code: string; language: string }) => {
       <pre className="p-4 overflow-x-auto">
         <code className="text-sm font-mono text-[#cdd6f4] leading-relaxed">{code}</code>
       </pre>
-    </div>
+    </motion.div>
+  );
+};
+
+// Animated text component for smooth character reveal
+const AnimatedText = ({ text }: { text: string }) => {
+  return (
+    <motion.span
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
+    >
+      {text}
+    </motion.span>
   );
 };
 
 // Parse and render content with code blocks
-const renderContent = (content: string) => {
+const renderContent = (content: string, isStreaming?: boolean) => {
   const parts: React.ReactNode[] = [];
   const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
   let lastIndex = 0;
@@ -102,7 +120,19 @@ const renderInlineFormatting = (text: string) => {
 
 export const ChatMessage = ({ role, content, isStreaming }: ChatMessageProps) => {
   const [copied, setCopied] = useState(false);
+  const [displayedContent, setDisplayedContent] = useState(content);
   const isUser = role === "user";
+  const prevContentRef = useRef(content);
+
+  // Smooth content update for streaming
+  useEffect(() => {
+    if (isStreaming && content !== prevContentRef.current) {
+      setDisplayedContent(content);
+      prevContentRef.current = content;
+    } else if (!isStreaming) {
+      setDisplayedContent(content);
+    }
+  }, [content, isStreaming]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content);
@@ -112,56 +142,95 @@ export const ChatMessage = ({ role, content, isStreaming }: ChatMessageProps) =>
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      initial={{ opacity: 0, y: 15, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ 
+        duration: 0.4, 
+        ease: [0.25, 0.46, 0.45, 0.94],
+        opacity: { duration: 0.3 }
+      }}
       className={`flex gap-4 ${isUser ? "justify-end" : "justify-start"}`}
     >
       {!isUser && (
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-primary/25">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-primary/25"
+        >
           <Sparkles className="w-5 h-5 text-white" />
-        </div>
+        </motion.div>
       )}
 
-      <div
+      <motion.div
+        layout
         className={`group relative max-w-[80%] rounded-2xl px-4 py-3 ${
           isUser
             ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
             : "bg-card/80 backdrop-blur-sm border border-border/50 shadow-xl"
         }`}
+        style={{ willChange: isStreaming ? "height" : "auto" }}
       >
-        <div className={`text-sm leading-relaxed ${isUser ? "" : "text-foreground"}`}>
-          {isUser ? content : renderContent(content)}
-          {isStreaming && (
-            <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse rounded-sm" />
-          )}
-        </div>
+        <motion.div 
+          className={`text-sm leading-relaxed ${isUser ? "" : "text-foreground"}`}
+          layout={isStreaming ? "position" : false}
+        >
+          {isUser ? displayedContent : renderContent(displayedContent, isStreaming)}
+          <AnimatePresence>
+            {isStreaming && (
+              <motion.span 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="inline-flex items-center ml-1"
+              >
+                <motion.span
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                  className="inline-block w-2 h-4 bg-primary rounded-sm"
+                />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* Copy button for assistant messages */}
         {!isUser && !isStreaming && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCopy}
-            className="absolute -bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-7 px-2 text-xs bg-background/80 backdrop-blur-sm border border-border/50"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
           >
-            {copied ? (
-              <>
-                <Check className="w-3 h-3 mr-1" /> Copied
-              </>
-            ) : (
-              <>
-                <Copy className="w-3 h-3 mr-1" /> Copy
-              </>
-            )}
-          </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopy}
+              className="absolute -bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 h-7 px-2 text-xs bg-background/80 backdrop-blur-sm border border-border/50"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3 h-3 mr-1" /> Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3 mr-1" /> Copy
+                </>
+              )}
+            </Button>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       {isUser && (
-        <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center shrink-0 border border-border/50">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center shrink-0 border border-border/50"
+        >
           <User className="w-5 h-5 text-muted-foreground" />
-        </div>
+        </motion.div>
       )}
     </motion.div>
   );
@@ -169,19 +238,41 @@ export const ChatMessage = ({ role, content, isStreaming }: ChatMessageProps) =>
 
 export const TypingIndicator = () => (
   <motion.div
-    initial={{ opacity: 0, y: 10 }}
+    initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3 }}
     className="flex gap-4"
   >
-    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-primary/25">
+    <motion.div 
+      initial={{ scale: 0.8 }}
+      animate={{ scale: 1 }}
+      className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-primary/25"
+    >
       <Sparkles className="w-5 h-5 text-white" />
-    </div>
-    <div className="bg-card/80 backdrop-blur-sm rounded-2xl px-4 py-3 border border-border/50 shadow-xl">
-      <div className="flex gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-        <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-        <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+    </motion.div>
+    <motion.div 
+      initial={{ scale: 0.95 }}
+      animate={{ scale: 1 }}
+      className="bg-card/80 backdrop-blur-sm rounded-2xl px-5 py-4 border border-border/50 shadow-xl"
+    >
+      <div className="flex gap-1.5 items-center">
+        <motion.span 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+          className="w-2.5 h-2.5 rounded-full bg-primary" 
+        />
+        <motion.span 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+          className="w-2.5 h-2.5 rounded-full bg-primary" 
+        />
+        <motion.span 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+          className="w-2.5 h-2.5 rounded-full bg-primary" 
+        />
       </div>
-    </div>
+    </motion.div>
   </motion.div>
 );

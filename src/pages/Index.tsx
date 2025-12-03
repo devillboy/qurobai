@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ChatMessage, TypingIndicator } from "@/components/ChatMessage";
 import { ChatInputEnhanced } from "@/components/ChatInputEnhanced";
@@ -26,10 +27,13 @@ const Index = () => {
     }
   }, [user, authLoading, navigate]);
 
-  // Auto-scroll to bottom on new messages
+  // Smooth auto-scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth"
+      });
     }
   }, [messages]);
 
@@ -115,27 +119,45 @@ const Index = () => {
         
         <div className="flex-1 max-w-3xl w-full mx-auto px-4 py-6 flex flex-col">
           {messages.length === 0 ? (
-            <WelcomeScreen onQuickAction={handleQuickAction} />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <WelcomeScreen onQuickAction={handleQuickAction} />
+            </motion.div>
           ) : (
             <div
               ref={scrollRef}
-              className="flex-1 overflow-y-auto space-y-6 pb-4"
+              className="flex-1 overflow-y-auto space-y-6 pb-4 scroll-smooth"
             >
-              {messages.map((message) => (
-                <ChatMessage
-                  key={message.id}
-                  role={message.role}
-                  content={message.content}
-                  isStreaming={
-                    isLoading &&
-                    message.role === "assistant" &&
-                    message.id === messages[messages.length - 1]?.id
-                  }
-                />
-              ))}
-              {isLoading && messages[messages.length - 1]?.role === "user" && (
-                <TypingIndicator />
-              )}
+              <AnimatePresence mode="popLayout">
+                {messages.map((message) => (
+                  <motion.div
+                    key={message.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    <ChatMessage
+                      role={message.role}
+                      content={message.content}
+                      isStreaming={
+                        isLoading &&
+                        message.role === "assistant" &&
+                        message.id === messages[messages.length - 1]?.id
+                      }
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              <AnimatePresence>
+                {isLoading && messages[messages.length - 1]?.role === "user" && (
+                  <TypingIndicator />
+                )}
+              </AnimatePresence>
             </div>
           )}
 

@@ -223,18 +223,29 @@ export const useChat = (conversationId: string | null) => {
       content: m.content,
     }));
 
+    // Use requestAnimationFrame for smoother updates
+    let pendingUpdate = false;
+    
     await streamChat({
       messages: messageHistory,
       userId: user?.id,
       onDelta: (delta) => {
         assistantContent += delta;
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId
-              ? { ...msg, content: assistantContent }
-              : msg
-          )
-        );
+        
+        // Batch updates with requestAnimationFrame for smooth rendering
+        if (!pendingUpdate) {
+          pendingUpdate = true;
+          requestAnimationFrame(() => {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: assistantContent }
+                  : msg
+              )
+            );
+            pendingUpdate = false;
+          });
+        }
       },
       onDone: async () => {
         setIsLoading(false);
