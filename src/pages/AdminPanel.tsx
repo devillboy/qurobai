@@ -76,18 +76,39 @@ export default function AdminPanel() {
   };
 
   const loadPendingPayments = async () => {
-    const { data, error } = await supabase
+    // Get pending payments
+    const { data: payments, error } = await supabase
       .from("payment_screenshots")
       .select(`
         *,
-        profiles(display_name),
         subscription_plans(name, model_name, price_inr)
       `)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setPendingPayments(data);
+    if (error) {
+      console.error("Error loading payments:", error);
+      return;
+    }
+
+    // Get profiles for each payment
+    if (payments && payments.length > 0) {
+      const userIds = payments.map(p => p.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p.display_name]) || []);
+      
+      const paymentsWithProfiles = payments.map(payment => ({
+        ...payment,
+        display_name: profileMap.get(payment.user_id) || "Unknown User"
+      }));
+
+      setPendingPayments(paymentsWithProfiles);
+    } else {
+      setPendingPayments([]);
     }
   };
 
@@ -283,8 +304,8 @@ export default function AdminPanel() {
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg">
-                          {payment.profiles?.display_name || "User"}
+                      <CardTitle className="text-lg">
+                          {payment.display_name || "User"}
                         </CardTitle>
                         <CardDescription>
                           {payment.subscription_plans?.name} - ₹{payment.amount_paid}

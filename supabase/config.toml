@@ -2,3 +2,6 @@ project_id = "fstxrxojxnziuqqceobd"
 
 [functions.chat]
 verify_jwt = false
+
+[functions.check-subscription-expiry]
+verify_jwt = false
