@@ -28,14 +28,14 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Determine which model to use based on subscription
-    let modelToUse = "google/gemini-2.5-flash"; // Qurob 2 (free)
+    let modelToUse = "google/gemini-2.5-flash";
     let modelName = "Qurob 2";
 
     if (userId) {
       const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
       
       if (userModel === "Qurob 4") {
-        modelToUse = "google/gemini-2.5-pro"; // Qurob 4 (premium)
+        modelToUse = "google/gemini-2.5-pro";
         modelName = "Qurob 4";
       }
     }
