@@ -7,6 +7,7 @@ import { ChatInputEnhanced } from "@/components/ChatInputEnhanced";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import ModelIndicator from "@/components/ModelIndicator";
+import { SubscriptionExpiryBanner } from "@/components/SubscriptionExpiryBanner";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,6 +114,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
+        <SubscriptionExpiryBanner />
         <div className="p-4 border-b max-w-3xl w-full mx-auto">
           <ModelIndicator currentModel={currentModel} />
         </div>
