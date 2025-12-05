@@ -17,11 +17,12 @@ import {
   CreditCard, 
   History, 
   ChevronRight,
-  User,
   Crown,
-  LogOut
+  LogOut,
+  Sliders
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PersonalizationDialog } from "./PersonalizationDialog";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -34,6 +35,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const [profile, setProfile] = useState<{ display_name: string | null; created_at: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
+  const [personalizationOpen, setPersonalizationOpen] = useState(false);
 
   useEffect(() => {
     if (user && open) {
@@ -230,6 +232,13 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
             className="space-y-2"
           >
             <MenuItem 
+              icon={Sliders} 
+              label="Personalization" 
+              description="Customize AI tone & instructions"
+              onClick={() => setPersonalizationOpen(true)}
+            />
+            
+            <MenuItem 
               icon={CreditCard} 
               label="Upgrade to Qurob 4" 
               description="Get better answers with premium AI"
@@ -287,6 +296,12 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
             </Button>
           </motion.div>
         </div>
+
+        {/* Personalization Dialog */}
+        <PersonalizationDialog 
+          open={personalizationOpen} 
+          onOpenChange={setPersonalizationOpen} 
+        />
       </DialogContent>
     </Dialog>
   );

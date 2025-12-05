@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const TONE_STYLES: Record<string, string> = {
+  default: "balanced and adaptable",
+  professional: "polished, precise, and formal. Avoid casual language, emojis, and unnecessary friendliness",
+  friendly: "warm, approachable, and conversational while remaining helpful",
+  candid: "direct, honest, and encouraging. Get straight to the point",
+  quirky: "playful, creative, and imaginative while still being informative",
+  efficient: "extremely concise and plain. Minimize words, maximize information density",
+  nerdy: "exploratory, enthusiastic, and deep-diving into technical details",
+  cynical: "critical, analytical, and slightly sarcastic while still being helpful",
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -22,14 +33,14 @@ serve(async (req) => {
       throw new Error("QurobAi API is not configured");
     }
 
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Determine which model to use based on subscription
     let modelToUse = "google/gemini-2.5-flash";
     let modelName = "Qurob 2";
+    let baseTone = "professional";
+    let customInstructions = "";
 
     if (userId) {
       const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
@@ -38,7 +49,20 @@ serve(async (req) => {
         modelToUse = "google/gemini-2.5-pro";
         modelName = "Qurob 4";
       }
+
+      const { data: settings } = await supabase
+        .from("user_settings")
+        .select("base_tone, custom_instructions")
+        .eq("user_id", userId)
+        .single();
+
+      if (settings) {
+        baseTone = settings.base_tone || "professional";
+        customInstructions = settings.custom_instructions || "";
+      }
     }
+
+    const toneStyle = TONE_STYLES[baseTone] || TONE_STYLES.professional;
 
     const systemPrompt = `You are ${modelName}, a professional AI assistant developed by QurobAi.
 
@@ -49,15 +73,12 @@ IDENTITY:
 ${modelName === "Qurob 4" ? "- You are the premium model with enhanced reasoning and advanced capabilities." : ""}
 
 COMMUNICATION STYLE:
-- Be professional, concise, and direct
-- Provide clear, well-structured responses
-- Avoid unnecessary filler words or excessive friendliness
-- Use a neutral, helpful tone
-- Do not use emojis unless specifically relevant to the context
-- Focus on accuracy and substance over personality
+- Your tone should be: ${toneStyle}
+- Do not use emojis unless the user's tone setting allows for it
+- Focus on accuracy and substance
 
 RESPONSE GUIDELINES:
-- Answer questions directly without preamble
+- Answer questions directly without unnecessary preamble
 - Structure complex responses with clear headings and bullet points
 - Provide actionable information
 - Acknowledge limitations when uncertain
@@ -73,7 +94,11 @@ FORMATTING:
 - Use **bold** for emphasis on key terms
 - Use bullet points for lists
 - Use numbered lists for sequential steps
-- Keep paragraphs focused and concise`;
+- Keep paragraphs focused and concise
+
+REAL-TIME DATA CAPABILITIES:
+When users ask for real-time information (weather, news, crypto, stocks, etc.), acknowledge that you can provide general knowledge but real-time data requires external API integration. Offer to help implement such features if they're building an application.
+${customInstructions ? `\nUSER'S CUSTOM INSTRUCTIONS:\n${customInstructions}` : ""}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

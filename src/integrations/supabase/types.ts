@@ -239,7 +239,9 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          base_tone: string | null
           created_at: string
+          custom_instructions: string | null
           gemini_api_key: string | null
           id: string
           openai_api_key: string | null
@@ -248,7 +250,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          base_tone?: string | null
           created_at?: string
+          custom_instructions?: string | null
           gemini_api_key?: string | null
           id?: string
           openai_api_key?: string | null
@@ -257,7 +261,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          base_tone?: string | null
           created_at?: string
+          custom_instructions?: string | null
           gemini_api_key?: string | null
           id?: string
           openai_api_key?: string | null
