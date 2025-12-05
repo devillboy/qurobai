@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.check-subscription-expiry]
 verify_jwt = false
+
+[functions.realtime-data]
+verify_jwt = false
