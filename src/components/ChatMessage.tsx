@@ -172,22 +172,40 @@ export const ChatMessage = ({ role, content, isStreaming }: ChatMessageProps) =>
   );
 };
 
-export const TypingIndicator = () => (
-  <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0 }}
-    className="flex gap-3"
-  >
-    <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center">
-      <Bot className="w-4 h-4 text-foreground" />
-    </div>
-    <div className="bg-muted/50 border border-border/50 rounded-2xl rounded-tl-sm px-4 py-3">
-      <div className="flex gap-1 items-center">
-        <span className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: "0ms" }} />
-        <span className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: "150ms" }} />
-        <span className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: "300ms" }} />
+// Enhanced Thinking Indicator - ChatGPT style
+export const TypingIndicator = () => {
+  const [dots, setDots] = useState("");
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots(prev => prev.length >= 3 ? "" : prev + ".");
+    }, 400);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="flex gap-3"
+    >
+      <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center">
+        <Bot className="w-4 h-4 text-foreground" />
       </div>
-    </div>
-  </motion.div>
-);
+      <div className="bg-muted/50 border border-border/50 rounded-2xl rounded-tl-sm px-4 py-3">
+        <div className="flex items-center gap-2">
+          {/* Animated spinner */}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full"
+          />
+          <span className="text-sm text-muted-foreground">
+            Thinking<span className="inline-block w-6 text-left">{dots}</span>
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
