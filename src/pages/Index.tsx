@@ -156,7 +156,7 @@ const Index = () => {
                 ))}
               </AnimatePresence>
               <AnimatePresence>
-                {isLoading && messages[messages.length - 1]?.role === "user" && (
+                {isLoading && (messages.length === 0 || messages[messages.length - 1]?.role === "user" || messages[messages.length - 1]?.content === "") && (
                   <TypingIndicator />
                 )}
               </AnimatePresence>
