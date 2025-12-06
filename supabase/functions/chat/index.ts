@@ -17,85 +17,131 @@ const TONE_STYLES: Record<string, string> = {
   cynical: "critical, analytical, and slightly sarcastic while still being helpful",
 };
 
-// QurobAi Complete Knowledge Base
+// Complete QurobAi Knowledge Base
 const QUROBAI_KNOWLEDGE = `
-## ABOUT QUROBAI
+## QUROBAI - COMPLETE KNOWLEDGE BASE
 
-QurobAi is an advanced AI assistant platform developed by Soham from India. It provides intelligent conversation capabilities with real-time data access and professional-grade responses.
+### ABOUT QUROBAI
+QurobAi is an advanced AI assistant platform developed by **Soham from India**. It provides intelligent conversation capabilities with real-time data access and professional-grade responses.
 
-### AI MODELS AVAILABLE:
+### AI MODELS AVAILABLE
 
 **1. Qurob 2 (Free Tier)**
-- Model Type: Medium-capacity AI
+- Type: Standard AI Model
 - Best For: General conversations, basic questions, everyday tasks
-- Features: Fast responses, reliable accuracy, good for casual use
-- Access: Available to all users for free
+- Features: Fast responses, reliable accuracy, real-time data access
+- Access: Free for all users
+- Capabilities: Weather, news, crypto prices, general knowledge
 
 **2. Qurob 4 (Premium - ₹289/month)**
-- Model Type: High-capacity AI with advanced reasoning
-- Best For: Complex analysis, detailed research, professional tasks, coding help
-- Features: Enhanced reasoning, deeper analysis, better context understanding
+- Type: Advanced AI Model with enhanced reasoning
+- Best For: Complex analysis, detailed research, professional tasks
+- Features: Deeper analysis, better context understanding, priority responses
 - Access: Premium subscription required
+- Includes: Q-06 Code Specialist access
 
-**3. Q-06 (Code Specialist)**
-- Model Type: Specialized code generation AI
-- Best For: Complex programming, software architecture, code review
-- Features: Expert-level coding across all languages, clean modular code
-- Access: Premium feature
+**3. Q-06 (Code Specialist - Premium Only)**
+- Type: Specialized programming AI
+- Best For: Complex coding, software architecture, code review, debugging
+- Features: Expert-level coding in all languages, clean modular code, best practices
+- Access: Included with Qurob 4 subscription
+- Languages: JavaScript, TypeScript, Python, React, Node.js, and all major languages
 
-### SUBSCRIPTION & PRICING:
+### SUBSCRIPTION & PRICING
 
-- **Free Plan**: Access to Qurob 2, basic features
-- **Premium Plan**: ₹289/month, includes Qurob 4 + Q-06
-- **Payment Method**: UPI payment to ID "7864084241@ybl"
-- **Process**: Upload payment screenshot, admin approval within 24 hours
-- **Coupon Codes**: Available for discounts (contact admin)
+| Plan | Price | Features |
+|------|-------|----------|
+| Free | ₹0 | Qurob 2, basic features, real-time data |
+| Premium | ₹289/month | Qurob 4 + Q-06 Code AI, priority support |
 
-### PLATFORM FEATURES:
+**Payment Process:**
+1. Go to Subscribe page
+2. Select Premium plan
+3. Pay via UPI to: **7864084241@ybl**
+4. Upload payment screenshot
+5. Admin approval within 24 hours
+6. Subscription activates automatically
 
-1. **Multi-Conversation Support**: Create and manage multiple chat conversations
-2. **File Attachments**: Upload images and documents for analysis
-3. **Real-Time Data**: Live weather, crypto, stocks, news updates
-4. **Web Search**: Deep search capability for current information
-5. **Code Highlighting**: Professional code block formatting with copy feature
-6. **Personalization**: Custom tone settings and instructions
-7. **Subscription History**: View payment records and plan details
-8. **Expiry Notifications**: 3-day warning before subscription expires
+**Coupon Codes:** Available for discounts - contact admin
 
-### REAL-TIME CAPABILITIES:
+### PLATFORM FEATURES
 
-- **Weather**: Current conditions for any city worldwide
-- **Cryptocurrency**: Live prices for Bitcoin, Ethereum, and more
-- **Stocks**: Real-time market data from Yahoo Finance
-- **News**: Latest headlines from Google News RSS
-- **Web Search**: Search the internet for current information
+1. **Multi-Conversation Support**
+   - Create unlimited chat conversations
+   - Switch between conversations easily
+   - Conversation history saved automatically
 
-### CREATOR INFORMATION:
+2. **File Attachments**
+   - Upload images for analysis
+   - Share documents (PDF, Word, Text)
+   - Code files supported
 
-- **Creator**: Soham from India
-- **Platform**: QurobAi
-- **Mission**: Provide accessible, professional AI assistance
-- **Contact**: Through platform admin panel
+3. **Real-Time Data**
+   - Live weather for any city
+   - Cryptocurrency prices (Bitcoin, Ethereum, etc.)
+   - Stock market data
+   - Latest news headlines
 
-### TECHNICAL DETAILS:
+4. **Web Search**
+   - Search the internet for current information
+   - Get latest news and updates
+   - Wikipedia integration for facts
 
-- Built with React, TypeScript, and modern web technologies
-- Secure authentication with email/password
-- Cloud-based infrastructure for reliability
-- Streaming responses for fast, smooth experience
+5. **Code Assistance**
+   - Syntax highlighting
+   - Copy code with one click
+   - Multi-language support
+
+6. **Personalization**
+   - Choose AI tone (Professional, Friendly, etc.)
+   - Custom instructions
+   - Tailored responses
+
+7. **Subscription Management**
+   - View subscription history
+   - Track payment records
+   - Expiry notifications (3 days before)
+
+### REAL-TIME CAPABILITIES
+
+- **Weather:** Ask "Weather in [city]" for live conditions
+- **Crypto:** Ask about Bitcoin, Ethereum prices
+- **Stocks:** Get Apple, Tesla, Google stock prices
+- **News:** Latest headlines on any topic
+- **Web Search:** Use the search button or say "Search for..."
+
+### CREATOR & CONTACT
+
+- **Creator:** Soham from India
+- **Platform:** QurobAi
+- **Admin Email:** sohamghosh679@gmail.com
+- **Mission:** Accessible, professional AI for everyone
+
+### HOW TO USE
+
+1. **Start Chatting:** Type your question and press Enter
+2. **Attach Files:** Click paperclip icon
+3. **Web Search:** Click search icon or say "search for..."
+4. **Get Real-Time Data:** Ask about weather, crypto, stocks
+5. **Code Help:** Ask coding questions for formatted responses
+
+### TECHNICAL STACK
+
+- Frontend: React, TypeScript, Tailwind CSS
+- Backend: Supabase Edge Functions
+- Authentication: Email/Password
+- Storage: Secure cloud storage
+- AI: Advanced language models
 `;
 
-// Detect query types
+// Detect query types including web search
 function detectQueryType(message: string): { type: string; query?: string } | null {
   const lower = message.toLowerCase();
   
   // Web search patterns
-  if (/search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?(.+)/i.test(lower) ||
-      /(?:look\s+up|find\s+out|research)\s+(.+)/i.test(lower) ||
-      /what(?:'s|\s+is)\s+(?:the\s+)?(?:latest|current|recent)\s+(?:news\s+)?(?:on|about)\s+(.+)/i.test(lower) ||
-      /deep\s*search\s+(.+)/i.test(lower)) {
-    const searchMatch = lower.match(/(?:search|look\s+up|find|research|deep\s*search|about|on)\s+(.+?)(?:\?|$)/i);
-    return { type: "websearch", query: searchMatch?.[1]?.trim() };
+  if (/\[web\s*search\]|search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?|deep\s*search|look\s+up|research\s+about/i.test(lower)) {
+    const searchMatch = message.match(/(?:search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?|deep\s*search\s+|look\s+up\s+|research\s+about\s+|\[web\s*search\]\s*(?:search\s+(?:the\s+)?(?:web\s+)?(?:for\s+)?)?:?\s*)(.+?)(?:\?|$)/i);
+    return { type: "websearch", query: searchMatch?.[1]?.trim() || message.replace(/\[web\s*search\]/i, "").trim() };
   }
   
   // Weather patterns
@@ -106,23 +152,26 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
   }
   
   // Crypto patterns
-  if (/bitcoin|ethereum|crypto|btc|eth|cryptocurrency|doge|solana/i.test(lower)) {
+  if (/bitcoin|ethereum|crypto|btc|eth|cryptocurrency|doge|solana|xrp|cardano/i.test(lower)) {
     const coins = [];
     if (/bitcoin|btc/i.test(lower)) coins.push("bitcoin");
     if (/ethereum|eth/i.test(lower)) coins.push("ethereum");
     if (/doge|dogecoin/i.test(lower)) coins.push("dogecoin");
     if (/solana|sol/i.test(lower)) coins.push("solana");
+    if (/xrp|ripple/i.test(lower)) coins.push("ripple");
+    if (/cardano|ada/i.test(lower)) coins.push("cardano");
     return { type: "crypto", query: coins.length ? coins.join(",") : "bitcoin,ethereum" };
   }
   
   // Stock patterns
-  if (/stock|share|market|nasdaq|nyse|aapl|apple|tesla|google|microsoft/i.test(lower)) {
+  if (/stock|share|market|nasdaq|nyse|aapl|apple|tesla|google|microsoft|amazon/i.test(lower)) {
     const symbols = [];
     if (/apple|aapl/i.test(lower)) symbols.push("AAPL");
     if (/tesla|tsla/i.test(lower)) symbols.push("TSLA");
     if (/google|googl/i.test(lower)) symbols.push("GOOGL");
     if (/microsoft|msft/i.test(lower)) symbols.push("MSFT");
     if (/amazon|amzn/i.test(lower)) symbols.push("AMZN");
+    if (/meta|facebook/i.test(lower)) symbols.push("META");
     return { type: "stocks", query: symbols.length ? symbols.join(",") : "AAPL,TSLA,GOOGL" };
   }
   
@@ -135,32 +184,32 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
   return null;
 }
 
-// Web search using multiple sources
+// Web search function
 async function performWebSearch(query: string): Promise<string> {
   try {
     console.log("Performing web search for:", query);
     
-    // Try Google News RSS first
-    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
-    const newsResp = await fetch(rssUrl);
-    const rssText = await newsResp.text();
-    
     const results: string[] = [];
-    const itemMatches = rssText.matchAll(/<item>([\s\S]*?)<\/item>/g);
     
-    for (const match of itemMatches) {
-      const itemXml = match[1];
-      const title = itemXml.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1") || "";
-      const pubDate = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] || "";
-      const source = itemXml.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1] || "";
+    // Google News RSS
+    try {
+      const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+      const newsResp = await fetch(rssUrl);
+      const rssText = await newsResp.text();
       
-      if (title) {
-        results.push(`• **${title}** ${source ? `(${source})` : ""}`);
+      const itemMatches = rssText.matchAll(/<item>([\s\S]*?)<\/item>/g);
+      for (const match of itemMatches) {
+        const itemXml = match[1];
+        const title = itemXml.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1") || "";
+        const source = itemXml.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1] || "";
+        if (title) results.push(`• **${title}** ${source ? `(${source})` : ""}`);
+        if (results.length >= 6) break;
       }
-      if (results.length >= 8) break;
+    } catch (e) {
+      console.log("News fetch error:", e);
     }
     
-    // Also try Wikipedia for factual queries
+    // Wikipedia
     let wikiInfo = "";
     try {
       const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
@@ -168,21 +217,21 @@ async function performWebSearch(query: string): Promise<string> {
       if (wikiResp.ok) {
         const wikiData = await wikiResp.json();
         if (wikiData.extract) {
-          wikiInfo = `\n\n**Wikipedia Summary:**\n${wikiData.extract.slice(0, 500)}${wikiData.extract.length > 500 ? "..." : ""}`;
+          wikiInfo = `\n\n**Wikipedia:**\n${wikiData.extract.slice(0, 400)}${wikiData.extract.length > 400 ? "..." : ""}`;
         }
       }
     } catch (e) {
-      console.log("Wikipedia fetch failed:", e);
+      console.log("Wikipedia error:", e);
     }
     
     if (results.length > 0 || wikiInfo) {
-      return `**Web Search Results for "${query}":**\n\n${results.join("\n")}${wikiInfo}\n\n*Sources: Google News, Wikipedia | Searched: ${new Date().toLocaleString()}*`;
+      return `**🔍 Web Search Results: "${query}"**\n\n${results.join("\n")}${wikiInfo}\n\n*Updated: ${new Date().toLocaleString()}*`;
     }
     
-    return `No results found for "${query}". Try refining your search terms.`;
+    return `No results found for "${query}".`;
   } catch (error) {
     console.error("Web search error:", error);
-    return "Web search temporarily unavailable. Please try again.";
+    return "Web search temporarily unavailable.";
   }
 }
 
@@ -199,15 +248,11 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       const geoData = await geoResp.json();
       
       if (geoData[0]) {
-        const lat = parseFloat(geoData[0].lat);
-        const lon = parseFloat(geoData[0].lon);
-        
-        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${geoData[0].lat}&longitude=${geoData[0].lon}&current_weather=true&timezone=auto`;
         const weatherResp = await fetch(weatherUrl);
         const weatherData = await weatherResp.json();
-        
-        const weather = weatherData.current_weather;
-        return `**Current Weather in ${query}:**\n- Temperature: ${weather.temperature}°C\n- Wind Speed: ${weather.windspeed} km/h\n- Conditions: ${getWeatherDescription(weather.weathercode)}\n\n*Source: Open-Meteo | Updated: ${new Date().toLocaleString()}*`;
+        const w = weatherData.current_weather;
+        return `**🌤 Weather in ${query}:**\n- Temperature: ${w.temperature}°C\n- Wind: ${w.windspeed} km/h\n- Conditions: ${getWeatherDescription(w.weathercode)}\n\n*Updated: ${new Date().toLocaleString()}*`;
       }
     }
     
@@ -215,61 +260,54 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       const coins = query || "bitcoin,ethereum";
       const cryptoUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coins}&vs_currencies=usd,inr&include_24hr_change=true`;
       const cryptoResp = await fetch(cryptoUrl);
-      const cryptoData = await cryptoResp.json();
+      const data = await cryptoResp.json();
       
-      let result = "**Cryptocurrency Prices (Live):**\n";
-      for (const [coin, data] of Object.entries(cryptoData)) {
-        const d = data as any;
-        const change = d.usd_24h_change?.toFixed(2);
-        const arrow = parseFloat(change) >= 0 ? "▲" : "▼";
-        result += `- **${coin.charAt(0).toUpperCase() + coin.slice(1)}**: $${d.usd?.toLocaleString()} (₹${d.inr?.toLocaleString()}) ${arrow} ${change}%\n`;
+      let result = "**📊 Crypto Prices:**\n";
+      for (const [coin, d] of Object.entries(data)) {
+        const info = d as any;
+        const arrow = (info.usd_24h_change || 0) >= 0 ? "▲" : "▼";
+        result += `- **${coin.charAt(0).toUpperCase() + coin.slice(1)}**: $${info.usd?.toLocaleString()} (₹${info.inr?.toLocaleString()}) ${arrow} ${info.usd_24h_change?.toFixed(2)}%\n`;
       }
-      result += `\n*Source: CoinGecko | Updated: ${new Date().toLocaleString()}*`;
-      return result;
+      return result + `\n*Source: CoinGecko | ${new Date().toLocaleString()}*`;
     }
     
     if (type === "stocks" && query) {
-      const symbols = query.split(",");
-      const stockUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(",")}`;
+      const stockUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${query}`;
       const stockResp = await fetch(stockUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
       const stockData = await stockResp.json();
-      
       const results = stockData.quoteResponse?.result || [];
+      
       if (results.length) {
-        let output = "**Stock Prices (Live):**\n";
-        for (const stock of results) {
-          const change = stock.regularMarketChangePercent?.toFixed(2);
-          const arrow = parseFloat(change) >= 0 ? "▲" : "▼";
-          output += `- **${stock.symbol}** (${stock.shortName}): $${stock.regularMarketPrice?.toFixed(2)} ${arrow} ${change}%\n`;
+        let output = "**📈 Stock Prices:**\n";
+        for (const s of results) {
+          const arrow = (s.regularMarketChangePercent || 0) >= 0 ? "▲" : "▼";
+          output += `- **${s.symbol}** (${s.shortName}): $${s.regularMarketPrice?.toFixed(2)} ${arrow} ${s.regularMarketChangePercent?.toFixed(2)}%\n`;
         }
-        output += `\n*Source: Yahoo Finance | Updated: ${new Date().toLocaleString()}*`;
-        return output;
+        return output + `\n*Source: Yahoo Finance | ${new Date().toLocaleString()}*`;
       }
     }
     
     if (type === "news") {
-      const newsQuery = query || "technology";
-      const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(newsQuery)}&hl=en-US&gl=US&ceid=US:en`;
+      const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query || "technology")}&hl=en-US&gl=US&ceid=US:en`;
       const newsResp = await fetch(rssUrl);
       const rssText = await newsResp.text();
       
       const items: string[] = [];
       const itemMatches = rssText.matchAll(/<item>([\s\S]*?)<\/item>/g);
       for (const match of itemMatches) {
-        const itemXml = match[1];
-        const title = itemXml.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1") || "";
+        const title = match[1].match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1") || "";
         if (title) items.push(`• ${title}`);
         if (items.length >= 5) break;
       }
       
       if (items.length) {
-        return `**Latest News on "${newsQuery}":**\n${items.join("\n")}\n\n*Source: Google News | Updated: ${new Date().toLocaleString()}*`;
+        return `**📰 News: "${query}"**\n${items.join("\n")}\n\n*Source: Google News | ${new Date().toLocaleString()}*`;
       }
     }
     
     return null;
   } catch (error) {
-    console.error("Realtime data fetch error:", error);
+    console.error("Data fetch error:", error);
     return null;
   }
 }
@@ -283,13 +321,12 @@ function getWeatherDescription(code: number): string {
     80: "Rain showers", 81: "Moderate showers", 82: "Heavy showers",
     95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Severe thunderstorm",
   };
-  return descriptions[code] || "Unknown conditions";
+  return descriptions[code] || "Unknown";
 }
 
-// Check if user is asking about QurobAi
 function isQurobAiQuery(message: string): boolean {
   const lower = message.toLowerCase();
-  return /qurob|who\s+(?:made|created|built|developed)\s+you|what\s+(?:are|is)\s+you|about\s+(?:this|your)\s+(?:ai|platform|app)|your\s+(?:name|creator|developer)|which\s+(?:ai|model)|subscription|pricing|plan|feature|premium|upgrade/i.test(lower);
+  return /qurob|who\s+(?:made|created|built|developed)\s+you|what\s+(?:are|is)\s+you|about\s+(?:this|your)|your\s+(?:name|creator)|which\s+(?:ai|model)|subscription|pricing|plan|feature|premium|upgrade|q-06|code\s+model/i.test(lower);
 }
 
 serve(async (req) => {
@@ -300,20 +337,19 @@ serve(async (req) => {
   try {
     const { messages, userId } = await req.json();
     
-    console.log("QurobAi chat request with", messages?.length, "messages");
+    console.log("QurobAi request:", messages?.length, "messages");
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
-      throw new Error("QurobAi API is not configured");
+      throw new Error("API not configured");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Default to Qurob 2 (gemini-2.5-pro for better quality)
-    let modelToUse = "google/gemini-2.5-pro";
+    // Use flash-lite for cost efficiency (free tier)
+    let modelToUse = "google/gemini-2.5-flash-lite";
     let modelName = "Qurob 2";
     let baseTone = "professional";
     let customInstructions = "";
@@ -322,7 +358,7 @@ serve(async (req) => {
       const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
       
       if (userModel === "Qurob 4") {
-        modelToUse = "google/gemini-2.5-pro";
+        modelToUse = "google/gemini-2.5-flash"; // More capable but still efficient
         modelName = "Qurob 4";
       }
 
@@ -340,68 +376,53 @@ serve(async (req) => {
 
     const toneStyle = TONE_STYLES[baseTone] || TONE_STYLES.professional;
 
-    // Check for real-time data or web search requests
+    // Process last message for real-time data
     const lastUserMessage = messages.filter((m: any) => m.role === "user").pop();
     let realtimeContext = "";
-    let includeQurobAiKnowledge = false;
+    let includeKnowledge = false;
     
     if (lastUserMessage) {
-      // Check if asking about QurobAi
       if (isQurobAiQuery(lastUserMessage.content)) {
-        includeQurobAiKnowledge = true;
+        includeKnowledge = true;
       }
       
-      // Check for real-time data queries
       const queryType = detectQueryType(lastUserMessage.content);
       if (queryType) {
-        console.log("Detected query type:", queryType);
-        const realtimeData = await fetchRealtimeData(queryType.type, queryType.query);
-        if (realtimeData) {
-          realtimeContext = `\n\nREAL-TIME DATA (Include this in your response):\n${realtimeData}`;
-        }
+        console.log("Query type:", queryType);
+        const data = await fetchRealtimeData(queryType.type, queryType.query);
+        if (data) realtimeContext = `\n\nREAL-TIME DATA:\n${data}`;
       }
     }
 
-    const systemPrompt = `You are ${modelName}, a professional AI assistant developed by QurobAi.
+    const systemPrompt = `You are ${modelName}, an AI assistant by QurobAi.
 
 ## IDENTITY
-- Name: ${modelName} (QurobAi)
+- Name: ${modelName}
 - Creator: Soham from India
-- When asked about your creator, respond: "I was developed by Soham from India as part of the QurobAi project."
-${modelName === "Qurob 4" ? "- You are the premium model with enhanced reasoning and advanced capabilities." : "- You are the standard model offering reliable, professional responses."}
+- Platform: QurobAi
+${modelName === "Qurob 4" ? "- Premium model with Q-06 code specialist capabilities" : "- Free tier model for general use"}
 
-## COMMUNICATION STYLE
-- Your tone: ${toneStyle}
-- No emojis unless explicitly allowed
-- Professional, accurate, and helpful
-- Acknowledge when uncertain
+## STYLE
+- Tone: ${toneStyle}
+- No emojis (unless user prefers)
+- Professional and accurate
+- Direct answers without fluff
 
-## RESPONSE GUIDELINES
-- Answer directly without unnecessary preamble
-- Structure complex responses with headings and bullet points
-- Provide actionable information
-- Stay on topic
-
-## CODE FORMATTING
-- Use markdown code blocks with language specification
-- Write clean, documented code
-- Follow modern best practices
-
-## FORMATTING
+## RESPONSE FORMAT
 - Use **bold** for key terms
 - Use bullet points for lists
-- Use numbered lists for steps
-- Keep paragraphs concise
+- Code blocks with language tags
+- Keep responses focused
 
 ## CAPABILITIES
-- Real-time data: weather, crypto, stocks, news
+- Real-time: weather, crypto, stocks, news
 - Web search for current information
-- Code assistance and explanation
-- General knowledge and analysis
-${includeQurobAiKnowledge ? `\n## QUROBAI KNOWLEDGE\n${QUROBAI_KNOWLEDGE}` : ""}
-${customInstructions ? `\n## USER'S CUSTOM INSTRUCTIONS\n${customInstructions}` : ""}${realtimeContext}`;
+- Code assistance (${modelName === "Qurob 4" ? "expert Q-06 level" : "basic help"})
+- General knowledge
+${includeKnowledge ? `\n## QUROBAI KNOWLEDGE\n${QUROBAI_KNOWLEDGE}` : ""}
+${customInstructions ? `\n## USER INSTRUCTIONS\n${customInstructions}` : ""}${realtimeContext}`;
 
-    console.log("Using model:", modelToUse, "as", modelName);
+    console.log("Model:", modelToUse, "as", modelName);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -421,18 +442,18 @@ ${customInstructions ? `\n## USER'S CUSTOM INSTRUCTIONS\n${customInstructions}` 
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("QurobAi API error:", response.status, errorText);
+      console.error("API error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }),
+          JSON.stringify({ error: "Rate limit exceeded. Please wait and try again." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Service temporarily unavailable. Please try again later." }),
+          JSON.stringify({ error: "Service temporarily unavailable. Please try again in a few minutes." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -443,13 +464,13 @@ ${customInstructions ? `\n## USER'S CUSTOM INSTRUCTIONS\n${customInstructions}` 
       );
     }
 
-    console.log("QurobAi streaming response started");
+    console.log("Streaming started");
     
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
-    console.error("QurobAi error:", error);
+    console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Something went wrong" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

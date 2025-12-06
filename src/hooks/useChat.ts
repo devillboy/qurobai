@@ -190,6 +190,7 @@ export const useChat = (conversationId: string | null) => {
   };
 
   const sendMessage = useCallback(async (content: string, convId: string) => {
+    // Prevent duplicate calls
     if (!content.trim() || isLoading || !user || !convId) return;
 
     const userMessage: Message = {
@@ -207,24 +208,17 @@ export const useChat = (conversationId: string | null) => {
 
     const assistantMessageId = crypto.randomUUID();
     let assistantContent = "";
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: assistantMessageId,
-        role: "assistant",
-        content: "",
-        timestamp: new Date(),
-      },
-    ]);
+    let hasAddedAssistantMessage = false;
 
     const messageHistory = [...messages, userMessage].map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Use requestAnimationFrame for smoother updates
+    // Throttle updates for smooth rendering
     let pendingUpdate = false;
+    let lastUpdateTime = 0;
+    const MIN_UPDATE_INTERVAL = 50; // ms
     
     await streamChat({
       messages: messageHistory,
@@ -232,32 +226,75 @@ export const useChat = (conversationId: string | null) => {
       onDelta: (delta) => {
         assistantContent += delta;
         
-        // Batch updates with requestAnimationFrame for smooth rendering
-        if (!pendingUpdate) {
+        const now = Date.now();
+        if (!pendingUpdate && (now - lastUpdateTime) >= MIN_UPDATE_INTERVAL) {
           pendingUpdate = true;
+          lastUpdateTime = now;
+          
           requestAnimationFrame(() => {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === assistantMessageId
-                  ? { ...msg, content: assistantContent }
-                  : msg
-              )
-            );
+            setMessages((prev) => {
+              // Check if assistant message already exists
+              const lastMsg = prev[prev.length - 1];
+              if (lastMsg?.id === assistantMessageId) {
+                // Update existing message
+                return prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: assistantContent }
+                    : msg
+                );
+              } else if (!hasAddedAssistantMessage) {
+                // Add new assistant message only once
+                hasAddedAssistantMessage = true;
+                return [
+                  ...prev,
+                  {
+                    id: assistantMessageId,
+                    role: "assistant" as const,
+                    content: assistantContent,
+                    timestamp: new Date(),
+                  },
+                ];
+              }
+              return prev;
+            });
             pendingUpdate = false;
           });
         }
       },
       onDone: async () => {
+        // Final update to ensure all content is displayed
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.id === assistantMessageId) {
+            return prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? { ...msg, content: assistantContent }
+                : msg
+            );
+          } else if (!hasAddedAssistantMessage && assistantContent) {
+            return [
+              ...prev,
+              {
+                id: assistantMessageId,
+                role: "assistant" as const,
+                content: assistantContent,
+                timestamp: new Date(),
+              },
+            ];
+          }
+          return prev;
+        });
+        
         setIsLoading(false);
         if (assistantContent) {
           await saveMessage(convId, "assistant", assistantContent);
         }
-        // Refresh model info after chat
         loadUserModel();
       },
       onError: (error) => {
         console.error("Chat error:", error);
         setIsLoading(false);
+        // Remove assistant message if it was added
         setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
         toast({
           title: "Error",
