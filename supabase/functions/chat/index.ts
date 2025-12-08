@@ -131,7 +131,7 @@ QurobAi is an advanced AI assistant platform developed by **Soham from India**. 
 - Backend: Supabase Edge Functions
 - Authentication: Email/Password
 - Storage: Secure cloud storage
-- AI: Advanced language models
+- AI: Groq-powered language models (LLaMA)
 `;
 
 // Detect query types including web search
@@ -339,17 +339,17 @@ serve(async (req) => {
     
     console.log("QurobAi request:", messages?.length, "messages");
     
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("API not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) {
+      throw new Error("Groq API not configured");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Use flash-lite for cost efficiency (free tier)
-    let modelToUse = "google/gemini-2.5-flash-lite";
+    // Groq models: llama-3.3-70b-versatile for premium, llama-3.1-8b-instant for free
+    let modelToUse = "llama-3.1-8b-instant";
     let modelName = "Qurob 2";
     let baseTone = "professional";
     let customInstructions = "";
@@ -358,7 +358,7 @@ serve(async (req) => {
       const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
       
       if (userModel === "Qurob 4") {
-        modelToUse = "google/gemini-2.5-flash"; // More capable but still efficient
+        modelToUse = "llama-3.3-70b-versatile";
         modelName = "Qurob 4";
       }
 
@@ -424,10 +424,10 @@ ${customInstructions ? `\n## USER INSTRUCTIONS\n${customInstructions}` : ""}${re
 
     console.log("Model:", modelToUse, "as", modelName);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -437,12 +437,14 @@ ${customInstructions ? `\n## USER INSTRUCTIONS\n${customInstructions}` : ""}${re
           ...messages,
         ],
         stream: true,
+        temperature: 0.7,
+        max_tokens: 4096,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("API error:", response.status, errorText);
+      console.error("Groq API error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -451,28 +453,19 @@ ${customInstructions ? `\n## USER INSTRUCTIONS\n${customInstructions}` : ""}${re
         );
       }
       
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Service temporarily unavailable. Please try again in a few minutes." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
       return new Response(
-        JSON.stringify({ error: "An error occurred. Please try again." }),
+        JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Streaming started");
-    
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("QurobAi error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Something went wrong" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
