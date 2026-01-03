@@ -1,6 +1,5 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { memo, useState, useEffect, useRef } from "react";
 import { Copy, Check, User, Bot } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 
 interface ChatMessageProps {
@@ -10,7 +9,7 @@ interface ChatMessageProps {
 }
 
 // Code block component - clean professional style
-const CodeBlock = ({ code, language }: { code: string; language: string }) => {
+const CodeBlock = memo(({ code, language }: { code: string; language: string }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -20,9 +19,9 @@ const CodeBlock = ({ code, language }: { code: string; language: string }) => {
   };
 
   return (
-    <div className="relative my-3 rounded-lg overflow-hidden bg-[#1a1a1a] border border-border/40">
-      <div className="flex items-center justify-between px-4 py-2 bg-[#0d0d0d] border-b border-border/30">
-        <span className="text-xs font-mono text-muted-foreground">{language || "plaintext"}</span>
+    <div className="relative my-3 rounded-lg overflow-hidden bg-[#1e1e1e] border border-border/30">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#161616] border-b border-border/20">
+        <span className="text-xs font-mono text-muted-foreground">{language || "code"}</span>
         <Button
           variant="ghost"
           size="sm"
@@ -41,11 +40,13 @@ const CodeBlock = ({ code, language }: { code: string; language: string }) => {
         </Button>
       </div>
       <pre className="p-4 overflow-x-auto">
-        <code className="text-sm font-mono text-[#e4e4e7] leading-relaxed">{code}</code>
+        <code className="text-sm font-mono text-[#d4d4d4] leading-relaxed">{code}</code>
       </pre>
     </div>
   );
-};
+});
+
+CodeBlock.displayName = "CodeBlock";
 
 // Parse and render content with code blocks
 const renderContent = (content: string) => {
@@ -85,15 +86,43 @@ const renderContent = (content: string) => {
 
 // Render inline formatting
 const renderInlineFormatting = (text: string) => {
-  let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
-  formatted = formatted.replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
-  formatted = formatted.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-muted text-sm font-mono">$1</code>');
-  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>');
+  // Handle generated images
+  if (text.includes("[GeneratedImage:")) {
+    const imageMatch = text.match(/\[GeneratedImage:(.*?)\]/);
+    if (imageMatch) {
+      const imageUrl = imageMatch[1];
+      const beforeImage = text.slice(0, text.indexOf("[GeneratedImage:"));
+      const afterImage = text.slice(text.indexOf("]", text.indexOf("[GeneratedImage:")) + 1);
+      
+      return (
+        <>
+          {beforeImage && <span dangerouslySetInnerHTML={{ __html: formatText(beforeImage) }} />}
+          <div className="my-3">
+            <img 
+              src={imageUrl} 
+              alt="AI Generated Image" 
+              className="max-w-full rounded-lg border border-border"
+              loading="lazy"
+            />
+          </div>
+          {afterImage && <span dangerouslySetInnerHTML={{ __html: formatText(afterImage) }} />}
+        </>
+      );
+    }
+  }
   
-  return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
+  return <span dangerouslySetInnerHTML={{ __html: formatText(text) }} />;
 };
 
-export const ChatMessage = ({ role, content, isStreaming }: ChatMessageProps) => {
+const formatText = (text: string): string => {
+  let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>');
+  formatted = formatted.replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+  formatted = formatted.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-muted text-sm font-mono text-foreground">$1</code>');
+  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>');
+  return formatted;
+};
+
+export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProps) => {
   const [copied, setCopied] = useState(false);
   const [displayedContent, setDisplayedContent] = useState(content);
   const isUser = role === "user";
@@ -112,48 +141,49 @@ export const ChatMessage = ({ role, content, isStreaming }: ChatMessageProps) =>
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Filter out image data from display
+  const cleanContent = displayedContent.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "");
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}
-    >
+    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
+      {/* Avatar */}
       <div 
-        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
           isUser 
             ? "bg-primary text-primary-foreground" 
-            : "bg-muted border border-border"
+            : "bg-muted"
         }`}
       >
         {isUser ? (
-          <User className="w-4 h-4" />
+          <User className="w-3.5 h-3.5" />
         ) : (
-          <Bot className="w-4 h-4 text-foreground" />
+          <Bot className="w-3.5 h-3.5 text-foreground" />
         )}
       </div>
 
+      {/* Message Content */}
       <div className={`flex flex-col max-w-[85%] ${isUser ? "items-end" : "items-start"}`}>
         <div
-          className={`group relative rounded-2xl px-4 py-3 ${
+          className={`group relative rounded-2xl px-4 py-2.5 ${
             isUser
-              ? "bg-primary text-primary-foreground rounded-tr-sm"
-              : "bg-muted/50 border border-border/50 rounded-tl-sm"
+              ? "bg-primary text-primary-foreground"
+              : "bg-card border border-border"
           }`}
         >
-          <div className="text-sm leading-relaxed">
-            {isUser ? displayedContent : renderContent(displayedContent)}
+          <div className={`text-sm leading-relaxed ${isUser ? "" : "text-foreground"}`}>
+            {isUser ? cleanContent : renderContent(cleanContent)}
             {isStreaming && (
-              <span className="inline-block w-1.5 h-4 ml-0.5 bg-foreground/70 animate-pulse" />
+              <span className="inline-block w-0.5 h-4 ml-0.5 bg-current animate-pulse" />
             )}
           </div>
 
+          {/* Copy button for assistant messages */}
           {!isUser && !isStreaming && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleCopy}
-              className="absolute -bottom-8 left-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2 text-xs text-muted-foreground"
+              className="absolute -bottom-7 left-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
             >
               {copied ? (
                 <>
@@ -168,44 +198,30 @@ export const ChatMessage = ({ role, content, isStreaming }: ChatMessageProps) =>
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
-};
+});
 
-// Enhanced Thinking Indicator - ChatGPT style
-export const TypingIndicator = () => {
-  const [dots, setDots] = useState("");
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots(prev => prev.length >= 3 ? "" : prev + ".");
-    }, 400);
-    return () => clearInterval(interval);
-  }, []);
+ChatMessage.displayName = "ChatMessage";
 
+// Enhanced Thinking Indicator
+export const TypingIndicator = memo(() => {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      className="flex gap-3"
-    >
-      <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center">
-        <Bot className="w-4 h-4 text-foreground" />
+    <div className="flex gap-3">
+      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+        <Bot className="w-3.5 h-3.5 text-foreground" />
       </div>
-      <div className="bg-muted/50 border border-border/50 rounded-2xl rounded-tl-sm px-4 py-3">
-        <div className="flex items-center gap-2">
-          {/* Animated spinner */}
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full"
-          />
-          <span className="text-sm text-muted-foreground">
-            Thinking<span className="inline-block w-6 text-left">{dots}</span>
-          </span>
+      <div className="bg-card border border-border rounded-2xl px-4 py-3">
+        <div className="flex items-center gap-1.5">
+          <div className="flex gap-1">
+            <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
-};
+});
+
+TypingIndicator.displayName = "TypingIndicator";

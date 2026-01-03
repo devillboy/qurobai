@@ -113,6 +113,12 @@ A: Expert-level coding in any language with clean, modular output.
 function detectQueryType(message: string): { type: string; query?: string } | null {
   const lower = message.toLowerCase();
   
+  // Image generation patterns
+  if (/generate\s+(?:an?\s+)?image|create\s+(?:an?\s+)?(?:image|picture|art)|draw\s+(?:an?\s+)?|make\s+(?:an?\s+)?(?:image|picture)|imagine\s+/i.test(lower)) {
+    const promptMatch = message.match(/(?:generate\s+(?:an?\s+)?image\s+(?:of\s+)?|create\s+(?:an?\s+)?(?:image|picture|art)\s+(?:of\s+)?|draw\s+(?:an?\s+)?|make\s+(?:an?\s+)?(?:image|picture)\s+(?:of\s+)?|imagine\s+)(.+)/i);
+    return { type: "image_generation", query: promptMatch?.[1]?.trim() || message };
+  }
+  
   // Web search patterns
   if (/\[web\s*search\]|search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?|deep\s*search|look\s+up|research\s+about|find\s+(?:information|info)\s+(?:about|on)/i.test(lower)) {
     const searchMatch = message.match(/(?:search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?|deep\s*search\s+|look\s+up\s+|research\s+about\s+|find\s+(?:information|info)\s+(?:about|on)\s+|\[web\s*search\]\s*(?:search\s+(?:the\s+)?(?:web\s+)?(?:for\s+)?)?:?\s*)(.+?)(?:\?|$)/i);
@@ -251,7 +257,6 @@ async function performWebSearch(query: string): Promise<string> {
 // Fetch cricket scores
 async function fetchCricketScores(): Promise<string> {
   try {
-    // Using CricAPI or similar - fallback to news
     const rssUrl = `https://news.google.com/rss/search?q=cricket+live+score+today&hl=en-IN&gl=IN&ceid=IN:en`;
     const resp = await fetch(rssUrl, { headers: { "User-Agent": "QurobAi/3.0" } });
     const rssText = await resp.text();
@@ -280,12 +285,10 @@ async function fetchCricketScores(): Promise<string> {
 // Fetch currency exchange rates
 async function fetchCurrencyRates(currencies: string): Promise<string> {
   try {
-    // Using exchangerate.host (free, no key needed)
     const baseUrl = "https://api.exchangerate.host/latest";
     const resp = await fetch(`${baseUrl}?base=USD`);
     
     if (!resp.ok) {
-      // Fallback to frankfurter
       const fallbackResp = await fetch("https://api.frankfurter.app/latest?from=USD");
       if (fallbackResp.ok) {
         const data = await fallbackResp.json();
@@ -459,6 +462,32 @@ function isQurobAiQuery(message: string): boolean {
   return /qurob|who\s+(?:made|created|built|developed)\s+you|what\s+(?:are|is)\s+you|about\s+(?:this|your)|your\s+(?:name|creator|developer)|which\s+(?:ai|model)|subscription|pricing|plan|feature|premium|upgrade|q-06|code\s+(?:model|specialist)|how\s+(?:do|does)\s+(?:this|you)\s+work|payment|upi|soham/i.test(lower);
 }
 
+// Check if message contains image for vision analysis
+function extractImageData(messages: any[]): { hasImage: boolean; imageUrl: string | null; cleanMessages: any[] } {
+  const cleanMessages: any[] = [];
+  let hasImage = false;
+  let imageUrl: string | null = null;
+  
+  for (const msg of messages) {
+    if (msg.role === "user" && msg.content) {
+      const imageMatch = msg.content.match(/\[ImageData:(data:image\/[^;]+;base64,[^\]]+)\]/);
+      if (imageMatch) {
+        hasImage = true;
+        imageUrl = imageMatch[1];
+        // Clean the message content
+        const cleanContent = msg.content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "").trim();
+        cleanMessages.push({ ...msg, content: cleanContent || "What's in this image?" });
+      } else {
+        cleanMessages.push(msg);
+      }
+    } else {
+      cleanMessages.push(msg);
+    }
+  }
+  
+  return { hasImage, imageUrl, cleanMessages };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -527,8 +556,11 @@ serve(async (req) => {
 
     const toneStyle = TONE_STYLES[baseTone] || TONE_STYLES.professional;
 
+    // Check for image in messages
+    const { hasImage, imageUrl, cleanMessages } = extractImageData(messages);
+
     // Process last message for real-time data
-    const lastUserMessage = messages.filter((m: any) => m.role === "user").pop();
+    const lastUserMessage = cleanMessages.filter((m: any) => m.role === "user").pop();
     let realtimeContext = "";
     let includeKnowledge = false;
     
@@ -540,6 +572,81 @@ serve(async (req) => {
       const queryType = detectQueryType(lastUserMessage.content);
       if (queryType) {
         console.log("Detected query:", queryType.type, queryType.query);
+        
+        // Handle image generation request
+        if (queryType.type === "image_generation" && FIREWORKS_API_KEY) {
+          try {
+            console.log("Generating image with prompt:", queryType.query);
+            const imageGenResponse = await fetch(
+              "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image",
+              {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  prompt: queryType.query,
+                  width: 1024,
+                  height: 1024,
+                  steps: 4,
+                  seed: Math.floor(Math.random() * 1000000),
+                }),
+              }
+            );
+
+            if (imageGenResponse.ok) {
+              const imageBlob = await imageGenResponse.blob();
+              const imageBuffer = await imageBlob.arrayBuffer();
+              const base64Image = btoa(
+                new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+              );
+              
+              // Upload to storage if userId provided
+              let imageUrlResult = `data:image/png;base64,${base64Image}`;
+              if (userId) {
+                try {
+                  const fileName = `${userId}/${Date.now()}-generated.png`;
+                  const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from("chat-attachments")
+                    .upload(fileName, imageBlob, { contentType: "image/png", upsert: false });
+
+                  if (!uploadError && uploadData) {
+                    const { data: urlData } = supabase.storage
+                      .from("chat-attachments")
+                      .getPublicUrl(uploadData.path);
+                    imageUrlResult = urlData.publicUrl;
+                  }
+                } catch (e) {
+                  console.log("Storage upload error:", e);
+                }
+              }
+              
+              // Return generated image response
+              const responseText = `I've generated an image based on your prompt: "${queryType.query}"\n\n[GeneratedImage:${imageUrlResult}]`;
+              
+              // Create SSE response
+              const encoder = new TextEncoder();
+              const stream = new ReadableStream({
+                start(controller) {
+                  const data = JSON.stringify({
+                    choices: [{ delta: { content: responseText } }]
+                  });
+                  controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                  controller.close();
+                }
+              });
+              
+              return new Response(stream, {
+                headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+              });
+            }
+          } catch (e) {
+            console.error("Image generation error:", e);
+          }
+        }
+        
         const data = await fetchRealtimeData(queryType.type, queryType.query);
         if (data) {
           realtimeContext = `\n\n## REAL-TIME DATA (Present this to user):\n${data}`;
@@ -547,59 +654,93 @@ serve(async (req) => {
       }
     }
 
-    // Build system prompt
-    let systemPrompt = `You are ${modelName}, an advanced AI assistant created by QurobAi.
+    // If image is present, use Fireworks Vision API
+    if (hasImage && imageUrl && FIREWORKS_API_KEY) {
+      console.log("Using Fireworks Vision API for image analysis");
+      
+      const visionMessages = cleanMessages.map((m: any, i: number) => {
+        if (m.role === "user" && i === cleanMessages.length - 1) {
+          return {
+            role: "user",
+            content: [
+              { type: "text", text: m.content || "What's in this image? Describe it in detail." },
+              { type: "image_url", image_url: { url: imageUrl } }
+            ]
+          };
+        }
+        return m;
+      });
 
-## YOUR IDENTITY
-- Name: ${modelName}
-- Creator: Soham from India
-- Platform: QurobAi (India's AI Assistant)
-- Type: ${isCodeSpecialist ? "Code Specialist AI - Expert programmer" : modelName === "Qurob 4" ? "Premium Advanced AI" : "Standard AI Assistant"}
+      const visionResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "accounts/fireworks/models/qwen2p5-vl-32b-instruct",
+          messages: [
+            { 
+              role: "system", 
+              content: `You are ${modelName}, an AI assistant created by Soham from India for QurobAi. Analyze images carefully and provide detailed, helpful descriptions. Be conversational and helpful.` 
+            },
+            ...visionMessages
+          ],
+          stream: true,
+          temperature: 0.7,
+          max_tokens: 2048,
+        }),
+      });
 
-## COMMUNICATION STYLE
-- Tone: ${toneStyle}
-- Language: Match user's language (Hindi, English, Hinglish)
-- NO excessive emojis (only where helpful)
-- Professional, accurate, and direct
+      if (visionResponse.ok) {
+        console.log("Vision API streaming response started");
+        return new Response(visionResponse.body, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      } else {
+        console.error("Vision API error:", await visionResponse.text());
+      }
+    }
 
-## RESPONSE FORMAT
-- Use **bold** for important terms
+    // Build system prompt - ChatGPT-style natural responses
+    let systemPrompt = `You are ${modelName}, an AI assistant created by **Soham from India** for the QurobAi platform.
+
+## IDENTITY (ALWAYS REMEMBER)
+- Your name is **${modelName}**
+- Creator: **Soham from India** (email: sohamghosh679@gmail.com)
+- Platform: **QurobAi** - India's AI Assistant
+- When asked "who made you", "who created you", or similar: ALWAYS say "I was created by Soham from India for the QurobAi platform"
+- When asked "what model are you" or "which AI": Say "I am ${modelName}, powered by QurobAi"
+
+## RESPONSE STYLE
+- Be conversational and natural, like ChatGPT
+- Keep responses concise unless detail is requested
+- Use **bold** for emphasis sparingly
 - Use bullet points for lists
-- Use proper markdown for structure
-- Code blocks with language tags: \`\`\`javascript
-- Keep responses focused and valuable
+- Don't overuse emojis - use them only when appropriate
+- Match the user's language (Hindi, English, Hinglish)
+- Tone: ${toneStyle}
 
-## CAPABILITIES
-${isCodeSpecialist ? `
-### CODE SPECIALIST MODE (Q-06)
-You are an EXPERT programmer. Provide:
-- Clean, modular, production-ready code
-- Best practices and design patterns
-- Comprehensive error handling
-- Clear comments and documentation
-- Performance optimizations
-- Security considerations
-Languages: JavaScript, TypeScript, Python, Java, C++, Go, Rust, PHP, Ruby, Swift, Kotlin, SQL, and 100+ more
-` : `
-- Real-time data: weather, crypto, stocks, news, cricket, currency
-- Web search for current information
-- General knowledge and reasoning
-- Basic code help${modelName === "Qurob 4" ? " (enhanced)" : ""}
-`}
+## FORMATTING
+- For code: use proper \`\`\`language blocks
+- For lists: use bullet points
+- Keep paragraphs short and readable
+- Don't use excessive headers or markdown
 
-## REAL-TIME DATA
-When user asks about weather, crypto, stocks, news, cricket, or currency:
-- Present the real-time data clearly
-- Add brief analysis or context
-- Mention data source and timestamp
+${isCodeSpecialist ? `## CODE SPECIALIST MODE
+You are Q-06, the expert coding AI. Provide:
+- Clean, production-ready code
+- Best practices and patterns
+- Clear explanations
+- All languages supported` : ""}
 
-${includeKnowledge ? `## QUROBAI COMPLETE KNOWLEDGE\n${QUROBAI_KNOWLEDGE}` : ""}
+${includeKnowledge ? `## QUROBAI KNOWLEDGE\n${QUROBAI_KNOWLEDGE}` : ""}
 
-${customInstructions ? `## USER CUSTOM INSTRUCTIONS\n${customInstructions}` : ""}${realtimeContext}`;
+${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${realtimeContext}`;
 
     console.log("Using model:", modelName, isCodeSpecialist ? "(Code Specialist)" : "");
 
-    // Determine which API to use (priority: Groq > Fireworks > DeepInfra)
+    // Determine which API to use
     let apiUrl: string;
     let apiKey: string;
     let modelToUse: string;
@@ -632,7 +773,7 @@ ${customInstructions ? `## USER CUSTOM INSTRUCTIONS\n${customInstructions}` : ""
         model: modelToUse,
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages,
+          ...cleanMessages,
         ],
         stream: true,
         temperature: isCodeSpecialist ? 0.3 : 0.7,
