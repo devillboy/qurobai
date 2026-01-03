@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Paperclip, X, Loader2, Image, FileText, Code, Globe, Search } from "lucide-react";
+import { Send, Paperclip, X, Loader2, Image, FileText, Code, Search, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +21,7 @@ interface AttachmentFile {
   type: string;
   url: string;
   size: number;
+  base64?: string;
 }
 
 export const ChatInputEnhanced = ({ onSend, isLoading }: ChatInputEnhancedProps) => {
@@ -28,9 +29,90 @@ export const ChatInputEnhanced = ({ onSend, isLoading }: ChatInputEnhancedProps)
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [webSearchMode, setWebSearchMode] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
   const { user } = useAuth();
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = "en-US";
+
+        recognitionRef.current.onresult = (event: any) => {
+          let transcript = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          setMessage((prev) => {
+            const words = prev.split(" ");
+            // Replace last partial word with new transcript
+            if (words.length > 0 && !prev.endsWith(" ")) {
+              words.pop();
+            }
+            return (words.join(" ") + " " + transcript).trim();
+          });
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error("Speech recognition error:", event.error);
+          setIsRecording(false);
+          if (event.error === "not-allowed") {
+            toast({
+              title: "Microphone access denied",
+              description: "Please allow microphone access to use voice input",
+              variant: "destructive",
+            });
+          }
+        };
+
+        recognitionRef.current.onend = () => {
+          if (isRecording) {
+            // Restart if still supposed to be recording
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              setIsRecording(false);
+            }
+          }
+        };
+      }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    };
+  }, [isRecording]);
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      toast({
+        title: "Voice input not supported",
+        description: "Your browser doesn't support speech recognition",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } else {
+      setMessage("");
+      recognitionRef.current.start();
+      setIsRecording(true);
+    }
+  };
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -54,6 +136,16 @@ export const ChatInputEnhanced = ({ onSend, isLoading }: ChatInputEnhancedProps)
           variant: "destructive",
         });
         continue;
+      }
+
+      // Convert image to base64 for vision
+      let base64Data: string | undefined;
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        base64Data = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
       }
 
       const fileExt = file.name.split(".").pop();
@@ -82,6 +174,7 @@ export const ChatInputEnhanced = ({ onSend, isLoading }: ChatInputEnhancedProps)
         type: file.type,
         url: urlData.publicUrl,
         size: file.size,
+        base64: base64Data,
       });
 
       toast({
@@ -105,6 +198,12 @@ export const ChatInputEnhanced = ({ onSend, isLoading }: ChatInputEnhancedProps)
   const handleSubmit = () => {
     if ((!message.trim() && attachments.length === 0) || isLoading) return;
     
+    // Stop recording if active
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+    }
+    
     let fullMessage = message;
     
     // Prepend web search instruction if mode is enabled
@@ -112,13 +211,28 @@ export const ChatInputEnhanced = ({ onSend, isLoading }: ChatInputEnhancedProps)
       fullMessage = `[Web Search] Search the web for: ${message}`;
     }
     
+    // Handle image attachments for vision
     if (attachments.length > 0) {
-      const attachmentText = attachments
-        .map((a) => `[Attached: ${a.name}](${a.url})`)
-        .join("\n");
-      fullMessage = attachments.length > 0 && fullMessage 
-        ? `${fullMessage}\n\n${attachmentText}` 
-        : attachmentText;
+      const imageAttachments = attachments.filter(a => a.type.startsWith("image/") && a.base64);
+      const otherAttachments = attachments.filter(a => !a.type.startsWith("image/") || !a.base64);
+      
+      // For images with base64, send as vision request
+      if (imageAttachments.length > 0) {
+        const imageInfo = imageAttachments.map(a => `[Image: ${a.name}](${a.url})\n[ImageData:${a.base64}]`).join("\n");
+        fullMessage = fullMessage 
+          ? `${fullMessage}\n\n${imageInfo}` 
+          : `Analyze this image:\n${imageInfo}`;
+      }
+      
+      // For other files
+      if (otherAttachments.length > 0) {
+        const attachmentText = otherAttachments
+          .map((a) => `[Attached: ${a.name}](${a.url})`)
+          .join("\n");
+        fullMessage = fullMessage 
+          ? `${fullMessage}\n\n${attachmentText}` 
+          : attachmentText;
+      }
     }
     
     onSend(fullMessage);
@@ -147,11 +261,25 @@ export const ChatInputEnhanced = ({ onSend, isLoading }: ChatInputEnhancedProps)
         {/* Web Search Mode Indicator */}
         {webSearchMode && (
           <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/30 rounded-lg">
-            <Globe className="w-4 h-4 text-primary animate-pulse" />
-            <span className="text-sm text-primary font-medium">Web Search Mode Active</span>
+            <Search className="w-4 h-4 text-primary" />
+            <span className="text-sm text-primary font-medium">Web Search Mode</span>
             <button
               onClick={() => setWebSearchMode(false)}
               className="ml-auto text-primary hover:text-primary/80"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Recording Indicator */}
+        {isRecording && (
+          <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-sm text-red-500 font-medium">Listening...</span>
+            <button
+              onClick={toggleRecording}
+              className="ml-auto text-red-500 hover:text-red-400"
             >
               <X className="w-4 h-4" />
             </button>
@@ -164,25 +292,25 @@ export const ChatInputEnhanced = ({ onSend, isLoading }: ChatInputEnhancedProps)
             {attachments.map((file, index) => (
               <div
                 key={index}
-                className="group relative bg-secondary/50 rounded-xl p-2 pr-8 flex items-center gap-2 border border-border/50"
+                className="group relative bg-secondary rounded-lg p-2 pr-8 flex items-center gap-2 border border-border"
               >
                 {file.type.startsWith("image/") ? (
                   <img
                     src={file.url}
                     alt={file.name}
-                    className="w-10 h-10 rounded-lg object-cover"
+                    className="w-10 h-10 rounded object-cover"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <div className="w-10 h-10 rounded bg-muted flex items-center justify-center text-muted-foreground">
                     {getFileIcon(file.type)}
                   </div>
                 )}
-                <span className="text-sm text-foreground/80 max-w-[100px] truncate">
+                <span className="text-sm text-foreground max-w-[100px] truncate">
                   {file.name}
                 </span>
                 <button
                   onClick={() => removeAttachment(index)}
-                  className="absolute right-1 top-1 p-1 rounded-full bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-1 top-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -191,97 +319,124 @@ export const ChatInputEnhanced = ({ onSend, isLoading }: ChatInputEnhancedProps)
           </div>
         )}
 
-        {/* Input Container */}
-        <div className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-purple-500/30 to-pink-500/30 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
-          <div className="relative bg-card/90 backdrop-blur-xl rounded-2xl border border-border/50 shadow-2xl overflow-hidden">
-            <div className="flex items-end gap-2 p-3">
-              {/* File Upload */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,.pdf,.doc,.docx,.txt,.js,.ts,.py,.json,.csv,.md"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="h-10 w-10 rounded-xl hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors shrink-0"
-                  >
-                    {uploading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Paperclip className="w-5 h-5" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Attach files</TooltipContent>
-              </Tooltip>
+        {/* Input Container - Clean design */}
+        <div className="bg-secondary/50 rounded-xl border border-border overflow-hidden focus-within:border-primary/50 transition-colors">
+          <div className="flex items-end gap-1 p-2">
+            {/* File Upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.txt,.js,.ts,.py,.json,.csv,.md"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
+                >
+                  {uploading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Paperclip className="w-5 h-5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Attach files</TooltipContent>
+            </Tooltip>
 
-              {/* Web Search Button */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setWebSearchMode(!webSearchMode)}
-                    className={`h-10 w-10 rounded-xl transition-colors shrink-0 ${
-                      webSearchMode 
-                        ? "bg-primary/20 text-primary" 
-                        : "hover:bg-primary/10 text-muted-foreground hover:text-primary"
-                    }`}
-                  >
-                    <Search className="w-5 h-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {webSearchMode ? "Disable Web Search" : "Enable Web Search"}
-                </TooltipContent>
-              </Tooltip>
+            {/* Voice Input Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleRecording}
+                  className={`h-9 w-9 rounded-lg shrink-0 transition-colors ${
+                    isRecording 
+                      ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {isRecording ? (
+                    <MicOff className="w-5 h-5" />
+                  ) : (
+                    <Mic className="w-5 h-5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isRecording ? "Stop recording" : "Voice input"}
+              </TooltipContent>
+            </Tooltip>
 
-              {/* Text Input */}
-              <textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={webSearchMode ? "Search the web..." : "Ask QurobAi anything..."}
-                rows={1}
-                className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground resize-none focus:outline-none min-h-[40px] max-h-[200px] py-2 px-1"
-              />
+            {/* Web Search Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setWebSearchMode(!webSearchMode)}
+                  className={`h-9 w-9 rounded-lg shrink-0 transition-colors ${
+                    webSearchMode 
+                      ? "bg-primary/20 text-primary" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Search className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {webSearchMode ? "Disable Web Search" : "Enable Web Search"}
+              </TooltipContent>
+            </Tooltip>
 
-              {/* Send Button */}
-              <Button
-                onClick={handleSubmit}
-                disabled={(!message.trim() && attachments.length === 0) || isLoading}
-                className="h-10 w-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 shadow-lg shadow-primary/25"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </Button>
-            </div>
+            {/* Text Input */}
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                isRecording 
+                  ? "Speak now..." 
+                  : webSearchMode 
+                    ? "Search the web..." 
+                    : "Message QurobAi..."
+              }
+              rows={1}
+              className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground resize-none focus:outline-none min-h-[36px] max-h-[200px] py-2 px-2 text-sm"
+            />
 
-            {/* Bottom hint */}
-            <div className="px-4 pb-2 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                Press Enter to send, Shift+Enter for new line
-              </span>
-              <span className="text-xs text-muted-foreground">
-                Powered by QurobAi
-              </span>
-            </div>
+            {/* Send Button */}
+            <Button
+              onClick={handleSubmit}
+              disabled={(!message.trim() && attachments.length === 0) || isLoading}
+              size="icon"
+              className="h-9 w-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
           </div>
+        </div>
+
+        {/* Bottom hint */}
+        <div className="mt-2 flex items-center justify-center">
+          <span className="text-xs text-muted-foreground">
+            Enter to send · Shift+Enter for new line
+          </span>
         </div>
       </div>
     </TooltipProvider>
