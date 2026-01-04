@@ -1,5 +1,6 @@
-import { memo, useState, useEffect, useRef } from "react";
-import { Copy, Check, User, Bot } from "lucide-react";
+import { memo, useState } from "react";
+import { Bot, User, Copy, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 interface ChatMessageProps {
@@ -8,39 +9,31 @@ interface ChatMessageProps {
   isStreaming?: boolean;
 }
 
-// Code block component - clean professional style
 const CodeBlock = memo(({ code, language }: { code: string; language: string }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
+  const copyCode = async () => {
     await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="relative my-3 rounded-lg overflow-hidden bg-[#1e1e1e] border border-border/30">
-      <div className="flex items-center justify-between px-4 py-2 bg-[#161616] border-b border-border/20">
-        <span className="text-xs font-mono text-muted-foreground">{language || "code"}</span>
+    <div className="my-3 rounded-lg overflow-hidden border border-border bg-muted/50">
+      <div className="flex items-center justify-between px-3 py-2 bg-muted border-b border-border">
+        <span className="text-xs text-muted-foreground font-mono">{language || "code"}</span>
         <Button
           variant="ghost"
           size="sm"
-          onClick={handleCopy}
-          className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+          className="h-6 px-2 text-xs"
+          onClick={copyCode}
         >
-          {copied ? (
-            <>
-              <Check className="w-3 h-3 mr-1" /> Copied
-            </>
-          ) : (
-            <>
-              <Copy className="w-3 h-3 mr-1" /> Copy
-            </>
-          )}
+          {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+          {copied ? "Copied" : "Copy"}
         </Button>
       </div>
-      <pre className="p-4 overflow-x-auto">
-        <code className="text-sm font-mono text-[#d4d4d4] leading-relaxed">{code}</code>
+      <pre className="p-3 overflow-x-auto text-sm">
+        <code className="font-mono text-foreground">{code}</code>
       </pre>
     </div>
   );
@@ -48,153 +41,110 @@ const CodeBlock = memo(({ code, language }: { code: string; language: string }) 
 
 CodeBlock.displayName = "CodeBlock";
 
-// Parse and render content with code blocks
 const renderContent = (content: string) => {
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
   const parts: React.ReactNode[] = [];
-  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
   let lastIndex = 0;
   let match;
-  let key = 0;
 
   while ((match = codeBlockRegex.exec(content)) !== null) {
     if (match.index > lastIndex) {
-      const textBefore = content.slice(lastIndex, match.index);
-      parts.push(
-        <span key={key++} className="whitespace-pre-wrap">
-          {renderInlineFormatting(textBefore)}
-        </span>
-      );
+      const text = content.slice(lastIndex, match.index);
+      parts.push(<span key={`text-${lastIndex}`} dangerouslySetInnerHTML={{ __html: formatText(text) }} />);
     }
-
     parts.push(
-      <CodeBlock key={key++} language={match[1]} code={match[2].trim()} />
+      <CodeBlock key={`code-${match.index}`} language={match[1] || ""} code={match[2].trim()} />
     );
-
     lastIndex = match.index + match[0].length;
   }
 
   if (lastIndex < content.length) {
-    parts.push(
-      <span key={key++} className="whitespace-pre-wrap">
-        {renderInlineFormatting(content.slice(lastIndex))}
-      </span>
-    );
-  }
-
-  return parts.length > 0 ? parts : <span className="whitespace-pre-wrap">{content}</span>;
-};
-
-// Render inline formatting
-const renderInlineFormatting = (text: string) => {
-  // Handle generated images
-  if (text.includes("[GeneratedImage:")) {
-    const imageMatch = text.match(/\[GeneratedImage:(.*?)\]/);
+    const remaining = content.slice(lastIndex);
+    const imageMatch = remaining.match(/\[GeneratedImage:(.*?)\]/);
     if (imageMatch) {
-      const imageUrl = imageMatch[1];
-      const beforeImage = text.slice(0, text.indexOf("[GeneratedImage:"));
-      const afterImage = text.slice(text.indexOf("]", text.indexOf("[GeneratedImage:")) + 1);
+      const beforeImage = remaining.slice(0, imageMatch.index);
+      const afterImage = remaining.slice(imageMatch.index! + imageMatch[0].length);
       
-      return (
-        <>
-          {beforeImage && <span dangerouslySetInnerHTML={{ __html: formatText(beforeImage) }} />}
-          <div className="my-3">
-            <img 
-              src={imageUrl} 
-              alt="AI Generated Image" 
-              className="max-w-full rounded-lg border border-border"
-              loading="lazy"
-            />
-          </div>
-          {afterImage && <span dangerouslySetInnerHTML={{ __html: formatText(afterImage) }} />}
-        </>
+      parts.push(<span key={`text-before-img`} dangerouslySetInnerHTML={{ __html: formatText(beforeImage) }} />);
+      parts.push(
+        <img 
+          key="generated-image" 
+          src={imageMatch[1]} 
+          alt="AI Generated" 
+          className="my-3 rounded-lg max-w-full md:max-w-md border border-border"
+        />
       );
+      if (afterImage) {
+        parts.push(<span key={`text-after-img`} dangerouslySetInnerHTML={{ __html: formatText(afterImage) }} />);
+      }
+    } else {
+      parts.push(<span key={`text-${lastIndex}`} dangerouslySetInnerHTML={{ __html: formatText(remaining) }} />);
     }
   }
-  
-  return <span dangerouslySetInnerHTML={{ __html: formatText(text) }} />;
+
+  return parts;
 };
 
 const formatText = (text: string): string => {
-  let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>');
-  formatted = formatted.replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
-  formatted = formatted.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-muted text-sm font-mono text-foreground">$1</code>');
-  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>');
-  return formatted;
+  return text
+    .replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "")
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-muted rounded text-sm font-mono">$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-primary hover:underline">$1</a>')
+    .replace(/\n/g, '<br />');
 };
 
 export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProps) => {
   const [copied, setCopied] = useState(false);
-  const [displayedContent, setDisplayedContent] = useState(content);
-  const isUser = role === "user";
-  const prevContentRef = useRef(content);
 
-  useEffect(() => {
-    if (content !== prevContentRef.current) {
-      setDisplayedContent(content);
-      prevContentRef.current = content;
-    }
-  }, [content]);
-
-  const handleCopy = async () => {
+  const copyMessage = async () => {
     await navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Filter out image data from display
-  const cleanContent = displayedContent.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "");
+  const isUser = role === "user";
+  const cleanContent = content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "");
 
   return (
-    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
-      {/* Avatar */}
-      <div 
-        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-          isUser 
-            ? "bg-primary text-primary-foreground" 
-            : "bg-muted"
-        }`}
-      >
-        {isUser ? (
-          <User className="w-3.5 h-3.5" />
-        ) : (
-          <Bot className="w-3.5 h-3.5 text-foreground" />
-        )}
-      </div>
+    <div className={cn("group py-4 px-4", isUser ? "bg-transparent" : "bg-muted/30")}>
+      <div className="max-w-3xl mx-auto flex gap-4">
+        <div className={cn(
+          "shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
+          isUser ? "bg-primary/10" : "bg-primary"
+        )}>
+          {isUser ? (
+            <User className="w-4 h-4 text-primary" />
+          ) : (
+            <Bot className="w-4 h-4 text-primary-foreground" />
+          )}
+        </div>
 
-      {/* Message Content */}
-      <div className={`flex flex-col max-w-[85%] ${isUser ? "items-end" : "items-start"}`}>
-        <div
-          className={`group relative rounded-2xl px-4 py-2.5 ${
-            isUser
-              ? "bg-primary text-primary-foreground"
-              : "bg-card border border-border"
-          }`}
-        >
-          <div className={`text-sm leading-relaxed ${isUser ? "" : "text-foreground"}`}>
-            {isUser ? cleanContent : renderContent(cleanContent)}
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium text-muted-foreground mb-1">
+            {isUser ? "You" : "QurobAi"}
+          </div>
+          
+          <div className="prose prose-sm prose-invert max-w-none text-foreground leading-relaxed">
+            {renderContent(cleanContent)}
             {isStreaming && (
-              <span className="inline-block w-0.5 h-4 ml-0.5 bg-current animate-pulse" />
+              <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-0.5" />
             )}
           </div>
 
-          {/* Copy button for assistant messages */}
           {!isUser && !isStreaming && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopy}
-              className="absolute -bottom-7 left-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3 h-3 mr-1" /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3 mr-1" /> Copy
-                </>
-              )}
-            </Button>
+            <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={copyMessage}
+              >
+                {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -204,24 +154,19 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
 
 ChatMessage.displayName = "ChatMessage";
 
-// Enhanced Thinking Indicator
-export const TypingIndicator = memo(() => {
-  return (
-    <div className="flex gap-3">
-      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-        <Bot className="w-3.5 h-3.5 text-foreground" />
+export const TypingIndicator = memo(() => (
+  <div className="py-4 px-4 bg-muted/30">
+    <div className="max-w-3xl mx-auto flex gap-4">
+      <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
+        <Bot className="w-4 h-4 text-primary-foreground" />
       </div>
-      <div className="bg-card border border-border rounded-2xl px-4 py-3">
-        <div className="flex items-center gap-1.5">
-          <div className="flex gap-1">
-            <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-          </div>
-        </div>
+      <div className="flex items-center gap-1 pt-2">
+        <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
+        <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
+        <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
       </div>
     </div>
-  );
-});
+  </div>
+));
 
 TypingIndicator.displayName = "TypingIndicator";

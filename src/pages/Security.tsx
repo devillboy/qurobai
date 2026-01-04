@@ -71,7 +71,7 @@ const Security = () => {
                 "Secure password hashing using bcrypt",
               ].map((item, index) => (
                 <li key={index} className="flex items-center gap-3 text-muted-foreground">
-                  <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0" />
                   {item}
                 </li>
               ))}
@@ -96,7 +96,7 @@ const Security = () => {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">AI Security</h2>
             <p className="text-muted-foreground leading-relaxed">
-              We use reputable AI providers (Groq, Fireworks AI, DeepInfra) that follow industry-standard security practices. Your prompts are processed securely and not used to train AI models without consent.
+              Your conversations are processed securely using enterprise-grade AI infrastructure. Your prompts are processed securely and not used to train AI models without consent. All AI processing follows industry-standard security practices.
             </p>
           </section>
 

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, Upload, Check, Sparkles, Code, Zap, Brain } from "lucide-react";
+import { ArrowLeft, Upload, Check, Sparkles, Code, Zap, Brain, Smartphone, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function Subscribe() {
@@ -20,6 +20,7 @@ export default function Subscribe() {
   const [discount, setDiscount] = useState(0);
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [upiId] = useState("7864084241@ybl");
 
   useEffect(() => {
     if (!user) {
@@ -84,6 +85,18 @@ export default function Subscribe() {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
     }
+  };
+
+  const copyUpiId = () => {
+    navigator.clipboard.writeText(upiId);
+    toast.success("UPI ID copied!");
+  };
+
+  const openUpiApp = () => {
+    if (!selectedPlan) return;
+    const finalPrice = Math.round(selectedPlan.price_inr * (1 - discount / 100));
+    const upiLink = `upi://pay?pa=${upiId}&pn=QurobAi&am=${finalPrice}&cu=INR&tn=QurobAi%20${selectedPlan.name}%20Subscription`;
+    window.location.href = upiLink;
   };
 
   const handleSubmit = async () => {
@@ -156,52 +169,44 @@ export default function Subscribe() {
   const finalPrice = selectedPlan ? selectedPlan.price_inr * (1 - discount / 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-background/90 p-4 md:p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="max-w-5xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate("/")} className="mb-6 md:mb-8">
+        <Button variant="ghost" onClick={() => navigate("/")} className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Chat
+          Back
         </Button>
 
-        <div className="text-center mb-6 md:mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <Sparkles className="w-6 md:w-8 h-6 md:h-8 text-primary animate-pulse" />
-            <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Upgrade Your AI
-            </h1>
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 mb-3">
+            <Sparkles className="w-6 h-6 text-primary" />
+            <h1 className="text-2xl md:text-3xl font-bold">Upgrade Your AI</h1>
           </div>
-          <p className="text-muted-foreground text-sm md:text-lg">
-            Choose the plan that fits your needs
-          </p>
+          <p className="text-muted-foreground text-sm">Choose the plan that fits your needs</p>
         </div>
 
-        {/* Plan Cards - 3 Column Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+        {/* Plan Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Free Plan */}
-          <Card className="border-2">
-            <CardHeader className="pb-4">
+          <Card className="border border-border">
+            <CardHeader className="pb-3">
               <Badge className="w-fit mb-2" variant="secondary">Current Plan</Badge>
               <div className="flex items-center gap-2">
                 <Zap className="w-5 h-5 text-muted-foreground" />
-                <CardTitle className="text-xl">Qurob 2</CardTitle>
+                <CardTitle className="text-lg">Qurob 2</CardTitle>
               </div>
-              <CardDescription className="text-2xl font-bold text-foreground">
+              <CardDescription className="text-xl font-bold text-foreground">
                 ₹0<span className="text-sm font-normal text-muted-foreground"> / forever</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm">
+              <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
                   Basic AI responses
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
-                  Real-time data access
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary shrink-0" />
-                  Weather, crypto, news
+                  Real-time data
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
@@ -213,23 +218,23 @@ export default function Subscribe() {
 
           {/* Premium Plan */}
           <Card 
-            className={`border-2 relative overflow-hidden cursor-pointer transition-all ${
+            className={`border-2 relative cursor-pointer transition-all ${
               selectedPlan?.name === "Premium" 
-                ? "border-primary ring-2 ring-primary/20" 
-                : "hover:border-primary/50"
+                ? "border-primary" 
+                : "border-border hover:border-primary/50"
             }`}
             onClick={() => premiumPlan && setSelectedPlan(premiumPlan)}
           >
-            <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-bold">
+            <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-2 py-0.5 text-xs font-medium rounded-bl">
               POPULAR
             </div>
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Brain className="w-5 h-5 text-primary" />
-                <CardTitle className="text-xl">Qurob 4</CardTitle>
+                <CardTitle className="text-lg">Qurob 4</CardTitle>
               </div>
               <CardDescription>
-                <span className="text-2xl font-bold text-foreground">
+                <span className="text-xl font-bold text-foreground">
                   ₹{premiumPlan ? Math.round(premiumPlan.price_inr * (1 - (selectedPlan?.name === "Premium" ? discount : 0) / 100)) : 289}
                 </span>
                 {selectedPlan?.name === "Premium" && discount > 0 && (
@@ -244,49 +249,43 @@ export default function Subscribe() {
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
-                  <strong>Advanced 70B AI model</strong>
+                  <strong>Advanced 70B model</strong>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
                   <strong>Superior reasoning</strong>
                 </li>
-                <li className="flex items-center gap-2">
+                <li className="flex items-center gap-2 text-muted-foreground">
                   <Check className="w-4 h-4 text-primary shrink-0" />
-                  Deep analysis & research
+                  Deep analysis
                 </li>
-                <li className="flex items-center gap-2">
+                <li className="flex items-center gap-2 text-muted-foreground">
                   <Check className="w-4 h-4 text-primary shrink-0" />
                   Priority support
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary shrink-0" />
-                  Enhanced code help
                 </li>
               </ul>
             </CardContent>
           </Card>
 
-          {/* Q-06 Code Specialist Plan */}
+          {/* Q-06 Plan */}
           <Card 
-            className={`border-2 relative overflow-hidden cursor-pointer transition-all ${
+            className={`border-2 relative cursor-pointer transition-all ${
               selectedPlan?.name === "Code Specialist" 
-                ? "border-purple-500 ring-2 ring-purple-500/20" 
-                : "hover:border-purple-500/50"
+                ? "border-primary" 
+                : "border-border hover:border-primary/50"
             }`}
             onClick={() => codePlan && setSelectedPlan(codePlan)}
           >
-            <div className="absolute top-0 right-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1 text-xs font-bold">
+            <div className="absolute top-0 right-0 bg-foreground text-background px-2 py-0.5 text-xs font-medium rounded-bl">
               CODE EXPERT
             </div>
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Code className="w-5 h-5 text-purple-500" />
-                <CardTitle className="text-xl bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-                  Q-06
-                </CardTitle>
+                <Code className="w-5 h-5 text-primary" />
+                <CardTitle className="text-lg">Q-06</CardTitle>
               </div>
               <CardDescription>
-                <span className="text-2xl font-bold text-foreground">
+                <span className="text-xl font-bold text-foreground">
                   ₹{codePlan ? Math.round(codePlan.price_inr * (1 - (selectedPlan?.name === "Code Specialist" ? discount : 0) / 100)) : 320}
                 </span>
                 {selectedPlan?.name === "Code Specialist" && discount > 0 && (
@@ -300,24 +299,20 @@ export default function Subscribe() {
             <CardContent>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-purple-500 shrink-0" />
+                  <Check className="w-4 h-4 text-primary shrink-0" />
                   <strong>Expert-level coding</strong>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-purple-500 shrink-0" />
+                  <Check className="w-4 h-4 text-primary shrink-0" />
                   <strong>100+ languages</strong>
                 </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-purple-500 shrink-0" />
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <Check className="w-4 h-4 text-primary shrink-0" />
                   Clean modular code
                 </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-purple-500 shrink-0" />
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <Check className="w-4 h-4 text-primary shrink-0" />
                   Architecture design
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-purple-500 shrink-0" />
-                  Debug & optimization
                 </li>
               </ul>
             </CardContent>
@@ -325,86 +320,96 @@ export default function Subscribe() {
         </div>
 
         {/* Purchase Form */}
-        {selectedPlan && (
+        {selectedPlan && selectedPlan.price_inr > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {selectedPlan.name === "Code Specialist" ? (
-                  <Code className="w-5 h-5 text-purple-500" />
-                ) : (
-                  <Brain className="w-5 h-5 text-primary" />
-                )}
+              <CardTitle className="text-lg flex items-center gap-2">
                 Complete Your Purchase - {selectedPlan.name === "Code Specialist" ? "Q-06" : selectedPlan.name}
               </CardTitle>
               <CardDescription>
                 Pay via UPI and upload screenshot for verification
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 md:space-y-6">
+            <CardContent className="space-y-4">
+              {/* Coupon */}
               <div>
-                <Label>Coupon Code (Optional)</Label>
-                <div className="flex gap-2 mt-2">
+                <Label className="text-sm">Coupon Code (Optional)</Label>
+                <div className="flex gap-2 mt-1">
                   <Input
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    placeholder="Enter coupon code"
+                    placeholder="Enter coupon"
                     className="flex-1"
                   />
-                  <Button onClick={validateCoupon} variant="outline">
+                  <Button onClick={validateCoupon} variant="outline" size="sm">
                     Apply
                   </Button>
                 </div>
               </div>
 
-              <div className={`p-4 rounded-lg space-y-2 ${
-                selectedPlan.name === "Code Specialist" 
-                  ? "bg-purple-500/10 border border-purple-500/20" 
-                  : "bg-primary/10"
-              }`}>
-                <Label className="text-lg font-semibold">Payment Instructions</Label>
-                <ol className="list-decimal list-inside space-y-2 text-sm">
-                  <li>Pay <strong>₹{Math.round(finalPrice)}</strong> to UPI ID: <strong className="font-mono">7864084241@ybl</strong></li>
-                  <li>Take a screenshot of the payment confirmation</li>
-                  <li>Upload the screenshot below</li>
-                  <li>Wait for admin approval (usually within 24 hours)</li>
+              {/* UPI Payment */}
+              <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
+                <Label className="font-medium">Payment Instructions</Label>
+                
+                <div className="flex items-center gap-2 p-3 bg-background rounded border">
+                  <span className="text-sm">UPI ID:</span>
+                  <code className="font-mono text-primary flex-1">{upiId}</code>
+                  <Button variant="ghost" size="sm" onClick={copyUpiId}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary mb-2">₹{Math.round(finalPrice)}</div>
+                  {discount > 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      <span className="line-through">₹{selectedPlan.price_inr}</span> • {discount}% off
+                    </div>
+                  )}
+                </div>
+
+                <Button onClick={openUpiApp} variant="outline" className="w-full">
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Open UPI App
+                </Button>
+
+                <ol className="text-xs text-muted-foreground space-y-1">
+                  <li>1. Pay ₹{Math.round(finalPrice)} to UPI ID above</li>
+                  <li>2. Take a screenshot of payment confirmation</li>
+                  <li>3. Upload the screenshot below</li>
+                  <li>4. Admin will verify within 24 hours</li>
                 </ol>
               </div>
 
+              {/* Screenshot Upload */}
               <div>
-                <Label>Upload Payment Screenshot</Label>
-                <div className="mt-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
+                <Label className="text-sm">Upload Payment Screenshot</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="mt-1 cursor-pointer"
+                />
+                {previewUrl && (
+                  <img
+                    src={previewUrl}
+                    alt="Payment screenshot"
+                    className="mt-3 rounded-lg border max-h-48 object-contain"
                   />
-                  {previewUrl && (
-                    <img
-                      src={previewUrl}
-                      alt="Payment screenshot"
-                      className="mt-4 rounded-lg border max-w-full md:max-w-md"
-                    />
-                  )}
-                </div>
+                )}
               </div>
 
               <Button
                 onClick={handleSubmit}
                 disabled={loading || !screenshot}
-                className={`w-full ${
-                  selectedPlan.name === "Code Specialist"
-                    ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    : ""
-                }`}
-                size="lg"
+                className="w-full"
               >
                 {loading ? (
                   "Submitting..."
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    Submit Payment for {selectedPlan.name === "Code Specialist" ? "Q-06" : selectedPlan.name}
+                    Submit Payment
                   </>
                 )}
               </Button>
