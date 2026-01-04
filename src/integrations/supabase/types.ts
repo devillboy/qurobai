@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      announcements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          message: string
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -71,6 +128,33 @@ export type Database = {
           is_active?: boolean
           max_uses?: number | null
           valid_until?: string | null
+        }
+        Relationships: []
+      }
+      maintenance_mode: {
+        Row: {
+          created_at: string
+          enabled_at: string | null
+          enabled_by: string | null
+          id: string
+          is_enabled: boolean
+          message: string | null
+        }
+        Insert: {
+          created_at?: string
+          enabled_at?: string | null
+          enabled_by?: string | null
+          id?: string
+          is_enabled?: boolean
+          message?: string | null
+        }
+        Update: {
+          created_at?: string
+          enabled_at?: string | null
+          enabled_by?: string | null
+          id?: string
+          is_enabled?: boolean
+          message?: string | null
         }
         Relationships: []
       }
@@ -246,6 +330,7 @@ export type Database = {
           id: string
           openai_api_key: string | null
           preferred_model: string | null
+          theme_preference: string | null
           updated_at: string
           user_id: string
         }
@@ -257,6 +342,7 @@ export type Database = {
           id?: string
           openai_api_key?: string | null
           preferred_model?: string | null
+          theme_preference?: string | null
           updated_at?: string
           user_id: string
         }
@@ -268,6 +354,7 @@ export type Database = {
           id?: string
           openai_api_key?: string | null
           preferred_model?: string | null
+          theme_preference?: string | null
           updated_at?: string
           user_id?: string
         }

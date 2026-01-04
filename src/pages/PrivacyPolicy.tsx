@@ -72,9 +72,9 @@ const PrivacyPolicy = () => {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold">Third-Party Services</h2>
+            <h2 className="text-xl font-semibold">Data Processing</h2>
             <p className="text-muted-foreground leading-relaxed">
-              We use third-party AI providers (Groq, Fireworks AI, DeepInfra) to power our AI capabilities. Your conversations may be processed by these services according to their respective privacy policies. We do not sell your personal data to third parties.
+              We use enterprise-grade AI infrastructure to power our AI capabilities. Your conversations are processed securely according to industry-standard privacy practices. We do not sell your personal data to third parties.
             </p>
           </section>
 
