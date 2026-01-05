@@ -8,7 +8,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { 
   Sparkles, 
   Mail, 
@@ -19,10 +18,12 @@ import {
   ChevronRight,
   Crown,
   LogOut,
-  Sliders
+  Sliders,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PersonalizationDialog } from "./PersonalizationDialog";
+import { toast } from "sonner";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -108,9 +109,50 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     navigate("/auth");
   };
 
-  const menuItemVariants = {
-    hover: { scale: 1.02, x: 4 },
-    tap: { scale: 0.98 }
+  const handleExportConversations = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: conversations } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      
+      if (!conversations?.length) {
+        toast.error("No conversations to export");
+        return;
+      }
+
+      const allData: any[] = [];
+      
+      for (const conv of conversations) {
+        const { data: messages } = await supabase
+          .from("messages")
+          .select("role, content, created_at")
+          .eq("conversation_id", conv.id)
+          .order("created_at", { ascending: true });
+        
+        allData.push({
+          title: conv.title,
+          created_at: conv.created_at,
+          messages: messages || [],
+        });
+      }
+
+      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `qurobai-conversations-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success("Conversations exported!");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export conversations");
+    }
   };
 
   const MenuItem = ({ 
@@ -126,48 +168,41 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     onClick: () => void;
     highlight?: boolean;
   }) => (
-    <motion.button
-      variants={menuItemVariants}
-      whileHover="hover"
-      whileTap="tap"
+    <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
         highlight 
-          ? "bg-primary/10 border border-primary/20 hover:bg-primary/15" 
-          : "bg-secondary/50 hover:bg-secondary/80"
+          ? "bg-foreground/5 border border-foreground/10 hover:bg-foreground/10" 
+          : "bg-secondary hover:bg-secondary/80"
       }`}
     >
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-        highlight ? "bg-primary/20" : "bg-secondary"
+        highlight ? "bg-foreground/10" : "bg-muted"
       }`}>
-        <Icon className={`w-5 h-5 ${highlight ? "text-primary" : "text-muted-foreground"}`} />
+        <Icon className={`w-5 h-5 ${highlight ? "text-foreground" : "text-muted-foreground"}`} />
       </div>
       <div className="flex-1 text-left">
-        <div className={`text-sm font-medium ${highlight ? "text-primary" : ""}`}>{label}</div>
+        <div className={`text-sm font-medium ${highlight ? "text-foreground" : ""}`}>{label}</div>
         {description && (
           <div className="text-xs text-muted-foreground">{description}</div>
         )}
       </div>
       <ChevronRight className="w-4 h-4 text-muted-foreground" />
-    </motion.button>
+    </button>
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-xl border-border/50 p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md bg-card border-border p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-center text-xl">Settings</DialogTitle>
         </DialogHeader>
 
         <div className="p-6 space-y-6">
           {/* User Profile Card */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-xl bg-secondary/50 border border-border/30"
-          >
+          <div className="p-4 rounded-xl bg-secondary border border-border">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-primary/25">
+              <div className="w-14 h-14 rounded-xl bg-foreground flex items-center justify-center text-background text-xl font-bold">
                 {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
               </div>
               <div className="flex-1">
@@ -181,26 +216,21 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
               </div>
             </div>
             {profile?.created_at && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3 pt-3 border-t border-border/30">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
                 <Calendar className="w-3 h-3" />
                 Member since {formatDate(profile.created_at)}
               </div>
             )}
-          </motion.div>
+          </div>
 
           {/* Subscription Status */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className={`p-4 rounded-xl border ${
-              subscription 
-                ? "bg-primary/5 border-primary/20" 
-                : "bg-secondary/30 border-border/30"
-            }`}
-          >
+          <div className={`p-4 rounded-xl border ${
+            subscription 
+              ? "bg-foreground/5 border-foreground/10" 
+              : "bg-secondary border-border"
+          }`}>
             <div className="flex items-center gap-3">
-              <Crown className={`w-5 h-5 ${subscription ? "text-primary" : "text-muted-foreground"}`} />
+              <Crown className={`w-5 h-5 ${subscription ? "text-foreground" : "text-muted-foreground"}`} />
               <div className="flex-1">
                 <div className="text-sm font-medium">
                   {subscription ? subscription.subscription_plans?.name : "Free Plan"}
@@ -222,15 +252,10 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                 </Button>
               )}
             </div>
-          </motion.div>
+          </div>
 
           {/* Menu Items */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-2"
-          >
+          <div className="space-y-2">
             <MenuItem 
               icon={Sliders} 
               label="Personalization" 
@@ -253,48 +278,44 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
               onClick={() => handleNavigate("/subscription-history")}
             />
 
+            <MenuItem 
+              icon={Download} 
+              label="Export Conversations" 
+              description="Download all your chat history"
+              onClick={handleExportConversations}
+            />
+
             {isAdmin && (
               <MenuItem 
                 icon={Shield} 
                 label="Admin Panel" 
-                description="Manage payments & coupons"
+                description="Manage payments & users"
                 onClick={() => handleNavigate("/admin")}
               />
             )}
-          </motion.div>
+          </div>
 
           {/* About QurobAi */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="p-4 rounded-xl bg-primary/5 border border-primary/20"
-          >
+          <div className="p-4 rounded-xl bg-secondary border border-border">
             <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Sparkles className="w-4 h-4" />
               About QurobAi
             </h4>
             <p className="text-xs text-muted-foreground">
-              QurobAi is your friendly AI companion, created by Soham from India 🇮🇳. 
+              QurobAi is your AI companion, created by Soham from India 🇮🇳. 
               Designed to help you with coding, writing, brainstorming, and more!
             </p>
-          </motion.div>
+          </div>
 
           {/* Sign Out */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={handleSignOut}
           >
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleSignOut}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </motion.div>
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
         </div>
 
         {/* Personalization Dialog */}

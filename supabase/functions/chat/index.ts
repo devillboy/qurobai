@@ -113,10 +113,26 @@ A: Expert-level coding in any language with clean, modular output.
 function detectQueryType(message: string): { type: string; query?: string } | null {
   const lower = message.toLowerCase();
   
-  // Image generation patterns
-  if (/generate\s+(?:an?\s+)?image|create\s+(?:an?\s+)?(?:image|picture|art)|draw\s+(?:an?\s+)?|make\s+(?:an?\s+)?(?:image|picture)|imagine\s+/i.test(lower)) {
-    const promptMatch = message.match(/(?:generate\s+(?:an?\s+)?image\s+(?:of\s+)?|create\s+(?:an?\s+)?(?:image|picture|art)\s+(?:of\s+)?|draw\s+(?:an?\s+)?|make\s+(?:an?\s+)?(?:image|picture)\s+(?:of\s+)?|imagine\s+)(.+)/i);
-    return { type: "image_generation", query: promptMatch?.[1]?.trim() || message };
+  // Image generation patterns - expanded to catch more variations
+  const imagePatterns = [
+    /generate\s+(?:an?\s+)?image/i,
+    /create\s+(?:an?\s+)?(?:image|picture|art|illustration)/i,
+    /draw\s+(?:an?\s+)?(?:me\s+)?/i,
+    /make\s+(?:an?\s+)?(?:image|picture|art)/i,
+    /imagine\s+/i,
+    /image\s+(?:of|about|for)\s+/i,
+    /picture\s+(?:of|about|for)\s+/i,
+    /banao\s+(?:ek\s+)?(?:image|tasveer|photo)/i,
+    /(?:image|tasveer|photo)\s+banao/i,
+    /(?:ek\s+)?(?:image|photo|pic)\s+(?:bana|banao|create|generate)/i,
+  ];
+  
+  if (imagePatterns.some(p => p.test(lower))) {
+    // Extract the prompt - remove the command words
+    let prompt = message
+      .replace(/(?:please\s+)?(?:generate|create|draw|make|imagine|banao)\s+(?:an?\s+)?(?:me\s+)?(?:ek\s+)?(?:image|picture|art|illustration|tasveer|photo|pic)?\s*(?:of|about|for|ka|ki)?\s*/gi, "")
+      .trim();
+    return { type: "image_generation", query: prompt || message };
   }
   
   // Web search patterns
@@ -575,8 +591,10 @@ serve(async (req) => {
         
         // Handle image generation request
         if (queryType.type === "image_generation" && FIREWORKS_API_KEY) {
+          console.log("=== IMAGE GENERATION REQUEST ===");
+          console.log("Prompt:", queryType.query);
+          
           try {
-            console.log("Generating image with prompt:", queryType.query);
             const imageGenResponse = await fetch(
               "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image",
               {
@@ -595,8 +613,12 @@ serve(async (req) => {
               }
             );
 
+            console.log("Image gen response status:", imageGenResponse.status);
+
             if (imageGenResponse.ok) {
               const imageBlob = await imageGenResponse.blob();
+              console.log("Image blob size:", imageBlob.size);
+              
               const imageBuffer = await imageBlob.arrayBuffer();
               const base64Image = btoa(
                 new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
@@ -609,21 +631,24 @@ serve(async (req) => {
                   const fileName = `${userId}/${Date.now()}-generated.png`;
                   const { data: uploadData, error: uploadError } = await supabase.storage
                     .from("chat-attachments")
-                    .upload(fileName, imageBlob, { contentType: "image/png", upsert: false });
+                    .upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
 
                   if (!uploadError && uploadData) {
                     const { data: urlData } = supabase.storage
                       .from("chat-attachments")
                       .getPublicUrl(uploadData.path);
                     imageUrlResult = urlData.publicUrl;
+                    console.log("Image uploaded to:", imageUrlResult);
+                  } else {
+                    console.log("Storage upload error:", uploadError);
                   }
                 } catch (e) {
-                  console.log("Storage upload error:", e);
+                  console.log("Storage upload exception:", e);
                 }
               }
               
               // Return generated image response
-              const responseText = `I've generated an image based on your prompt: "${queryType.query}"\n\n[GeneratedImage:${imageUrlResult}]`;
+              const responseText = `Here's the image I generated for "${queryType.query}":\n\n[GeneratedImage:${imageUrlResult}]\n\nI hope you like it! Let me know if you'd like any changes.`;
               
               // Create SSE response
               const encoder = new TextEncoder();
@@ -641,9 +666,36 @@ serve(async (req) => {
               return new Response(stream, {
                 headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
               });
+            } else {
+              const errorText = await imageGenResponse.text();
+              console.error("Image generation API error:", imageGenResponse.status, errorText);
+              
+              // Return error message instead of falling through
+              const errorResponse = `I tried to generate an image but encountered an error. Please try again with a different prompt, or try later.`;
+              const encoder = new TextEncoder();
+              const stream = new ReadableStream({
+                start(controller) {
+                  const data = JSON.stringify({ choices: [{ delta: { content: errorResponse } }] });
+                  controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                  controller.close();
+                }
+              });
+              return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
             }
           } catch (e) {
-            console.error("Image generation error:", e);
+            console.error("Image generation exception:", e);
+            const errorResponse = `Sorry, I couldn't generate the image right now. Error: ${e instanceof Error ? e.message : "Unknown error"}`;
+            const encoder = new TextEncoder();
+            const stream = new ReadableStream({
+              start(controller) {
+                const data = JSON.stringify({ choices: [{ delta: { content: errorResponse } }] });
+                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                controller.close();
+              }
+            });
+            return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         }
         

@@ -202,7 +202,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
                     className="h-16 w-16 object-cover rounded-lg border border-border"
                   />
                 ) : (
-                  <div className="h-16 px-3 flex items-center bg-muted rounded-lg border border-border">
+                  <div className="h-16 px-3 flex items-center bg-secondary rounded-lg border border-border">
                     <span className="text-xs truncate max-w-[100px]">{file.name}</span>
                   </div>
                 )}
@@ -218,13 +218,13 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
         )}
 
         {isRecording && (
-          <div className="flex items-center gap-2 mb-3 text-sm text-primary">
-            <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+          <div className="flex items-center gap-2 mb-3 text-sm text-foreground">
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             Listening...
           </div>
         )}
 
-        <div className="relative flex items-end gap-2 bg-muted/50 rounded-xl border border-border p-2">
+        <div className="relative flex items-end gap-2 bg-secondary rounded-xl border border-border p-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -260,7 +260,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
             size="icon"
             className={cn(
               "shrink-0 h-9 w-9",
-              isRecording ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
+              isRecording ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-foreground"
             )}
             onClick={toggleRecording}
             disabled={isLoading}
