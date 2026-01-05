@@ -210,7 +210,9 @@ export const useChat = (conversationId: string | null) => {
     let assistantContent = "";
     let hasAddedAssistantMessage = false;
 
-    const messageHistory = [...messages, userMessage].map((m) => ({
+    // Send more message history for better context (up to 20 messages)
+    const recentMessages = [...messages, userMessage].slice(-20);
+    const messageHistory = recentMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));

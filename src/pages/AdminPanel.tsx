@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Settings, Activity, MessageSquare, Shield, AlertTriangle, Eye, Ban, Gift, Download, RefreshCw, Search } from "lucide-react";
+import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface UserData {
   id: string;
@@ -60,11 +61,18 @@ export default function AdminPanel() {
   // Maintenance state
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [maintenanceId, setMaintenanceId] = useState<string | null>(null);
   
   // Gift subscription state
-  const [giftEmail, setGiftEmail] = useState("");
+  const [giftUserId, setGiftUserId] = useState("");
   const [giftPlan, setGiftPlan] = useState("");
+  const [giftDays, setGiftDays] = useState("30");
   const [plans, setPlans] = useState<any[]>([]);
+
+  // Email state
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Stats
   const [stats, setStats] = useState({
@@ -176,7 +184,6 @@ export default function AdminPanel() {
 
     if (error || !profiles) return;
 
-    // Get subscriptions for each user
     const { data: subscriptions } = await supabase
       .from("user_subscriptions")
       .select("*, subscription_plans(name)")
@@ -218,6 +225,7 @@ export default function AdminPanel() {
     if (data) {
       setMaintenanceMode(data.is_enabled);
       setMaintenanceMessage(data.message || "");
+      setMaintenanceId(data.id);
     }
   };
 
@@ -371,7 +379,13 @@ export default function AdminPanel() {
   };
 
   const handleToggleMaintenance = async () => {
+    if (!maintenanceId) {
+      toast.error("Maintenance mode not configured");
+      return;
+    }
+
     const newStatus = !maintenanceMode;
+    
     const { error } = await supabase
       .from("maintenance_mode")
       .update({
@@ -380,7 +394,7 @@ export default function AdminPanel() {
         enabled_by: newStatus ? user?.id : null,
         enabled_at: newStatus ? new Date().toISOString() : null,
       })
-      .eq("id", (await supabase.from("maintenance_mode").select("id").limit(1).single()).data?.id);
+      .eq("id", maintenanceId);
 
     if (error) {
       toast.error("Failed to update maintenance mode");
@@ -392,14 +406,67 @@ export default function AdminPanel() {
   };
 
   const handleGiftSubscription = async () => {
-    if (!giftEmail || !giftPlan) {
-      toast.error("Email and plan are required");
+    if (!giftUserId || !giftPlan) {
+      toast.error("User ID and plan are required");
       return;
     }
 
-    // Find user by email - we'll need to search in auth.users
-    // For now, show a message that this requires email to be same as user_id lookup
-    toast.error("Gift subscription feature requires email lookup - coming soon!");
+    const selectedPlan = plans.find(p => p.id === giftPlan);
+    if (!selectedPlan) {
+      toast.error("Invalid plan selected");
+      return;
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + parseInt(giftDays));
+
+    const { error } = await supabase.from("user_subscriptions").insert({
+      user_id: giftUserId,
+      plan_id: giftPlan,
+      status: "active",
+      expires_at: expiresAt.toISOString(),
+    });
+
+    if (error) {
+      toast.error("Failed to gift subscription: " + error.message);
+      return;
+    }
+
+    toast.success(`Gifted ${selectedPlan.name} for ${giftDays} days!`);
+    setGiftUserId("");
+    setGiftPlan("");
+    setGiftDays("30");
+    loadData();
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailSubject || !emailMessage) {
+      toast.error("Subject and message are required");
+      return;
+    }
+
+    setSendingEmail(true);
+    
+    try {
+      const { error } = await supabase.functions.invoke("send-email", {
+        body: {
+          type: "announcement",
+          subject: emailSubject,
+          message: emailMessage,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Email sent to all users!");
+      setEmailSubject("");
+      setEmailMessage("");
+    } catch (error) {
+      console.error("Email error:", error);
+      toast.error("Failed to send email");
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const filteredUsers = users.filter(u => 
@@ -411,7 +478,7 @@ export default function AdminPanel() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
       </div>
     );
   }
@@ -420,7 +487,7 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card/50">
+      <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
@@ -455,68 +522,50 @@ export default function AdminPanel() {
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-              <AlertTriangle className="w-3 h-3" />
+              <Activity className="w-3 h-3" />
               Pending
             </div>
-            <div className="text-2xl font-bold text-warning">{stats.pendingPayments}</div>
+            <div className="text-2xl font-bold text-yellow-500">{stats.pendingPayments}</div>
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <Activity className="w-3 h-3" />
               Today
             </div>
-            <div className="text-2xl font-bold text-primary">₹{stats.todayRevenue}</div>
+            <div className="text-2xl font-bold">₹{stats.todayRevenue}</div>
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <Activity className="w-3 h-3" />
               This Month
             </div>
-            <div className="text-2xl font-bold text-primary">₹{stats.monthlyRevenue}</div>
+            <div className="text-2xl font-bold">₹{stats.monthlyRevenue}</div>
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <CreditCard className="w-3 h-3" />
               Total Revenue
             </div>
-            <div className="text-2xl font-bold text-success">₹{stats.totalRevenue}</div>
+            <div className="text-2xl font-bold text-green-500">₹{stats.totalRevenue}</div>
           </Card>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <ScrollArea className="w-full">
             <TabsList className="inline-flex w-auto">
-              <TabsTrigger value="dashboard" className="gap-2">
-                <Activity className="w-4 h-4" />
-                Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="payments" className="gap-2">
-                <CreditCard className="w-4 h-4" />
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="payments">
                 Payments
                 {stats.pendingPayments > 0 && (
                   <Badge variant="destructive" className="ml-1 h-5 px-1.5">{stats.pendingPayments}</Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="users" className="gap-2">
-                <Users className="w-4 h-4" />
-                Users
-              </TabsTrigger>
-              <TabsTrigger value="coupons" className="gap-2">
-                <CreditCard className="w-4 h-4" />
-                Coupons
-              </TabsTrigger>
-              <TabsTrigger value="announcements" className="gap-2">
-                <Bell className="w-4 h-4" />
-                Announcements
-              </TabsTrigger>
-              <TabsTrigger value="maintenance" className="gap-2">
-                <Shield className="w-4 h-4" />
-                Maintenance
-              </TabsTrigger>
-              <TabsTrigger value="gift" className="gap-2">
-                <Gift className="w-4 h-4" />
-                Gift Sub
-              </TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="coupons">Coupons</TabsTrigger>
+              <TabsTrigger value="announcements">Announcements</TabsTrigger>
+              <TabsTrigger value="email">Email</TabsTrigger>
+              <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+              <TabsTrigger value="gift">Gift Sub</TabsTrigger>
             </TabsList>
           </ScrollArea>
 
@@ -533,7 +582,7 @@ export default function AdminPanel() {
                   ) : (
                     <div className="space-y-2">
                       {pendingPayments.slice(0, 5).map(p => (
-                        <div key={p.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                        <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded">
                           <div>
                             <div className="font-medium text-sm">{p.display_name}</div>
                             <div className="text-xs text-muted-foreground">₹{p.amount_paid}</div>
@@ -600,26 +649,43 @@ export default function AdminPanel() {
                             {payment.subscription_plans?.name} • ₹{payment.amount_paid}
                           </CardDescription>
                         </div>
-                        <Badge variant="secondary">{payment.status}</Badge>
+                        <Badge>Pending</Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <img
-                        src={payment.screenshot_url}
-                        alt="Payment proof"
-                        className="rounded-lg border max-h-48 w-full object-contain bg-muted/50"
-                      />
-                      {payment.coupon_code && (
-                        <div className="text-xs text-muted-foreground">
-                          Coupon: <code className="bg-muted px-1 rounded">{payment.coupon_code}</code>
-                        </div>
+                      {payment.screenshot_url && (
+                        <a 
+                          href={payment.screenshot_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <img 
+                            src={payment.screenshot_url} 
+                            alt="Payment screenshot" 
+                            className="w-full h-32 object-cover rounded border border-border"
+                          />
+                        </a>
                       )}
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(payment.created_at).toLocaleString()}
+                        {payment.coupon_code && ` • Coupon: ${payment.coupon_code}`}
+                      </div>
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => handleApprovePayment(payment)} className="flex-1">
+                        <Button 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleApprovePayment(payment)}
+                        >
                           <Check className="w-4 h-4 mr-1" />
                           Approve
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleRejectPayment(payment.id)} className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          className="flex-1"
+                          onClick={() => handleRejectPayment(payment.id)}
+                        >
                           <X className="w-4 h-4 mr-1" />
                           Reject
                         </Button>
@@ -640,59 +706,40 @@ export default function AdminPanel() {
                   placeholder="Search users..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-9"
                 />
               </div>
             </div>
             
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left p-3 text-xs font-medium text-muted-foreground">User</th>
-                        <th className="text-left p-3 text-xs font-medium text-muted-foreground">Subscription</th>
-                        <th className="text-left p-3 text-xs font-medium text-muted-foreground">Joined</th>
-                        <th className="text-left p-3 text-xs font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.slice(0, 50).map((u) => (
-                        <tr key={u.id} className="border-b border-border/50">
-                          <td className="p-3">
-                            <div className="font-medium text-sm">{u.display_name || "No name"}</div>
-                            <div className="text-xs text-muted-foreground truncate max-w-[200px]">{u.user_id}</div>
-                          </td>
-                          <td className="p-3">
-                            {u.subscription ? (
-                              <Badge variant="default" className="text-xs">{u.subscription.plan_name}</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">Free</Badge>
-                            )}
-                          </td>
-                          <td className="p-3 text-sm text-muted-foreground">
-                            {new Date(u.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm">
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid gap-2">
+              {filteredUsers.slice(0, 50).map((u) => (
+                <Card key={u.id} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{u.display_name || "Unnamed"}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{u.user_id}</div>
+                    </div>
+                    <div className="text-right">
+                      {u.subscription ? (
+                        <Badge>{u.subscription.plan_name}</Badge>
+                      ) : (
+                        <Badge variant="outline">Free</Badge>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Joined {new Date(u.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
 
           {/* Coupons Tab */}
           <TabsContent value="coupons" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Create New Coupon</CardTitle>
+                <CardTitle className="text-lg">Create Coupon</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -701,7 +748,7 @@ export default function AdminPanel() {
                     <Input
                       value={newCoupon.code}
                       onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
-                      placeholder="SAVE50"
+                      placeholder="SAVE20"
                     />
                   </div>
                   <div>
@@ -710,9 +757,7 @@ export default function AdminPanel() {
                       type="number"
                       value={newCoupon.discount_percent}
                       onChange={(e) => setNewCoupon({ ...newCoupon, discount_percent: e.target.value })}
-                      placeholder="50"
-                      min="0"
-                      max="100"
+                      placeholder="20"
                     />
                   </div>
                   <div>
@@ -721,7 +766,7 @@ export default function AdminPanel() {
                       type="number"
                       value={newCoupon.max_uses}
                       onChange={(e) => setNewCoupon({ ...newCoupon, max_uses: e.target.value })}
-                      placeholder="∞"
+                      placeholder="100"
                     />
                   </div>
                   <div>
@@ -733,28 +778,35 @@ export default function AdminPanel() {
                     />
                   </div>
                 </div>
-                <Button onClick={handleCreateCoupon} className="w-full">
+                <Button onClick={handleCreateCoupon}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Coupon
                 </Button>
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid gap-2">
               {coupons.map((coupon) => (
                 <Card key={coupon.id} className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <code className="text-lg font-bold">{coupon.code}</code>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCoupon(coupon.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <div>{coupon.discount_percent}% off</div>
-                    <div>Uses: {coupon.current_uses}/{coupon.max_uses || "∞"}</div>
-                    <Badge variant={coupon.is_active ? "default" : "secondary"} className="text-xs">
-                      {coupon.is_active ? "Active" : "Inactive"}
-                    </Badge>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-mono font-bold">{coupon.code}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {coupon.discount_percent}% off • {coupon.current_uses}/{coupon.max_uses || "∞"} uses
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={coupon.is_active ? "default" : "secondary"}>
+                        {coupon.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleDeleteCoupon(coupon.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -767,7 +819,7 @@ export default function AdminPanel() {
               <CardHeader>
                 <CardTitle className="text-lg">Create Announcement</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <div>
                   <Label className="text-xs">Title</Label>
                   <Input
@@ -785,84 +837,133 @@ export default function AdminPanel() {
                     rows={3}
                   />
                 </div>
-                <div className="flex gap-2">
-                  {["info", "warning", "success", "maintenance"].map((type) => (
-                    <Button
-                      key={type}
-                      variant={newAnnouncement.type === type ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setNewAnnouncement({ ...newAnnouncement, type })}
-                    >
-                      {type}
-                    </Button>
-                  ))}
+                <div>
+                  <Label className="text-xs">Type</Label>
+                  <Select 
+                    value={newAnnouncement.type} 
+                    onValueChange={(v) => setNewAnnouncement({ ...newAnnouncement, type: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="info">Info</SelectItem>
+                      <SelectItem value="warning">Warning</SelectItem>
+                      <SelectItem value="success">Success</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button onClick={handleCreateAnnouncement} className="w-full">
-                  <Bell className="w-4 h-4 mr-2" />
+                <Button onClick={handleCreateAnnouncement}>
+                  <Plus className="w-4 h-4 mr-2" />
                   Create Announcement
                 </Button>
               </CardContent>
             </Card>
 
-            <div className="space-y-2">
+            <div className="grid gap-2">
               {announcements.map((a) => (
                 <Card key={a.id} className="p-4">
-                  <div className="flex justify-between items-start">
+                  <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">{a.title}</div>
-                      <p className="text-sm text-muted-foreground mt-1">{a.message}</p>
-                      <div className="flex gap-2 mt-2">
-                        <Badge variant={a.type === "warning" ? "destructive" : "secondary"} className="text-xs">
-                          {a.type}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(a.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
+                      <div className="text-sm text-muted-foreground">{a.message}</div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteAnnouncement(a.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={a.is_active ? "default" : "secondary"}>
+                        {a.type}
+                      </Badge>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleDeleteAnnouncement(a.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))}
             </div>
           </TabsContent>
 
+          {/* Email Tab */}
+          <TabsContent value="email" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Mail className="w-5 h-5" />
+                  Send Email to All Users
+                </CardTitle>
+                <CardDescription>
+                  This will send an email to all registered users
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-xs">Subject</Label>
+                  <Input
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    placeholder="Email subject"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Message</Label>
+                  <Textarea
+                    value={emailMessage}
+                    onChange={(e) => setEmailMessage(e.target.value)}
+                    placeholder="Email message (HTML supported)"
+                    rows={6}
+                  />
+                </div>
+                <Button onClick={handleSendEmail} disabled={sendingEmail}>
+                  {sendingEmail ? (
+                    <>Sending...</>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Email
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Maintenance Tab */}
           <TabsContent value="maintenance" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  Maintenance Mode
-                </CardTitle>
+                <CardTitle className="text-lg">Maintenance Mode</CardTitle>
                 <CardDescription>
-                  Enable maintenance mode to prevent users from accessing the app
+                  When enabled, users will see a maintenance message
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">Maintenance Mode</div>
                     <div className="text-sm text-muted-foreground">
                       {maintenanceMode ? "Currently enabled" : "Currently disabled"}
                     </div>
                   </div>
-                  <Switch
-                    checked={maintenanceMode}
+                  <Switch 
+                    checked={maintenanceMode} 
                     onCheckedChange={handleToggleMaintenance}
                   />
                 </div>
                 <div>
-                  <Label>Maintenance Message</Label>
+                  <Label className="text-xs">Maintenance Message</Label>
                   <Textarea
                     value={maintenanceMessage}
                     onChange={(e) => setMaintenanceMessage(e.target.value)}
-                    placeholder="Message to show users during maintenance"
+                    placeholder="QurobAi is currently under maintenance..."
                     rows={3}
                   />
                 </div>
+                <Button onClick={handleToggleMaintenance} variant={maintenanceMode ? "destructive" : "default"}>
+                  {maintenanceMode ? "Disable Maintenance" : "Enable Maintenance"}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -876,34 +977,43 @@ export default function AdminPanel() {
                   Gift Subscription
                 </CardTitle>
                 <CardDescription>
-                  Give a free subscription to a user
+                  Give a user a subscription without payment
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>User Email</Label>
+                  <Label className="text-xs">User ID</Label>
                   <Input
-                    type="email"
-                    value={giftEmail}
-                    onChange={(e) => setGiftEmail(e.target.value)}
-                    placeholder="user@email.com"
+                    value={giftUserId}
+                    onChange={(e) => setGiftUserId(e.target.value)}
+                    placeholder="Enter user ID from Users tab"
                   />
                 </div>
                 <div>
-                  <Label>Plan</Label>
-                  <div className="flex gap-2 mt-2">
-                    {plans.filter(p => p.price_inr > 0).map((plan) => (
-                      <Button
-                        key={plan.id}
-                        variant={giftPlan === plan.id ? "default" : "outline"}
-                        onClick={() => setGiftPlan(plan.id)}
-                      >
-                        {plan.name}
-                      </Button>
-                    ))}
-                  </div>
+                  <Label className="text-xs">Plan</Label>
+                  <Select value={giftPlan} onValueChange={setGiftPlan}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.filter(p => p.price_inr > 0).map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.name} (₹{plan.price_inr})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button onClick={handleGiftSubscription} className="w-full">
+                <div>
+                  <Label className="text-xs">Duration (days)</Label>
+                  <Input
+                    type="number"
+                    value={giftDays}
+                    onChange={(e) => setGiftDays(e.target.value)}
+                    placeholder="30"
+                  />
+                </div>
+                <Button onClick={handleGiftSubscription}>
                   <Gift className="w-4 h-4 mr-2" />
                   Gift Subscription
                 </Button>

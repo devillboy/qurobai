@@ -19,7 +19,7 @@ const CodeBlock = memo(({ code, language }: { code: string; language: string }) 
   };
 
   return (
-    <div className="my-3 rounded-lg overflow-hidden border border-border bg-muted/50">
+    <div className="my-3 rounded-lg overflow-hidden border border-border bg-secondary">
       <div className="flex items-center justify-between px-3 py-2 bg-muted border-b border-border">
         <span className="text-xs text-muted-foreground font-mono">{language || "code"}</span>
         <Button
@@ -32,7 +32,7 @@ const CodeBlock = memo(({ code, language }: { code: string; language: string }) 
           {copied ? "Copied" : "Copy"}
         </Button>
       </div>
-      <pre className="p-3 overflow-x-auto text-sm">
+      <pre className="p-3 overflow-x-auto text-sm bg-background">
         <code className="font-mono text-foreground">{code}</code>
       </pre>
     </div>
@@ -71,7 +71,8 @@ const renderContent = (content: string) => {
           key="generated-image" 
           src={imageMatch[1]} 
           alt="AI Generated" 
-          className="my-3 rounded-lg max-w-full md:max-w-md border border-border"
+          className="my-4 rounded-xl max-w-full md:max-w-lg border border-border"
+          loading="lazy"
         />
       );
       if (afterImage) {
@@ -90,8 +91,8 @@ const formatText = (text: string): string => {
     .replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "")
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-muted rounded text-sm font-mono">$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-primary hover:underline">$1</a>')
+    .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-secondary rounded text-sm font-mono">$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-foreground underline hover:no-underline">$1</a>')
     .replace(/\n/g, '<br />');
 };
 
@@ -108,33 +109,33 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
   const cleanContent = content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "");
 
   return (
-    <div className={cn("group py-4 px-4", isUser ? "bg-transparent" : "bg-muted/30")}>
+    <div className={cn("group py-5 px-4", isUser ? "bg-transparent" : "bg-secondary/30")}>
       <div className="max-w-3xl mx-auto flex gap-4">
         <div className={cn(
           "shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
-          isUser ? "bg-primary/10" : "bg-primary"
+          isUser ? "bg-secondary" : "bg-foreground"
         )}>
           {isUser ? (
-            <User className="w-4 h-4 text-primary" />
+            <User className="w-4 h-4 text-foreground" />
           ) : (
-            <Bot className="w-4 h-4 text-primary-foreground" />
+            <Bot className="w-4 h-4 text-background" />
           )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-muted-foreground mb-1">
+          <div className="text-xs font-medium text-muted-foreground mb-2">
             {isUser ? "You" : "QurobAi"}
           </div>
           
-          <div className="prose prose-sm prose-invert max-w-none text-foreground leading-relaxed">
+          <div className="prose prose-sm max-w-none text-foreground leading-relaxed">
             {renderContent(cleanContent)}
             {isStreaming && (
-              <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-0.5" />
+              <span className="inline-block w-2 h-4 bg-foreground animate-pulse ml-0.5" />
             )}
           </div>
 
           {!isUser && !isStreaming && (
-            <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
                 variant="ghost"
                 size="sm"
@@ -155,10 +156,10 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
 ChatMessage.displayName = "ChatMessage";
 
 export const TypingIndicator = memo(() => (
-  <div className="py-4 px-4 bg-muted/30">
+  <div className="py-5 px-4 bg-secondary/30">
     <div className="max-w-3xl mx-auto flex gap-4">
-      <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
-        <Bot className="w-4 h-4 text-primary-foreground" />
+      <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-foreground">
+        <Bot className="w-4 h-4 text-background" />
       </div>
       <div className="flex items-center gap-1 pt-2">
         <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
