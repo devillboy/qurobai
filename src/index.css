@@ -6,51 +6,51 @@
 
 @layer base {
   :root {
-    /* Grok-inspired dark theme - true black with minimal accents */
-    --background: 0 0% 3%;
-    --foreground: 0 0% 98%;
+    /* Balanced dark theme - not too black, easier on eyes */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 93%;
 
-    --card: 0 0% 6%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 93%;
 
-    --popover: 0 0% 6%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 93%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 3%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 93%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 55%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 93%;
 
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 85% 97%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 12%;
-    --ring: 0 0% 98%;
+    --border: 0 0% 18%;
+    --input: 0 0% 14%;
+    --ring: 160 84% 39%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 3%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 0 0% 3%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 0 0% 98%;
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 93%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 93%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 160 84% 39%;
     
-    --chart-1: 0 0% 98%;
-    --chart-2: 0 0% 70%;
-    --chart-3: 0 0% 50%;
-    --chart-4: 0 0% 30%;
-    --chart-5: 0 0% 20%;
+    --chart-1: 160 84% 39%;
+    --chart-2: 160 60% 50%;
+    --chart-3: 160 40% 60%;
+    --chart-4: 0 0% 50%;
+    --chart-5: 0 0% 30%;
     
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
@@ -72,7 +72,7 @@
   }
 
   ::selection {
-    background: hsl(var(--primary) / 0.2);
+    background: hsl(var(--primary) / 0.3);
     color: hsl(var(--foreground));
   }
 
@@ -97,12 +97,14 @@
 
 @layer components {
   .glass {
-    background: hsl(var(--card));
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(12px);
     border: 1px solid hsl(var(--border));
   }
 
   .glass-strong {
-    background: hsl(var(--card));
+    background: hsl(var(--card) / 0.95);
+    backdrop-filter: blur(20px);
     border: 1px solid hsl(var(--border));
   }
 }
@@ -137,7 +139,7 @@
 /* Grid pattern for backgrounds */
 .bg-grid {
   background-image: 
-    linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(var(--border) / 0.5) 1px, transparent 1px);
+    linear-gradient(hsl(var(--border) / 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--border) / 0.3) 1px, transparent 1px);
   background-size: 60px 60px;
 }

@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { Bot, User, Copy, Check } from "lucide-react";
+import { Bot, User, Copy, Check, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -41,7 +41,100 @@ const CodeBlock = memo(({ code, language }: { code: string; language: string }) 
 
 CodeBlock.displayName = "CodeBlock";
 
+// Render generated images
+const GeneratedImage = memo(({ src, prompt }: { src: string; prompt?: string }) => {
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `qurobai-generated-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
+  return (
+    <div className="my-4 relative group">
+      <img 
+        src={src} 
+        alt={prompt || "AI Generated Image"} 
+        className="rounded-xl max-w-full md:max-w-lg border border-border shadow-lg"
+        loading="lazy"
+      />
+      <Button
+        variant="secondary"
+        size="sm"
+        className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={handleDownload}
+      >
+        <Download className="w-4 h-4 mr-1" />
+        Download
+      </Button>
+    </div>
+  );
+});
+
+GeneratedImage.displayName = "GeneratedImage";
+
 const renderContent = (content: string) => {
+  // First, remove image data from display
+  let cleanContent = content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "");
+  
+  // Check for generated images
+  const generatedImageRegex = /\[GeneratedImage:(.*?)\]/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+  
+  // Find all generated images first
+  const imageMatches: { index: number; url: string; fullMatch: string }[] = [];
+  while ((match = generatedImageRegex.exec(cleanContent)) !== null) {
+    imageMatches.push({
+      index: match.index,
+      url: match[1],
+      fullMatch: match[0]
+    });
+  }
+  
+  // If we have generated images, process them
+  if (imageMatches.length > 0) {
+    let processedContent = cleanContent;
+    
+    for (const img of imageMatches) {
+      const beforeImg = processedContent.slice(0, img.index - (cleanContent.length - processedContent.length));
+      const afterImg = processedContent.slice(img.index - (cleanContent.length - processedContent.length) + img.fullMatch.length);
+      
+      // Add text before image
+      if (beforeImg) {
+        parts.push(...renderTextWithCode(beforeImg, parts.length));
+      }
+      
+      // Add image
+      parts.push(<GeneratedImage key={`img-${parts.length}`} src={img.url} />);
+      
+      processedContent = afterImg;
+    }
+    
+    // Add remaining text
+    if (processedContent) {
+      parts.push(...renderTextWithCode(processedContent, parts.length));
+    }
+    
+    return parts;
+  }
+  
+  // No generated images, process normally with code blocks
+  return renderTextWithCode(cleanContent, 0);
+};
+
+const renderTextWithCode = (content: string, keyOffset: number): React.ReactNode[] => {
   const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -50,37 +143,17 @@ const renderContent = (content: string) => {
   while ((match = codeBlockRegex.exec(content)) !== null) {
     if (match.index > lastIndex) {
       const text = content.slice(lastIndex, match.index);
-      parts.push(<span key={`text-${lastIndex}`} dangerouslySetInnerHTML={{ __html: formatText(text) }} />);
+      parts.push(<span key={`text-${keyOffset}-${lastIndex}`} dangerouslySetInnerHTML={{ __html: formatText(text) }} />);
     }
     parts.push(
-      <CodeBlock key={`code-${match.index}`} language={match[1] || ""} code={match[2].trim()} />
+      <CodeBlock key={`code-${keyOffset}-${match.index}`} language={match[1] || ""} code={match[2].trim()} />
     );
     lastIndex = match.index + match[0].length;
   }
 
   if (lastIndex < content.length) {
     const remaining = content.slice(lastIndex);
-    const imageMatch = remaining.match(/\[GeneratedImage:(.*?)\]/);
-    if (imageMatch) {
-      const beforeImage = remaining.slice(0, imageMatch.index);
-      const afterImage = remaining.slice(imageMatch.index! + imageMatch[0].length);
-      
-      parts.push(<span key={`text-before-img`} dangerouslySetInnerHTML={{ __html: formatText(beforeImage) }} />);
-      parts.push(
-        <img 
-          key="generated-image" 
-          src={imageMatch[1]} 
-          alt="AI Generated" 
-          className="my-4 rounded-xl max-w-full md:max-w-lg border border-border"
-          loading="lazy"
-        />
-      );
-      if (afterImage) {
-        parts.push(<span key={`text-after-img`} dangerouslySetInnerHTML={{ __html: formatText(afterImage) }} />);
-      }
-    } else {
-      parts.push(<span key={`text-${lastIndex}`} dangerouslySetInnerHTML={{ __html: formatText(remaining) }} />);
-    }
+    parts.push(<span key={`text-${keyOffset}-${lastIndex}`} dangerouslySetInnerHTML={{ __html: formatText(remaining) }} />);
   }
 
   return parts;
@@ -88,7 +161,6 @@ const renderContent = (content: string) => {
 
 const formatText = (text: string): string => {
   return text
-    .replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "")
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-secondary rounded text-sm font-mono">$1</code>')
@@ -100,13 +172,16 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
   const [copied, setCopied] = useState(false);
 
   const copyMessage = async () => {
-    await navigator.clipboard.writeText(content);
+    // Clean content for copying
+    const cleanContent = content
+      .replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "")
+      .replace(/\[GeneratedImage:.*?\]/g, "[Image]");
+    await navigator.clipboard.writeText(cleanContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const isUser = role === "user";
-  const cleanContent = content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "");
 
   return (
     <div className={cn("group py-5 px-4", isUser ? "bg-transparent" : "bg-secondary/30")}>
@@ -128,7 +203,7 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
           </div>
           
           <div className="prose prose-sm max-w-none text-foreground leading-relaxed">
-            {renderContent(cleanContent)}
+            {renderContent(content)}
             {isStreaming && (
               <span className="inline-block w-2 h-4 bg-foreground animate-pulse ml-0.5" />
             )}
