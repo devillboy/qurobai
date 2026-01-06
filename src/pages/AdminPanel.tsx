@@ -8,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send } from "lucide-react";
+import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface UserData {
   id: string;
@@ -62,9 +63,11 @@ export default function AdminPanel() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [maintenanceId, setMaintenanceId] = useState<string | null>(null);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
   
   // Gift subscription state
-  const [giftUserId, setGiftUserId] = useState("");
+  const [giftUserSearch, setGiftUserSearch] = useState("");
+  const [selectedGiftUser, setSelectedGiftUser] = useState<UserData | null>(null);
   const [giftPlan, setGiftPlan] = useState("");
   const [giftDays, setGiftDays] = useState("30");
   const [plans, setPlans] = useState<any[]>([]);
@@ -217,15 +220,37 @@ export default function AdminPanel() {
   };
 
   const loadMaintenanceStatus = async () => {
-    const { data } = await supabase
-      .from("maintenance_mode")
-      .select("*")
-      .limit(1)
-      .single();
-    if (data) {
-      setMaintenanceMode(data.is_enabled);
-      setMaintenanceMessage(data.message || "");
-      setMaintenanceId(data.id);
+    try {
+      const { data, error } = await supabase
+        .from("maintenance_mode")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Maintenance load error:", error);
+        return;
+      }
+      
+      if (data) {
+        setMaintenanceMode(data.is_enabled);
+        setMaintenanceMessage(data.message || "");
+        setMaintenanceId(data.id);
+      } else {
+        // Create initial maintenance record if none exists
+        const { data: newRecord, error: insertError } = await supabase
+          .from("maintenance_mode")
+          .insert({ is_enabled: false, message: "QurobAi is under maintenance. Please check back soon." })
+          .select()
+          .single();
+        
+        if (!insertError && newRecord) {
+          setMaintenanceId(newRecord.id);
+          setMaintenanceMessage(newRecord.message || "");
+        }
+      }
+    } catch (e) {
+      console.error("Maintenance status error:", e);
     }
   };
 
@@ -380,24 +405,29 @@ export default function AdminPanel() {
 
   const handleToggleMaintenance = async () => {
     if (!maintenanceId) {
-      toast.error("Maintenance mode not configured");
+      toast.error("Maintenance mode not configured. Please refresh.");
+      await loadMaintenanceStatus();
       return;
     }
 
+    setMaintenanceLoading(true);
     const newStatus = !maintenanceMode;
     
     const { error } = await supabase
       .from("maintenance_mode")
       .update({
         is_enabled: newStatus,
-        message: maintenanceMessage,
+        message: maintenanceMessage || "QurobAi is under maintenance. Please check back soon.",
         enabled_by: newStatus ? user?.id : null,
         enabled_at: newStatus ? new Date().toISOString() : null,
       })
       .eq("id", maintenanceId);
 
+    setMaintenanceLoading(false);
+
     if (error) {
-      toast.error("Failed to update maintenance mode");
+      console.error("Maintenance toggle error:", error);
+      toast.error("Failed to update maintenance mode: " + error.message);
       return;
     }
 
@@ -405,9 +435,24 @@ export default function AdminPanel() {
     toast.success(newStatus ? "Maintenance mode enabled" : "Maintenance mode disabled");
   };
 
+  const handleSaveMaintenanceMessage = async () => {
+    if (!maintenanceId) return;
+    
+    const { error } = await supabase
+      .from("maintenance_mode")
+      .update({ message: maintenanceMessage })
+      .eq("id", maintenanceId);
+    
+    if (error) {
+      toast.error("Failed to save message");
+    } else {
+      toast.success("Message saved");
+    }
+  };
+
   const handleGiftSubscription = async () => {
-    if (!giftUserId || !giftPlan) {
-      toast.error("User ID and plan are required");
+    if (!selectedGiftUser || !giftPlan) {
+      toast.error("Please select a user and plan");
       return;
     }
 
@@ -421,7 +466,7 @@ export default function AdminPanel() {
     expiresAt.setDate(expiresAt.getDate() + parseInt(giftDays));
 
     const { error } = await supabase.from("user_subscriptions").insert({
-      user_id: giftUserId,
+      user_id: selectedGiftUser.user_id,
       plan_id: giftPlan,
       status: "active",
       expires_at: expiresAt.toISOString(),
@@ -432,8 +477,17 @@ export default function AdminPanel() {
       return;
     }
 
-    toast.success(`Gifted ${selectedPlan.name} for ${giftDays} days!`);
-    setGiftUserId("");
+    // Create notification for user
+    await supabase.from("notifications").insert({
+      user_id: selectedGiftUser.user_id,
+      title: "🎁 Subscription Gifted!",
+      message: `You've been gifted ${selectedPlan.name} for ${giftDays} days!`,
+      type: "success",
+    });
+
+    toast.success(`Gifted ${selectedPlan.name} to ${selectedGiftUser.display_name || "User"} for ${giftDays} days!`);
+    setSelectedGiftUser(null);
+    setGiftUserSearch("");
     setGiftPlan("");
     setGiftDays("30");
     loadData();
@@ -463,7 +517,7 @@ export default function AdminPanel() {
       setEmailMessage("");
     } catch (error) {
       console.error("Email error:", error);
-      toast.error("Failed to send email");
+      toast.error("Failed to send email. Check that Resend is configured with your domain.");
     } finally {
       setSendingEmail(false);
     }
@@ -475,10 +529,17 @@ export default function AdminPanel() {
     u.user_id.toLowerCase().includes(userSearch.toLowerCase())
   );
 
+  const giftUserResults = users.filter(u =>
+    giftUserSearch && (
+      u.display_name?.toLowerCase().includes(giftUserSearch.toLowerCase()) ||
+      u.user_id.toLowerCase().includes(giftUserSearch.toLowerCase())
+    )
+  ).slice(0, 5);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -495,6 +556,9 @@ export default function AdminPanel() {
               Back
             </Button>
             <h1 className="text-xl font-bold">Admin Panel</h1>
+            {maintenanceMode && (
+              <Badge variant="destructive">Maintenance Active</Badge>
+            )}
           </div>
           <Button variant="outline" size="sm" onClick={loadData}>
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -525,7 +589,7 @@ export default function AdminPanel() {
               <Activity className="w-3 h-3" />
               Pending
             </div>
-            <div className="text-2xl font-bold text-yellow-500">{stats.pendingPayments}</div>
+            <div className="text-2xl font-bold text-warning">{stats.pendingPayments}</div>
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
@@ -546,7 +610,7 @@ export default function AdminPanel() {
               <CreditCard className="w-3 h-3" />
               Total Revenue
             </div>
-            <div className="text-2xl font-bold text-green-500">₹{stats.totalRevenue}</div>
+            <div className="text-2xl font-bold text-success">₹{stats.totalRevenue}</div>
           </Card>
         </div>
 
@@ -620,6 +684,7 @@ export default function AdminPanel() {
                     variant={maintenanceMode ? "destructive" : "outline"}
                     className="w-full justify-start"
                     onClick={handleToggleMaintenance}
+                    disabled={maintenanceLoading}
                   >
                     <Shield className="w-4 h-4 mr-2" />
                     {maintenanceMode ? "Disable Maintenance" : "Enable Maintenance"}
@@ -703,12 +768,16 @@ export default function AdminPanel() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search users..."
+                  placeholder="Search users by name or ID..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   className="pl-9"
                 />
               </div>
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              Showing {filteredUsers.slice(0, 50).length} of {filteredUsers.length} users
             </div>
             
             <div className="grid gap-2">
@@ -721,7 +790,7 @@ export default function AdminPanel() {
                     </div>
                     <div className="text-right">
                       {u.subscription ? (
-                        <Badge>{u.subscription.plan_name}</Badge>
+                        <Badge className="bg-primary">{u.subscription.plan_name}</Badge>
                       ) : (
                         <Badge variant="outline">Free</Badge>
                       )}
@@ -888,6 +957,13 @@ export default function AdminPanel() {
 
           {/* Email Tab */}
           <TabsContent value="email" className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Email sending requires Resend to be configured with your own domain. The default onboarding@resend.dev only works for the account owner.
+              </AlertDescription>
+            </Alert>
+            
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -936,20 +1012,21 @@ export default function AdminPanel() {
               <CardHeader>
                 <CardTitle className="text-lg">Maintenance Mode</CardTitle>
                 <CardDescription>
-                  When enabled, users will see a maintenance message
+                  When enabled, users will see a maintenance message instead of the app
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                   <div>
                     <div className="font-medium">Maintenance Mode</div>
                     <div className="text-sm text-muted-foreground">
-                      {maintenanceMode ? "Currently enabled" : "Currently disabled"}
+                      {maintenanceMode ? "Currently enabled - users see maintenance page" : "Currently disabled - app is accessible"}
                     </div>
                   </div>
                   <Switch 
                     checked={maintenanceMode} 
                     onCheckedChange={handleToggleMaintenance}
+                    disabled={maintenanceLoading}
                   />
                 </div>
                 <div>
@@ -957,12 +1034,25 @@ export default function AdminPanel() {
                   <Textarea
                     value={maintenanceMessage}
                     onChange={(e) => setMaintenanceMessage(e.target.value)}
-                    placeholder="QurobAi is currently under maintenance..."
+                    placeholder="QurobAi is currently under maintenance. We'll be back soon!"
                     rows={3}
                   />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={handleSaveMaintenanceMessage}
+                  >
+                    Save Message
+                  </Button>
                 </div>
-                <Button onClick={handleToggleMaintenance} variant={maintenanceMode ? "destructive" : "default"}>
-                  {maintenanceMode ? "Disable Maintenance" : "Enable Maintenance"}
+                <Button 
+                  onClick={handleToggleMaintenance} 
+                  variant={maintenanceMode ? "destructive" : "default"}
+                  disabled={maintenanceLoading}
+                  className="w-full"
+                >
+                  {maintenanceLoading ? "Processing..." : maintenanceMode ? "Disable Maintenance Mode" : "Enable Maintenance Mode"}
                 </Button>
               </CardContent>
             </Card>
@@ -977,18 +1067,56 @@ export default function AdminPanel() {
                   Gift Subscription
                 </CardTitle>
                 <CardDescription>
-                  Give a user a subscription without payment
+                  Give a user a subscription without payment. Search for a user by name.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label className="text-xs">User ID</Label>
-                  <Input
-                    value={giftUserId}
-                    onChange={(e) => setGiftUserId(e.target.value)}
-                    placeholder="Enter user ID from Users tab"
-                  />
+                  <Label className="text-xs">Search User</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      value={giftUserSearch}
+                      onChange={(e) => {
+                        setGiftUserSearch(e.target.value);
+                        setSelectedGiftUser(null);
+                      }}
+                      placeholder="Search by name or ID..."
+                      className="pl-9"
+                    />
+                  </div>
+                  
+                  {giftUserResults.length > 0 && !selectedGiftUser && (
+                    <div className="mt-2 border border-border rounded-lg overflow-hidden">
+                      {giftUserResults.map(u => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            setSelectedGiftUser(u);
+                            setGiftUserSearch(u.display_name || u.user_id);
+                          }}
+                          className="w-full p-3 text-left hover:bg-muted flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">{u.display_name || "Unnamed"}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{u.user_id.slice(0, 8)}...</div>
+                          </div>
+                          {u.subscription && (
+                            <Badge variant="outline">{u.subscription.plan_name}</Badge>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {selectedGiftUser && (
+                    <div className="mt-2 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                      <div className="font-medium">{selectedGiftUser.display_name || "Unnamed"}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{selectedGiftUser.user_id}</div>
+                    </div>
+                  )}
                 </div>
+                
                 <div>
                   <Label className="text-xs">Plan</Label>
                   <Select value={giftPlan} onValueChange={setGiftPlan}>
@@ -1013,7 +1141,11 @@ export default function AdminPanel() {
                     placeholder="30"
                   />
                 </div>
-                <Button onClick={handleGiftSubscription}>
+                <Button 
+                  onClick={handleGiftSubscription}
+                  disabled={!selectedGiftUser || !giftPlan}
+                  className="w-full"
+                >
                   <Gift className="w-4 h-4 mr-2" />
                   Gift Subscription
                 </Button>

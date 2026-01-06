@@ -125,12 +125,16 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
     /banao\s+(?:ek\s+)?(?:image|tasveer|photo)/i,
     /(?:image|tasveer|photo)\s+banao/i,
     /(?:ek\s+)?(?:image|photo|pic)\s+(?:bana|banao|create|generate)/i,
+    /can\s+you\s+(?:make|create|generate|draw)\s+(?:an?\s+)?(?:image|picture)/i,
+    /show\s+me\s+(?:an?\s+)?(?:image|picture)\s+of/i,
+    /visualize\s+/i,
+    /paint\s+/i,
   ];
   
   if (imagePatterns.some(p => p.test(lower))) {
     // Extract the prompt - remove the command words
     let prompt = message
-      .replace(/(?:please\s+)?(?:generate|create|draw|make|imagine|banao)\s+(?:an?\s+)?(?:me\s+)?(?:ek\s+)?(?:image|picture|art|illustration|tasveer|photo|pic)?\s*(?:of|about|for|ka|ki)?\s*/gi, "")
+      .replace(/(?:please\s+)?(?:can\s+you\s+)?(?:generate|create|draw|make|imagine|banao|show\s+me|visualize|paint)\s+(?:an?\s+)?(?:me\s+)?(?:ek\s+)?(?:image|picture|art|illustration|tasveer|photo|pic)?\s*(?:of|about|for|ka|ki)?\s*/gi, "")
       .trim();
     return { type: "image_generation", query: prompt || message };
   }
@@ -492,7 +496,7 @@ function extractImageData(messages: any[]): { hasImage: boolean; imageUrl: strin
         imageUrl = imageMatch[1];
         // Clean the message content
         const cleanContent = msg.content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "").trim();
-        cleanMessages.push({ ...msg, content: cleanContent || "What's in this image?" });
+        cleanMessages.push({ ...msg, content: cleanContent || "What's in this image? Describe it in detail." });
       } else {
         cleanMessages.push(msg);
       }
@@ -502,6 +506,32 @@ function extractImageData(messages: any[]): { hasImage: boolean; imageUrl: strin
   }
   
   return { hasImage, imageUrl, cleanMessages };
+}
+
+// Summarize long conversation for better memory
+function summarizeConversation(messages: any[]): any[] {
+  if (messages.length <= 10) return messages;
+  
+  // Keep first 2 messages for context, summarize middle, keep last 8 for recency
+  const firstMessages = messages.slice(0, 2);
+  const middleMessages = messages.slice(2, -8);
+  const recentMessages = messages.slice(-8);
+  
+  // Create a summary of middle messages
+  const summaryPoints: string[] = [];
+  for (const msg of middleMessages) {
+    if (msg.role === "user" && msg.content.length > 20) {
+      const topic = msg.content.slice(0, 100).replace(/\n/g, " ");
+      summaryPoints.push(topic);
+    }
+  }
+  
+  const summaryMessage = {
+    role: "system",
+    content: `[Earlier conversation summary: User discussed ${summaryPoints.slice(0, 5).join("; ")}...]`
+  };
+  
+  return [...firstMessages, summaryMessage, ...recentMessages];
 }
 
 serve(async (req) => {
@@ -525,8 +555,9 @@ serve(async (req) => {
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
     const DEEPINFRA_API_KEY = Deno.env.get("DEEPINFRA_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     
-    if (!GROQ_API_KEY && !FIREWORKS_API_KEY && !DEEPINFRA_API_KEY) {
+    if (!GROQ_API_KEY && !FIREWORKS_API_KEY && !DEEPINFRA_API_KEY && !OPENROUTER_API_KEY) {
       console.error("No AI API keys configured");
       return new Response(
         JSON.stringify({ error: "AI service not configured. Please contact admin." }),
@@ -574,9 +605,12 @@ serve(async (req) => {
 
     // Check for image in messages
     const { hasImage, imageUrl, cleanMessages } = extractImageData(messages);
+    
+    // Summarize long conversations for better memory
+    const processedMessages = summarizeConversation(cleanMessages);
 
     // Process last message for real-time data
-    const lastUserMessage = cleanMessages.filter((m: any) => m.role === "user").pop();
+    const lastUserMessage = processedMessages.filter((m: any) => m.role === "user").pop();
     let realtimeContext = "";
     let includeKnowledge = false;
     
@@ -648,7 +682,7 @@ serve(async (req) => {
               }
               
               // Return generated image response
-              const responseText = `Here's the image I generated for "${queryType.query}":\n\n[GeneratedImage:${imageUrlResult}]\n\nI hope you like it! Let me know if you'd like any changes.`;
+              const responseText = `Here's the image I generated for "${queryType.query}":\n\n[GeneratedImage:${imageUrlResult}]\n\nI hope you like it! Let me know if you'd like any changes or a different style.`;
               
               // Create SSE response
               const encoder = new TextEncoder();
@@ -671,7 +705,7 @@ serve(async (req) => {
               console.error("Image generation API error:", imageGenResponse.status, errorText);
               
               // Return error message instead of falling through
-              const errorResponse = `I tried to generate an image but encountered an error. Please try again with a different prompt, or try later.`;
+              const errorResponse = `I tried to generate an image but encountered an error. This might be due to rate limiting or service issues. Please try again in a moment with a different prompt.`;
               const encoder = new TextEncoder();
               const stream = new ReadableStream({
                 start(controller) {
@@ -685,7 +719,7 @@ serve(async (req) => {
             }
           } catch (e) {
             console.error("Image generation exception:", e);
-            const errorResponse = `Sorry, I couldn't generate the image right now. Error: ${e instanceof Error ? e.message : "Unknown error"}`;
+            const errorResponse = `Sorry, I couldn't generate the image right now. Error: ${e instanceof Error ? e.message : "Unknown error"}. Please try again.`;
             const encoder = new TextEncoder();
             const stream = new ReadableStream({
               start(controller) {
@@ -710,8 +744,8 @@ serve(async (req) => {
     if (hasImage && imageUrl && FIREWORKS_API_KEY) {
       console.log("Using Fireworks Vision API for image analysis");
       
-      const visionMessages = cleanMessages.map((m: any, i: number) => {
-        if (m.role === "user" && i === cleanMessages.length - 1) {
+      const visionMessages = processedMessages.map((m: any, i: number) => {
+        if (m.role === "user" && i === processedMessages.length - 1) {
           return {
             role: "user",
             content: [
@@ -734,7 +768,14 @@ serve(async (req) => {
           messages: [
             { 
               role: "system", 
-              content: `You are ${modelName}, an AI assistant created by Soham from India for QurobAi. Analyze images carefully and provide detailed, helpful descriptions. Be conversational and helpful.` 
+              content: `You are ${modelName}, an AI assistant created by Soham from India for QurobAi. 
+
+## YOUR CAPABILITIES
+- You CAN see and analyze images in detail
+- You CAN describe what's in images accurately
+- You CAN help with visual tasks like identifying objects, reading text, analyzing art, etc.
+
+Be helpful, conversational, and provide detailed descriptions when analyzing images.` 
             },
             ...visionMessages
           ],
@@ -764,6 +805,12 @@ serve(async (req) => {
 - When asked "who made you", "who created you", or similar: ALWAYS say "I was created by Soham from India for the QurobAi platform"
 - When asked "what model are you" or "which AI": Say "I am ${modelName}, powered by QurobAi"
 
+## YOUR CAPABILITIES
+- You CAN see and analyze images when users upload them
+- You CAN generate images when users ask (e.g., "generate an image of a sunset")
+- You have access to real-time data: weather, crypto, stocks, news, cricket scores, currency rates
+- You can search the web for current information
+
 ## RESPONSE STYLE
 - Be conversational and natural, like ChatGPT
 - Keep responses concise unless detail is requested
@@ -779,12 +826,17 @@ serve(async (req) => {
 - Keep paragraphs short and readable
 - Don't use excessive headers or markdown
 
-${isCodeSpecialist ? `## CODE SPECIALIST MODE
-You are Q-06, the expert coding AI. Provide:
-- Clean, production-ready code
-- Best practices and patterns
-- Clear explanations
-- All languages supported` : ""}
+${isCodeSpecialist ? `## CODE SPECIALIST MODE (Q-06)
+You are Q-06, the expert coding AI. You provide:
+- Clean, production-ready, well-structured code
+- Best practices and design patterns
+- Clear explanations of complex concepts
+- Support for ALL programming languages
+- Architecture recommendations
+- Debugging assistance
+- Code optimization suggestions
+
+Always write complete, working code. Never leave TODOs or placeholders.` : ""}
 
 ${includeKnowledge ? `## QUROBAI KNOWLEDGE\n${QUROBAI_KNOWLEDGE}` : ""}
 
@@ -792,13 +844,25 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
 
     console.log("Using model:", modelName, isCodeSpecialist ? "(Code Specialist)" : "");
 
-    // Determine which API to use
+    // Determine which API to use - prefer OpenRouter for premium users
     let apiUrl: string;
     let apiKey: string;
     let modelToUse: string;
     let headers: Record<string, string>;
 
-    if (GROQ_API_KEY) {
+    // Use OpenRouter for Qurob 4 if available (better quality)
+    if ((modelName === "Qurob 4" || isCodeSpecialist) && OPENROUTER_API_KEY) {
+      apiUrl = "https://openrouter.ai/api/v1/chat/completions";
+      apiKey = OPENROUTER_API_KEY;
+      modelToUse = isCodeSpecialist ? "qwen/qwen-2.5-coder-32b-instruct" : "qwen/qwen-2.5-72b-instruct";
+      headers = { 
+        Authorization: `Bearer ${apiKey}`, 
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://qurobai.com",
+        "X-Title": "QurobAi"
+      };
+      console.log("Using OpenRouter with model:", modelToUse);
+    } else if (GROQ_API_KEY) {
       apiUrl = "https://api.groq.com/openai/v1/chat/completions";
       apiKey = GROQ_API_KEY;
       modelToUse = (modelName === "Qurob 4" || isCodeSpecialist) ? "llama-3.3-70b-versatile" : "llama-3.1-8b-instant";
@@ -815,7 +879,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
       headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
     }
 
-    console.log("API:", apiUrl.includes("groq") ? "Groq" : apiUrl.includes("fireworks") ? "Fireworks" : "DeepInfra", "Model:", modelToUse);
+    console.log("API:", apiUrl.includes("openrouter") ? "OpenRouter" : apiUrl.includes("groq") ? "Groq" : apiUrl.includes("fireworks") ? "Fireworks" : "DeepInfra", "Model:", modelToUse);
 
     // Call AI API
     const response = await fetch(apiUrl, {
@@ -825,10 +889,10 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         model: modelToUse,
         messages: [
           { role: "system", content: systemPrompt },
-          ...cleanMessages,
+          ...processedMessages,
         ],
         stream: true,
-        temperature: isCodeSpecialist ? 0.3 : 0.7,
+        temperature: isCodeSpecialist ? 0.2 : 0.7,
         max_tokens: 4096,
       }),
     });

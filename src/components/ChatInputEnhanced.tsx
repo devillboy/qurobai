@@ -24,6 +24,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,47 +83,75 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
     const files = e.target.files;
     if (!files || !user) return;
 
-    setUploading(true);
+    const fileArray = Array.from(files);
+    const totalFiles = fileArray.length;
+    let completedUploads = 0;
 
-    for (const file of Array.from(files)) {
+    setUploading(true);
+    setUploadCount(totalFiles);
+
+    for (const file of fileArray) {
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("File too large (max 10MB)");
+        toast.error(`${file.name} is too large (max 10MB)`);
+        completedUploads++;
         continue;
       }
 
       try {
         if (file.type.startsWith("image/")) {
+          // For images, read as base64 for vision AND upload to storage
           const reader = new FileReader();
-          reader.onload = async (e) => {
-            const base64 = e.target?.result as string;
+          
+          await new Promise<void>((resolve, reject) => {
+            reader.onload = async (event) => {
+              try {
+                const base64 = event.target?.result as string;
+                
+                const fileName = `${user.id}/${Date.now()}-${file.name}`;
+                const { data, error } = await supabase.storage
+                  .from("chat-attachments")
+                  .upload(fileName, file);
+
+                if (error) {
+                  console.error("Upload error:", error);
+                  toast.error(`Failed to upload ${file.name}`);
+                  resolve();
+                  return;
+                }
+
+                const { data: urlData } = supabase.storage
+                  .from("chat-attachments")
+                  .getPublicUrl(data.path);
+
+                setAttachments(prev => [...prev, {
+                  name: file.name,
+                  type: file.type,
+                  url: urlData.publicUrl,
+                  size: file.size,
+                  base64,
+                }]);
+                resolve();
+              } catch (err) {
+                console.error("Processing error:", err);
+                reject(err);
+              }
+            };
             
-            const fileName = `${user.id}/${Date.now()}-${file.name}`;
-            const { data, error } = await supabase.storage
-              .from("chat-attachments")
-              .upload(fileName, file);
-
-            if (error) throw error;
-
-            const { data: urlData } = supabase.storage
-              .from("chat-attachments")
-              .getPublicUrl(data.path);
-
-            setAttachments(prev => [...prev, {
-              name: file.name,
-              type: file.type,
-              url: urlData.publicUrl,
-              size: file.size,
-              base64,
-            }]);
-          };
-          reader.readAsDataURL(file);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+          });
         } else {
+          // Non-image files - just upload to storage
           const fileName = `${user.id}/${Date.now()}-${file.name}`;
           const { data, error } = await supabase.storage
             .from("chat-attachments")
             .upload(fileName, file);
 
-          if (error) throw error;
+          if (error) {
+            console.error("Upload error:", error);
+            toast.error(`Failed to upload ${file.name}`);
+            continue;
+          }
 
           const { data: urlData } = supabase.storage
             .from("chat-attachments")
@@ -137,11 +166,14 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
         }
       } catch (error) {
         console.error("Upload error:", error);
-        toast.error("Failed to upload file");
+        toast.error(`Failed to upload ${file.name}`);
       }
+      
+      completedUploads++;
     }
 
     setUploading(false);
+    setUploadCount(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -157,12 +189,14 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
 
     let finalMessage = trimmedMessage;
 
+    // Add image data for vision analysis
     const imageAttachments = attachments.filter(a => a.type.startsWith("image/") && a.base64);
     if (imageAttachments.length > 0) {
       const imageData = imageAttachments.map(a => `[ImageData:${a.base64}]`).join("");
       finalMessage = finalMessage + "\n" + imageData;
     }
 
+    // Add other attachments as links
     const otherAttachments = attachments.filter(a => !a.type.startsWith("image/"));
     if (otherAttachments.length > 0) {
       const attachmentLinks = otherAttachments.map(a => `[Attachment: ${a.name}](${a.url})`).join("\n");
@@ -272,14 +306,14 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
             size="icon"
             className="shrink-0 h-9 w-9"
             onClick={handleSubmit}
-            disabled={isLoading || (!message.trim() && attachments.length === 0)}
+            disabled={isLoading || uploading || (!message.trim() && attachments.length === 0)}
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
 
         <p className="text-xs text-muted-foreground text-center mt-2">
-          QurobAi may make mistakes. Verify important information.
+          QurobAi can see images and generate images. Ask "generate an image of..."
         </p>
       </div>
     </div>
