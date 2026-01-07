@@ -36,6 +36,14 @@ const TONE_OPTIONS = [
   { value: "cynical", label: "Cynical", description: "Critical and sarcastic" },
 ];
 
+const PERSONA_OPTIONS = [
+  { value: "default", label: "Default", description: "Balanced helpful assistant" },
+  { value: "coder", label: "Coder", description: "Technical and code-focused" },
+  { value: "creative", label: "Creative", description: "Imaginative storyteller" },
+  { value: "tutor", label: "Tutor", description: "Patient and educational" },
+  { value: "friend", label: "Friend", description: "Casual and conversational" },
+];
+
 export const PersonalizationDialog = ({ open, onOpenChange }: PersonalizationDialogProps) => {
   const { user } = useAuth();
   const [baseTone, setBaseTone] = useState("professional");

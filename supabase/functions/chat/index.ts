@@ -32,7 +32,7 @@ Tech Stack: React, TypeScript, Tailwind CSS, Supabase, Multiple AI APIs
 ### AI MODELS AVAILABLE
 
 **1. Qurob 2 (Free Tier)**
-- Type: Fast Standard AI Model
+- Type: Fast Standard AI Model (Google Gemini Flash)
 - Best For: Quick questions, general conversations, basic tasks
 - Features: Fast responses, real-time data access, basic code help
 - Access: FREE for all registered users
@@ -40,17 +40,17 @@ Tech Stack: React, TypeScript, Tailwind CSS, Supabase, Multiple AI APIs
 - Capabilities: Weather, news, crypto, stocks, cricket scores, currency exchange, web search
 
 **2. Qurob 4 (Premium - ₹289/month)**
-- Type: Advanced AI Model with superior reasoning
+- Type: Advanced AI Model (DeepSeek Chat - GPT-4 class)
 - Best For: Complex analysis, detailed research, professional work
 - Features: Deeper understanding, nuanced responses, better accuracy
 - Access: Requires Premium subscription (₹289/month)
-- Includes: All Qurob 2 features plus enhanced capabilities
+- Includes: All Qurob 2 features plus enhanced capabilities, Q-06 Code Specialist bundled FREE!
 
-**3. Q-06 (Code Specialist - ₹320/month)**
-- Type: Specialized Programming AI
+**3. Q-06 (Code Specialist - Bundled with Qurob 4)**
+- Type: Specialized Programming AI (DeepSeek Coder V2)
 - Best For: Complex coding, architecture design, debugging, code review
 - Features: Expert-level coding in ALL languages, clean modular code
-- Access: Separate subscription at ₹320/month
+- Access: Included FREE with Qurob 4 subscription!
 - Languages: JavaScript, TypeScript, Python, Java, C++, Go, Rust, PHP, Ruby, Swift, Kotlin, and 100+ more
 - Specialties: Full-stack development, API design, database optimization, DevOps
 
@@ -58,13 +58,12 @@ Tech Stack: React, TypeScript, Tailwind CSS, Supabase, Multiple AI APIs
 
 | Plan | Price | Model | Features |
 |------|-------|-------|----------|
-| Free | ₹0/month | Qurob 2 | Basic AI, real-time data, web search |
-| Premium | ₹289/month | Qurob 4 | Advanced AI, better answers, priority |
-| Code Specialist | ₹320/month | Q-06 | Expert coding AI, all languages |
+| Free | ₹0/month | Qurob 2 (Gemini Flash) | Basic AI, real-time data, web search |
+| Premium | ₹289/month | Qurob 4 (DeepSeek) + Q-06 | Advanced AI, code specialist, all features |
 
 **Payment Process (Manual UPI):**
 1. Go to Subscribe page in QurobAi
-2. Select your preferred plan (Premium or Code Specialist)
+2. Select Premium plan
 3. Pay via UPI to: **7864084241@ybl**
 4. Upload payment screenshot as proof
 5. Admin reviews and approves within 24 hours
@@ -80,6 +79,7 @@ Tech Stack: React, TypeScript, Tailwind CSS, Supabase, Multiple AI APIs
 **Cricket:** "Live cricket score" → Get IPL, international match scores
 **Currency:** "USD to INR rate" → Get forex exchange rates
 **Web Search:** "[Web Search] AI developments 2024" → Search internet
+**Image Generation:** "Generate an image of..." → Create AI images
 
 ### CONTACT & SUPPORT
 
@@ -103,10 +103,10 @@ A: Within 24 hours after admin approval.
 A: Soham from India created QurobAi.
 
 **Q: What makes Qurob 4 better?**
-A: Uses larger model for more accurate, nuanced responses.
+A: Uses DeepSeek Chat (GPT-4 class model) for more accurate, nuanced responses.
 
-**Q: What can Q-06 do?**
-A: Expert-level coding in any language with clean, modular output.
+**Q: Is Q-06 included with Qurob 4?**
+A: Yes! Q-06 Code Specialist is now bundled FREE with Qurob 4 subscription.
 `;
 
 // Enhanced query detection with cricket and currency
@@ -342,6 +342,20 @@ async function fetchCurrencyRates(currencies: string): Promise<string> {
   }
 }
 
+function getWeatherDescription(code: number): string {
+  const descriptions: Record<number, string> = {
+    0: "☀️ Clear sky", 1: "🌤️ Mainly clear", 2: "⛅ Partly cloudy", 3: "☁️ Overcast",
+    45: "🌫️ Fog", 48: "🌫️ Depositing rime fog",
+    51: "🌧️ Light drizzle", 53: "🌧️ Moderate drizzle", 55: "🌧️ Dense drizzle",
+    61: "🌧️ Slight rain", 63: "🌧️ Moderate rain", 65: "🌧️ Heavy rain",
+    71: "❄️ Slight snow", 73: "❄️ Moderate snow", 75: "❄️ Heavy snow",
+    77: "🌨️ Snow grains", 80: "🌦️ Slight rain showers", 81: "🌦️ Moderate rain showers",
+    82: "⛈️ Violent rain showers", 85: "🌨️ Slight snow showers", 86: "🌨️ Heavy snow showers",
+    95: "⛈️ Thunderstorm", 96: "⛈️ Thunderstorm with slight hail", 99: "⛈️ Thunderstorm with heavy hail",
+  };
+  return descriptions[code] || "Unknown conditions";
+}
+
 // Fetch real-time data
 async function fetchRealtimeData(type: string, query?: string): Promise<string | null> {
   try {
@@ -463,20 +477,6 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
   }
 }
 
-function getWeatherDescription(code: number): string {
-  const descriptions: Record<number, string> = {
-    0: "☀️ Clear sky", 1: "🌤️ Mainly clear", 2: "⛅ Partly cloudy", 3: "☁️ Overcast",
-    45: "🌫️ Fog", 48: "🌫️ Depositing rime fog",
-    51: "🌧️ Light drizzle", 53: "🌧️ Moderate drizzle", 55: "🌧️ Dense drizzle",
-    61: "🌧️ Slight rain", 63: "🌧️ Moderate rain", 65: "🌧️ Heavy rain",
-    71: "❄️ Slight snow", 73: "❄️ Moderate snow", 75: "❄️ Heavy snow",
-    77: "🌨️ Snow grains", 80: "🌦️ Slight rain showers", 81: "🌦️ Moderate rain showers",
-    82: "⛈️ Violent rain showers", 85: "🌨️ Slight snow showers", 86: "🌨️ Heavy snow showers",
-    95: "⛈️ Thunderstorm", 96: "⛈️ Thunderstorm with slight hail", 99: "⛈️ Thunderstorm with heavy hail",
-  };
-  return descriptions[code] || "Unknown conditions";
-}
-
 function isQurobAiQuery(message: string): boolean {
   const lower = message.toLowerCase();
   return /qurob|who\s+(?:made|created|built|developed)\s+you|what\s+(?:are|is)\s+you|about\s+(?:this|your)|your\s+(?:name|creator|developer)|which\s+(?:ai|model)|subscription|pricing|plan|feature|premium|upgrade|q-06|code\s+(?:model|specialist)|how\s+(?:do|does)\s+(?:this|you)\s+work|payment|upi|soham/i.test(lower);
@@ -534,6 +534,100 @@ function summarizeConversation(messages: any[]): any[] {
   return [...firstMessages, summaryMessage, ...recentMessages];
 }
 
+// Generate image using OpenRouter
+async function generateImage(prompt: string, apiKey: string, supabase: any, userId?: string): Promise<string> {
+  console.log("=== IMAGE GENERATION via OpenRouter ===");
+  console.log("Prompt:", prompt);
+  
+  try {
+    // Use OpenRouter's flux-schnell model for image generation
+    const response = await fetch("https://openrouter.ai/api/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://qurobai.com",
+        "X-Title": "QurobAi"
+      },
+      body: JSON.stringify({
+        model: "black-forest-labs/flux-schnell",
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024"
+      }),
+    });
+
+    console.log("Image gen response status:", response.status);
+
+    if (response.ok) {
+      const data = await response.json();
+      const imageUrl = data.data?.[0]?.url;
+      
+      if (imageUrl) {
+        console.log("Image generated successfully:", imageUrl.slice(0, 50) + "...");
+        return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrl}]\n\nI hope you like it! Let me know if you'd like any changes.`;
+      }
+    }
+    
+    // Fallback to Fireworks if OpenRouter fails
+    const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
+    if (FIREWORKS_API_KEY) {
+      console.log("Falling back to Fireworks for image generation");
+      const imageGenResponse = await fetch(
+        "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: prompt,
+            width: 1024,
+            height: 1024,
+            steps: 4,
+            seed: Math.floor(Math.random() * 1000000),
+          }),
+        }
+      );
+
+      if (imageGenResponse.ok) {
+        const imageBlob = await imageGenResponse.blob();
+        const imageBuffer = await imageBlob.arrayBuffer();
+        const base64Image = btoa(
+          new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+        );
+        
+        let imageUrlResult = `data:image/png;base64,${base64Image}`;
+        if (userId) {
+          try {
+            const fileName = `${userId}/${Date.now()}-generated.png`;
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from("chat-attachments")
+              .upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
+
+            if (!uploadError && uploadData) {
+              const { data: urlData } = supabase.storage
+                .from("chat-attachments")
+                .getPublicUrl(uploadData.path);
+              imageUrlResult = urlData.publicUrl;
+            }
+          } catch (e) {
+            console.log("Storage upload exception:", e);
+          }
+        }
+        
+        return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrlResult}]\n\nI hope you like it! Let me know if you'd like any changes.`;
+      }
+    }
+    
+    return "I tried to generate an image but encountered an error. Please try again with a different prompt.";
+  } catch (e) {
+    console.error("Image generation exception:", e);
+    return `Sorry, I couldn't generate the image right now. Error: ${e instanceof Error ? e.message : "Unknown error"}. Please try again.`;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -556,8 +650,9 @@ serve(async (req) => {
     const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
     const DEEPINFRA_API_KEY = Deno.env.get("DEEPINFRA_API_KEY");
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     
-    if (!GROQ_API_KEY && !FIREWORKS_API_KEY && !DEEPINFRA_API_KEY && !OPENROUTER_API_KEY) {
+    if (!GROQ_API_KEY && !FIREWORKS_API_KEY && !DEEPINFRA_API_KEY && !OPENROUTER_API_KEY && !GOOGLE_GEMINI_API_KEY) {
       console.error("No AI API keys configured");
       return new Response(
         JSON.stringify({ error: "AI service not configured. Please contact admin." }),
@@ -574,6 +669,7 @@ serve(async (req) => {
     let isCodeSpecialist = false;
     let baseTone = "professional";
     let customInstructions = "";
+    let persona = "default";
 
     if (userId) {
       try {
@@ -588,13 +684,26 @@ serve(async (req) => {
 
         const { data: settings } = await supabase
           .from("user_settings")
-          .select("base_tone, custom_instructions")
+          .select("base_tone, custom_instructions, persona")
           .eq("user_id", userId)
           .single();
 
         if (settings) {
           baseTone = settings.base_tone || "professional";
           customInstructions = settings.custom_instructions || "";
+          persona = settings.persona || "default";
+        }
+
+        // Load user memory for personalization
+        const { data: memories } = await supabase
+          .from("user_memory")
+          .select("memory_key, memory_value")
+          .eq("user_id", userId)
+          .limit(10);
+
+        if (memories && memories.length > 0) {
+          const memoryContext = memories.map(m => `- ${m.memory_key}: ${m.memory_value}`).join("\n");
+          customInstructions = `## USER PREFERENCES (Remember these):\n${memoryContext}\n\n${customInstructions}`;
         }
       } catch (e) {
         console.log("User settings error:", e);
@@ -624,113 +733,22 @@ serve(async (req) => {
         console.log("Detected query:", queryType.type, queryType.query);
         
         // Handle image generation request
-        if (queryType.type === "image_generation" && FIREWORKS_API_KEY) {
-          console.log("=== IMAGE GENERATION REQUEST ===");
-          console.log("Prompt:", queryType.query);
+        if (queryType.type === "image_generation" && OPENROUTER_API_KEY) {
+          const imageResponse = await generateImage(queryType.query || "beautiful artwork", OPENROUTER_API_KEY, supabase, userId);
           
-          try {
-            const imageGenResponse = await fetch(
-              "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image",
-              {
-                method: "POST",
-                headers: {
-                  "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  prompt: queryType.query,
-                  width: 1024,
-                  height: 1024,
-                  steps: 4,
-                  seed: Math.floor(Math.random() * 1000000),
-                }),
-              }
-            );
-
-            console.log("Image gen response status:", imageGenResponse.status);
-
-            if (imageGenResponse.ok) {
-              const imageBlob = await imageGenResponse.blob();
-              console.log("Image blob size:", imageBlob.size);
-              
-              const imageBuffer = await imageBlob.arrayBuffer();
-              const base64Image = btoa(
-                new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-              );
-              
-              // Upload to storage if userId provided
-              let imageUrlResult = `data:image/png;base64,${base64Image}`;
-              if (userId) {
-                try {
-                  const fileName = `${userId}/${Date.now()}-generated.png`;
-                  const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from("chat-attachments")
-                    .upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
-
-                  if (!uploadError && uploadData) {
-                    const { data: urlData } = supabase.storage
-                      .from("chat-attachments")
-                      .getPublicUrl(uploadData.path);
-                    imageUrlResult = urlData.publicUrl;
-                    console.log("Image uploaded to:", imageUrlResult);
-                  } else {
-                    console.log("Storage upload error:", uploadError);
-                  }
-                } catch (e) {
-                  console.log("Storage upload exception:", e);
-                }
-              }
-              
-              // Return generated image response
-              const responseText = `Here's the image I generated for "${queryType.query}":\n\n[GeneratedImage:${imageUrlResult}]\n\nI hope you like it! Let me know if you'd like any changes or a different style.`;
-              
-              // Create SSE response
-              const encoder = new TextEncoder();
-              const stream = new ReadableStream({
-                start(controller) {
-                  const data = JSON.stringify({
-                    choices: [{ delta: { content: responseText } }]
-                  });
-                  controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                  controller.close();
-                }
-              });
-              
-              return new Response(stream, {
-                headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-              });
-            } else {
-              const errorText = await imageGenResponse.text();
-              console.error("Image generation API error:", imageGenResponse.status, errorText);
-              
-              // Return error message instead of falling through
-              const errorResponse = `I tried to generate an image but encountered an error. This might be due to rate limiting or service issues. Please try again in a moment with a different prompt.`;
-              const encoder = new TextEncoder();
-              const stream = new ReadableStream({
-                start(controller) {
-                  const data = JSON.stringify({ choices: [{ delta: { content: errorResponse } }] });
-                  controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                  controller.close();
-                }
-              });
-              return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          const encoder = new TextEncoder();
+          const stream = new ReadableStream({
+            start(controller) {
+              const data = JSON.stringify({ choices: [{ delta: { content: imageResponse } }] });
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
             }
-          } catch (e) {
-            console.error("Image generation exception:", e);
-            const errorResponse = `Sorry, I couldn't generate the image right now. Error: ${e instanceof Error ? e.message : "Unknown error"}. Please try again.`;
-            const encoder = new TextEncoder();
-            const stream = new ReadableStream({
-              start(controller) {
-                const data = JSON.stringify({ choices: [{ delta: { content: errorResponse } }] });
-                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                controller.close();
-              }
-            });
-            return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-          }
+          });
+          
+          return new Response(stream, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
         }
         
         const data = await fetchRealtimeData(queryType.type, queryType.query);
@@ -740,35 +758,39 @@ serve(async (req) => {
       }
     }
 
-    // If image is present, use Fireworks Vision API
-    if (hasImage && imageUrl && FIREWORKS_API_KEY) {
-      console.log("Using Fireworks Vision API for image analysis");
+    // If image is present, use vision API
+    if (hasImage && imageUrl) {
+      console.log("Using Vision API for image analysis");
       
-      const visionMessages = processedMessages.map((m: any, i: number) => {
-        if (m.role === "user" && i === processedMessages.length - 1) {
-          return {
-            role: "user",
-            content: [
-              { type: "text", text: m.content || "What's in this image? Describe it in detail." },
-              { type: "image_url", image_url: { url: imageUrl } }
-            ]
-          };
-        }
-        return m;
-      });
+      // Try OpenRouter vision first (Qwen VL or similar)
+      if (OPENROUTER_API_KEY) {
+        const visionMessages = processedMessages.map((m: any, i: number) => {
+          if (m.role === "user" && i === processedMessages.length - 1) {
+            return {
+              role: "user",
+              content: [
+                { type: "text", text: m.content || "What's in this image? Describe it in detail." },
+                { type: "image_url", image_url: { url: imageUrl } }
+              ]
+            };
+          }
+          return m;
+        });
 
-      const visionResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "accounts/fireworks/models/qwen2p5-vl-32b-instruct",
-          messages: [
-            { 
-              role: "system", 
-              content: `You are ${modelName}, an AI assistant created by Soham from India for QurobAi. 
+        const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://qurobai.com",
+            "X-Title": "QurobAi"
+          },
+          body: JSON.stringify({
+            model: "qwen/qwen-2-vl-72b-instruct",
+            messages: [
+              { 
+                role: "system", 
+                content: `You are ${modelName}, an AI assistant created by Soham from India for QurobAi. 
 
 ## YOUR CAPABILITIES
 - You CAN see and analyze images in detail
@@ -776,26 +798,90 @@ serve(async (req) => {
 - You CAN help with visual tasks like identifying objects, reading text, analyzing art, etc.
 
 Be helpful, conversational, and provide detailed descriptions when analyzing images.` 
-            },
-            ...visionMessages
-          ],
-          stream: true,
-          temperature: 0.7,
-          max_tokens: 2048,
-        }),
-      });
-
-      if (visionResponse.ok) {
-        console.log("Vision API streaming response started");
-        return new Response(visionResponse.body, {
-          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+              },
+              ...visionMessages
+            ],
+            stream: true,
+            temperature: 0.7,
+            max_tokens: 2048,
+          }),
         });
-      } else {
-        console.error("Vision API error:", await visionResponse.text());
+
+        if (visionResponse.ok) {
+          console.log("OpenRouter Vision API streaming response started");
+          return new Response(visionResponse.body, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        } else {
+          console.error("OpenRouter Vision API error:", await visionResponse.text());
+        }
+      }
+      
+      // Fallback to Fireworks Vision
+      if (FIREWORKS_API_KEY) {
+        const visionMessages = processedMessages.map((m: any, i: number) => {
+          if (m.role === "user" && i === processedMessages.length - 1) {
+            return {
+              role: "user",
+              content: [
+                { type: "text", text: m.content || "What's in this image? Describe it in detail." },
+                { type: "image_url", image_url: { url: imageUrl } }
+              ]
+            };
+          }
+          return m;
+        });
+
+        const visionResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "accounts/fireworks/models/qwen2p5-vl-32b-instruct",
+            messages: [
+              { 
+                role: "system", 
+                content: `You are ${modelName}, an AI assistant created by Soham from India for QurobAi. 
+
+## YOUR CAPABILITIES
+- You CAN see and analyze images in detail
+- You CAN describe what's in images accurately
+- You CAN help with visual tasks like identifying objects, reading text, analyzing art, etc.
+
+Be helpful, conversational, and provide detailed descriptions when analyzing images.` 
+              },
+              ...visionMessages
+            ],
+            stream: true,
+            temperature: 0.7,
+            max_tokens: 2048,
+          }),
+        });
+
+        if (visionResponse.ok) {
+          console.log("Fireworks Vision API streaming response started");
+          return new Response(visionResponse.body, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        } else {
+          console.error("Fireworks Vision API error:", await visionResponse.text());
+        }
       }
     }
 
-    // Build system prompt - ChatGPT-style natural responses
+    // Persona-based personality
+    const personaStyles: Record<string, string> = {
+      default: "balanced, helpful, and adaptable",
+      coder: "technical, precise, and code-focused. Always provide code examples when relevant",
+      creative: "imaginative, artistic, and storytelling-focused. Use vivid language",
+      tutor: "patient, educational, and step-by-step. Explain concepts clearly",
+      friend: "casual, conversational, and warm. Use friendly language and occasional humor",
+    };
+    const personaStyle = personaStyles[persona] || personaStyles.default;
+
+    // Build system prompt
     let systemPrompt = `You are ${modelName}, an AI assistant created by **Soham from India** for the QurobAi platform.
 
 ## IDENTITY (ALWAYS REMEMBER)
@@ -810,6 +896,9 @@ Be helpful, conversational, and provide detailed descriptions when analyzing ima
 - You CAN generate images when users ask (e.g., "generate an image of a sunset")
 - You have access to real-time data: weather, crypto, stocks, news, cricket scores, currency rates
 - You can search the web for current information
+
+## PERSONALITY
+- ${personaStyle}
 
 ## RESPONSE STYLE
 - Be conversational and natural, like ChatGPT
@@ -827,7 +916,7 @@ Be helpful, conversational, and provide detailed descriptions when analyzing ima
 - Don't use excessive headers or markdown
 
 ${isCodeSpecialist ? `## CODE SPECIALIST MODE (Q-06)
-You are Q-06, the expert coding AI. You provide:
+You are Q-06, the expert coding AI powered by DeepSeek Coder V2 - one of the best open-source coding models. You provide:
 - Clean, production-ready, well-structured code
 - Best practices and design patterns
 - Clear explanations of complex concepts
@@ -835,8 +924,9 @@ You are Q-06, the expert coding AI. You provide:
 - Architecture recommendations
 - Debugging assistance
 - Code optimization suggestions
+- Security best practices
 
-Always write complete, working code. Never leave TODOs or placeholders.` : ""}
+Always write complete, working code. Never leave TODOs or placeholders. Every code block should be runnable.` : ""}
 
 ${includeKnowledge ? `## QUROBAI KNOWLEDGE\n${QUROBAI_KNOWLEDGE}` : ""}
 
@@ -844,44 +934,147 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
 
     console.log("Using model:", modelName, isCodeSpecialist ? "(Code Specialist)" : "");
 
-    // Determine which API to use - prefer OpenRouter for premium users
+    // Determine which API to use based on model tier
     let apiUrl: string;
     let apiKey: string;
     let modelToUse: string;
     let headers: Record<string, string>;
 
-    // Use OpenRouter for Qurob 4 if available (better quality)
-    if ((modelName === "Qurob 4" || isCodeSpecialist) && OPENROUTER_API_KEY) {
-      apiUrl = "https://openrouter.ai/api/v1/chat/completions";
-      apiKey = OPENROUTER_API_KEY;
-      modelToUse = isCodeSpecialist ? "qwen/qwen-2.5-coder-32b-instruct" : "qwen/qwen-2.5-72b-instruct";
-      headers = { 
-        Authorization: `Bearer ${apiKey}`, 
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://qurobai.com",
-        "X-Title": "QurobAi"
-      };
-      console.log("Using OpenRouter with model:", modelToUse);
-    } else if (GROQ_API_KEY) {
-      apiUrl = "https://api.groq.com/openai/v1/chat/completions";
-      apiKey = GROQ_API_KEY;
-      modelToUse = (modelName === "Qurob 4" || isCodeSpecialist) ? "llama-3.3-70b-versatile" : "llama-3.1-8b-instant";
-      headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-    } else if (FIREWORKS_API_KEY) {
-      apiUrl = "https://api.fireworks.ai/inference/v1/chat/completions";
-      apiKey = FIREWORKS_API_KEY;
-      modelToUse = (modelName === "Qurob 4" || isCodeSpecialist) ? "accounts/fireworks/models/llama-v3p1-70b-instruct" : "accounts/fireworks/models/llama-v3p1-8b-instruct";
-      headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+    if (modelName === "Qurob 4" || isCodeSpecialist) {
+      // Premium tier: Use OpenRouter with DeepSeek (FREE and excellent quality!)
+      if (OPENROUTER_API_KEY) {
+        apiUrl = "https://openrouter.ai/api/v1/chat/completions";
+        apiKey = OPENROUTER_API_KEY;
+        // DeepSeek models are FREE on OpenRouter!
+        modelToUse = isCodeSpecialist ? "deepseek/deepseek-coder" : "deepseek/deepseek-chat";
+        headers = { 
+          Authorization: `Bearer ${apiKey}`, 
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://qurobai.com",
+          "X-Title": "QurobAi"
+        };
+        console.log("Using OpenRouter DeepSeek:", modelToUse, "(FREE!)");
+      } else if (GROQ_API_KEY) {
+        // Fallback to Groq
+        apiUrl = "https://api.groq.com/openai/v1/chat/completions";
+        apiKey = GROQ_API_KEY;
+        modelToUse = "llama-3.3-70b-versatile";
+        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+        console.log("Using Groq fallback:", modelToUse);
+      } else {
+        apiUrl = "https://api.deepinfra.com/v1/openai/chat/completions";
+        apiKey = DEEPINFRA_API_KEY!;
+        modelToUse = "meta-llama/Meta-Llama-3.1-70B-Instruct";
+        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+      }
     } else {
-      apiUrl = "https://api.deepinfra.com/v1/openai/chat/completions";
-      apiKey = DEEPINFRA_API_KEY!;
-      modelToUse = (modelName === "Qurob 4" || isCodeSpecialist) ? "meta-llama/Meta-Llama-3.1-70B-Instruct" : "meta-llama/Meta-Llama-3.1-8B-Instruct";
-      headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+      // Free tier (Qurob 2): Use Google Gemini Flash (fast and good!)
+      if (GOOGLE_GEMINI_API_KEY) {
+        apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
+        apiKey = GOOGLE_GEMINI_API_KEY;
+        modelToUse = "gemini-2.0-flash";
+        headers = { "Content-Type": "application/json" };
+        console.log("Using Google Gemini Flash for free tier");
+        
+        // Gemini has different request format
+        const geminiMessages = processedMessages.map((m: any) => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }]
+        }));
+        
+        const geminiResponse = await fetch(apiUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            contents: [
+              { role: "user", parts: [{ text: systemPrompt }] },
+              { role: "model", parts: [{ text: "I understand. I am " + modelName + " created by Soham from India." }] },
+              ...geminiMessages
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 4096,
+            }
+          }),
+        });
+
+        if (geminiResponse.ok) {
+          console.log("Gemini streaming response started");
+          
+          // Transform Gemini SSE to OpenAI-compatible SSE
+          const reader = geminiResponse.body?.getReader();
+          const encoder = new TextEncoder();
+          
+          const stream = new ReadableStream({
+            async start(controller) {
+              if (!reader) {
+                controller.close();
+                return;
+              }
+              
+              const decoder = new TextDecoder();
+              let buffer = "";
+              
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                
+                for (const line of lines) {
+                  if (line.startsWith("data: ")) {
+                    try {
+                      const data = JSON.parse(line.slice(6));
+                      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                      if (text) {
+                        const openaiFormat = JSON.stringify({ choices: [{ delta: { content: text } }] });
+                        controller.enqueue(encoder.encode(`data: ${openaiFormat}\n\n`));
+                      }
+                    } catch (e) {
+                      // Skip malformed lines
+                    }
+                  }
+                }
+              }
+              
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+            }
+          });
+          
+          return new Response(stream, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        } else {
+          console.error("Gemini error:", await geminiResponse.text());
+          // Fall through to use alternative
+        }
+      }
+      
+      // Fallback for free tier
+      if (GROQ_API_KEY) {
+        apiUrl = "https://api.groq.com/openai/v1/chat/completions";
+        apiKey = GROQ_API_KEY;
+        modelToUse = "llama-3.1-8b-instant";
+        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+      } else if (FIREWORKS_API_KEY) {
+        apiUrl = "https://api.fireworks.ai/inference/v1/chat/completions";
+        apiKey = FIREWORKS_API_KEY;
+        modelToUse = "accounts/fireworks/models/llama-v3p1-8b-instruct";
+        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+      } else {
+        apiUrl = "https://api.deepinfra.com/v1/openai/chat/completions";
+        apiKey = DEEPINFRA_API_KEY!;
+        modelToUse = "meta-llama/Meta-Llama-3.1-8B-Instruct";
+        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+      }
     }
 
-    console.log("API:", apiUrl.includes("openrouter") ? "OpenRouter" : apiUrl.includes("groq") ? "Groq" : apiUrl.includes("fireworks") ? "Fireworks" : "DeepInfra", "Model:", modelToUse);
+    console.log("API:", apiUrl.includes("openrouter") ? "OpenRouter" : apiUrl.includes("groq") ? "Groq" : apiUrl.includes("fireworks") ? "Fireworks" : apiUrl.includes("google") ? "Gemini" : "DeepInfra", "Model:", modelToUse);
 
-    // Call AI API
+    // Call AI API (OpenAI-compatible format)
     const response = await fetch(apiUrl, {
       method: "POST",
       headers,
