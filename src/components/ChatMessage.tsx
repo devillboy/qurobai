@@ -2,6 +2,7 @@ import { memo, useState } from "react";
 import { Bot, User, Copy, Check, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { VoiceOutput } from "@/components/VoiceOutput";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -210,7 +211,7 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
           </div>
 
           {!isUser && !isStreaming && (
-            <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="mt-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
                 variant="ghost"
                 size="sm"
@@ -220,6 +221,7 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
                 {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
                 {copied ? "Copied" : "Copy"}
               </Button>
+              <VoiceOutput text={content} />
             </div>
           )}
         </div>

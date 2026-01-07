@@ -71,6 +71,42 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_templates: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_public: boolean | null
+          prompt: string
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_public?: boolean | null
+          prompt: string
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_public?: boolean | null
+          prompt?: string
+          title?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -330,6 +366,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_memory: {
+        Row: {
+          created_at: string | null
+          id: string
+          memory_key: string
+          memory_value: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          memory_key: string
+          memory_value: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          memory_key?: string
+          memory_value?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -358,11 +421,14 @@ export type Database = {
           custom_instructions: string | null
           gemini_api_key: string | null
           id: string
+          language_preference: string | null
           openai_api_key: string | null
+          persona: string | null
           preferred_model: string | null
           theme_preference: string | null
           updated_at: string
           user_id: string
+          voice_output_enabled: boolean | null
         }
         Insert: {
           base_tone?: string | null
@@ -370,11 +436,14 @@ export type Database = {
           custom_instructions?: string | null
           gemini_api_key?: string | null
           id?: string
+          language_preference?: string | null
           openai_api_key?: string | null
+          persona?: string | null
           preferred_model?: string | null
           theme_preference?: string | null
           updated_at?: string
           user_id: string
+          voice_output_enabled?: boolean | null
         }
         Update: {
           base_tone?: string | null
@@ -382,11 +451,14 @@ export type Database = {
           custom_instructions?: string | null
           gemini_api_key?: string | null
           id?: string
+          language_preference?: string | null
           openai_api_key?: string | null
+          persona?: string | null
           preferred_model?: string | null
           theme_preference?: string | null
           updated_at?: string
           user_id?: string
+          voice_output_enabled?: boolean | null
         }
         Relationships: []
       }

@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Paperclip, Mic, MicOff, X, Loader2 } from "lucide-react";
+import { Send, Paperclip, Mic, MicOff, X, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { TemplatesPicker } from "@/components/TemplatesPicker";
 
 interface ChatInputEnhancedProps {
   onSend: (message: string) => void;
@@ -24,8 +25,8 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadCount, setUploadCount] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -36,16 +37,15 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
+        // Use single result mode for cleaner transcription
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
         recognitionRef.current.lang = "en-US";
 
         recognitionRef.current.onresult = (event: any) => {
-          let transcript = "";
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-          }
-          setMessage(prev => prev + transcript);
+          const transcript = event.results[0][0].transcript;
+          setMessage(prev => prev + (prev ? " " : "") + transcript);
+          toast.success("Voice captured!");
         };
 
         recognitionRef.current.onerror = (event: any) => {
@@ -53,6 +53,8 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
           setIsRecording(false);
           if (event.error === "not-allowed") {
             toast.error("Microphone access denied");
+          } else if (event.error === "no-speech") {
+            toast.info("No speech detected. Try again.");
           }
         };
 
@@ -65,7 +67,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
-      toast.error("Speech recognition not supported");
+      toast.error("Speech recognition not supported in this browser");
       return;
     }
 
@@ -73,9 +75,14 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
       recognitionRef.current.stop();
       setIsRecording(false);
     } else {
-      recognitionRef.current.start();
-      setIsRecording(true);
-      toast.success("Listening...");
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+        toast.info("Listening... Speak now");
+      } catch (e) {
+        console.error("Failed to start recording:", e);
+        toast.error("Failed to start voice input");
+      }
     }
   };
 
@@ -84,16 +91,11 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
     if (!files || !user) return;
 
     const fileArray = Array.from(files);
-    const totalFiles = fileArray.length;
-    let completedUploads = 0;
-
     setUploading(true);
-    setUploadCount(totalFiles);
 
     for (const file of fileArray) {
       if (file.size > 10 * 1024 * 1024) {
         toast.error(`${file.name} is too large (max 10MB)`);
-        completedUploads++;
         continue;
       }
 
@@ -168,12 +170,9 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
         console.error("Upload error:", error);
         toast.error(`Failed to upload ${file.name}`);
       }
-      
-      completedUploads++;
     }
 
     setUploading(false);
-    setUploadCount(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -215,6 +214,12 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
     }
   };
 
+  const handleTemplateSelect = (prompt: string) => {
+    setMessage(prompt);
+    setShowTemplates(false);
+    textareaRef.current?.focus();
+  };
+
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -225,10 +230,18 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
   return (
     <div className="border-t border-border bg-background p-4">
       <div className="max-w-3xl mx-auto">
+        {/* Templates Picker */}
+        {showTemplates && (
+          <TemplatesPicker 
+            onSelect={handleTemplateSelect} 
+            onClose={() => setShowTemplates(false)} 
+          />
+        )}
+
         {attachments.length > 0 && (
           <div className="flex gap-2 mb-3 flex-wrap">
             {attachments.map((file, index) => (
-              <div key={index} className="relative group">
+              <div key={index} className="relative group animate-fade-in">
                 {file.type.startsWith("image/") ? (
                   <img
                     src={file.url}
@@ -252,9 +265,9 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
         )}
 
         {isRecording && (
-          <div className="flex items-center gap-2 mb-3 text-sm text-foreground">
-            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            Listening...
+          <div className="flex items-center gap-2 mb-3 text-sm text-foreground animate-pulse">
+            <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            <span>Listening... Speak now</span>
           </div>
         )}
 
@@ -267,6 +280,17 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
             onChange={handleFileUpload}
             className="hidden"
           />
+
+          {/* Templates Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+            onClick={() => setShowTemplates(!showTemplates)}
+            title="Quick Templates"
+          >
+            <Sparkles className="w-4 h-4" />
+          </Button>
 
           <Button
             variant="ghost"
@@ -293,7 +317,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
             variant="ghost"
             size="icon"
             className={cn(
-              "shrink-0 h-9 w-9",
+              "shrink-0 h-9 w-9 transition-colors",
               isRecording ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-foreground"
             )}
             onClick={toggleRecording}
@@ -313,7 +337,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
         </div>
 
         <p className="text-xs text-muted-foreground text-center mt-2">
-          QurobAi can see images and generate images. Ask "generate an image of..."
+          QurobAi can see images & generate images • Try "generate an image of..."
         </p>
       </div>
     </div>
