@@ -3,6 +3,7 @@ import { Bot, User, Copy, Check, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceOutput } from "@/components/VoiceOutput";
+import { CodePlayground } from "@/components/CodePlayground";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -136,6 +137,49 @@ const renderContent = (content: string) => {
 };
 
 const renderTextWithCode = (content: string, keyOffset: number): React.ReactNode[] => {
+  // Check for playground code blocks first
+  const playgroundRegex = /```\[Playground\](\w+)?\n([\s\S]*?)```/g;
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+
+  // First handle playground blocks
+  let processedContent = content;
+  const playgroundMatches: { index: number; lang: string; code: string; fullMatch: string }[] = [];
+  
+  while ((match = playgroundRegex.exec(content)) !== null) {
+    playgroundMatches.push({
+      index: match.index,
+      lang: match[1] || "html",
+      code: match[2].trim(),
+      fullMatch: match[0]
+    });
+  }
+
+  // Replace playground blocks with placeholders and render
+  if (playgroundMatches.length > 0) {
+    let offset = 0;
+    for (const pm of playgroundMatches) {
+      const before = processedContent.slice(offset, pm.index - (content.length - processedContent.length - offset));
+      if (before) {
+        parts.push(<span key={`text-${keyOffset}-${offset}`} dangerouslySetInnerHTML={{ __html: formatText(before) }} />);
+      }
+      parts.push(<CodePlayground key={`playground-${keyOffset}-${pm.index}`} code={pm.code} language={pm.lang} />);
+      offset = pm.index + pm.fullMatch.length;
+    }
+    const remaining = content.slice(offset);
+    if (remaining) {
+      // Process remaining for normal code blocks
+      return [...parts, ...renderNormalCode(remaining, keyOffset + 1000)];
+    }
+    return parts;
+  }
+
+  return renderNormalCode(content, keyOffset);
+};
+
+const renderNormalCode = (content: string, keyOffset: number): React.ReactNode[] => {
   const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
