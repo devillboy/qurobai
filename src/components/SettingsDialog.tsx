@@ -19,7 +19,10 @@ import {
   Crown,
   LogOut,
   Sliders,
-  Download
+  Download,
+  FileText,
+  Scale,
+  Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PersonalizationDialog } from "./PersonalizationDialog";
@@ -241,7 +244,16 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     : "Using Qurob 2 model"}
                 </div>
               </div>
-              {!subscription && (
+              {subscription ? (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleNavigate("/subscription-history")}
+                  className="text-xs"
+                >
+                  Manage
+                </Button>
+              ) : (
                 <Button 
                   size="sm" 
                   onClick={() => handleNavigate("/subscribe")}
@@ -263,13 +275,15 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
               onClick={() => setPersonalizationOpen(true)}
             />
             
-            <MenuItem 
-              icon={CreditCard} 
-              label="Upgrade to Qurob 4" 
-              description="Get better answers with premium AI"
-              onClick={() => handleNavigate("/subscribe")}
-              highlight
-            />
+            {!subscription && (
+              <MenuItem 
+                icon={CreditCard} 
+                label="Upgrade to Qurob 4" 
+                description="Get better answers with premium AI + Q-06 Code AI"
+                onClick={() => handleNavigate("/subscribe")}
+                highlight
+              />
+            )}
             
             <MenuItem 
               icon={History} 
@@ -293,6 +307,26 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                 onClick={() => handleNavigate("/admin")}
               />
             )}
+          </div>
+
+          {/* Legal Links */}
+          <div className="space-y-2">
+            <div className="text-xs text-muted-foreground font-medium px-1">Legal & Privacy</div>
+            <MenuItem 
+              icon={FileText} 
+              label="Privacy Policy" 
+              onClick={() => handleNavigate("/privacy")}
+            />
+            <MenuItem 
+              icon={Scale} 
+              label="Terms of Service" 
+              onClick={() => handleNavigate("/terms")}
+            />
+            <MenuItem 
+              icon={Lock} 
+              label="Security" 
+              onClick={() => handleNavigate("/security")}
+            />
           </div>
 
           {/* About QurobAi */}

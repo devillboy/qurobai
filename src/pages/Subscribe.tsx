@@ -228,6 +228,9 @@ export default function Subscribe() {
             <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-2 py-0.5 text-xs font-medium rounded-bl">
               POPULAR
             </div>
+            <div className="absolute top-0 left-0 bg-green-600 text-white px-2 py-0.5 text-xs font-medium rounded-br">
+              + Q-06 FREE
+            </div>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Brain className="w-5 h-5 text-primary" />
