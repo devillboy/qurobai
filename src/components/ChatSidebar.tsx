@@ -109,8 +109,8 @@ export const ChatSidebar = ({
     <motion.aside
       initial={false}
       animate={{ width: collapsed ? 72 : 280 }}
-      transition={{ duration: 0.2 }}
-      className="h-full bg-card/50 backdrop-blur-xl border-r border-border/50 flex flex-col shrink-0"
+      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      className="h-full bg-sidebar border-r border-sidebar-border flex flex-col shrink-0"
     >
       {/* Header */}
       <div className="p-4 flex items-center justify-between">
@@ -122,12 +122,10 @@ export const ChatSidebar = ({
               exit={{ opacity: 0 }}
               className="flex items-center gap-2"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/20">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-                QurobAi
-              </span>
+              <span className="font-bold text-lg">QurobAi</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -136,7 +134,7 @@ export const ChatSidebar = ({
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className="h-9 w-9 rounded-xl hover:bg-secondary"
+          className="h-9 w-9 rounded-lg hover:bg-sidebar-accent"
         >
           {collapsed ? (
             <ChevronRight className="w-4 h-4" />
@@ -150,7 +148,7 @@ export const ChatSidebar = ({
       <div className="px-3 mb-2">
         <Button
           onClick={onNewChat}
-          className={`w-full justify-start gap-2 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-xl ${
+          className={`w-full justify-start gap-2 bg-primary hover:bg-primary/90 rounded-lg ${
             collapsed ? "px-3" : ""
           }`}
         >
@@ -164,10 +162,10 @@ export const ChatSidebar = ({
         {conversations.map((conv) => (
           <div
             key={conv.id}
-            className={`group relative flex items-center rounded-xl transition-all duration-200 ${
+            className={`group relative flex items-center rounded-lg transition-all duration-200 ${
               currentConversationId === conv.id
-                ? "bg-primary/10 border border-primary/20"
-                : "hover:bg-secondary/50"
+                ? "bg-sidebar-accent border border-primary/20"
+                : "hover:bg-sidebar-accent/50"
             }`}
           >
             <button
@@ -218,23 +216,23 @@ export const ChatSidebar = ({
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-border/50 space-y-1">
+      <div className="p-3 border-t border-sidebar-border space-y-1">
         <Button
           variant="ghost"
           onClick={() => navigate("/subscribe")}
-          className={`w-full justify-start gap-2 rounded-xl bg-gradient-to-r from-primary/10 to-purple-500/10 hover:from-primary/20 hover:to-purple-500/20 ${
+          className={`w-full justify-start gap-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary ${
             collapsed ? "px-3" : ""
           }`}
         >
-          <Sparkles className="w-4 h-4 shrink-0 text-primary" />
-          {!collapsed && <span className="text-primary font-semibold">Upgrade</span>}
+          <Sparkles className="w-4 h-4 shrink-0" />
+          {!collapsed && <span className="font-medium">Upgrade</span>}
         </Button>
 
         {isAdmin && (
           <Button
             variant="ghost"
             onClick={() => navigate("/admin")}
-            className={`w-full justify-start gap-2 rounded-xl ${
+            className={`w-full justify-start gap-2 rounded-lg ${
               collapsed ? "px-3" : ""
             }`}
           >
@@ -246,7 +244,7 @@ export const ChatSidebar = ({
         <Button
           variant="ghost"
           onClick={onOpenSettings}
-          className={`w-full justify-start gap-2 rounded-xl ${
+          className={`w-full justify-start gap-2 rounded-lg ${
             collapsed ? "px-3" : ""
           }`}
         >
@@ -257,7 +255,7 @@ export const ChatSidebar = ({
         <Button
           variant="ghost"
           onClick={handleSignOut}
-          className={`w-full justify-start gap-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 ${
+          className={`w-full justify-start gap-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 ${
             collapsed ? "px-3" : ""
           }`}
         >

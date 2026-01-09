@@ -6,57 +6,59 @@
 
 @layer base {
   :root {
-    /* ChatGPT + Claude Hybrid Theme */
-    /* Warm dark background like Claude, ChatGPT's clean aesthetic */
-    --background: 0 0% 10%;
-    --foreground: 0 0% 93%;
+    /* Grok + Claude Hybrid Theme */
+    /* Pure black base (Grok) + warm accents (Claude) */
+    --background: 0 0% 5%;           /* Near black: #0d0d0d */
+    --foreground: 40 15% 95%;        /* Warm white: #f7f5f3 */
 
-    --card: 0 0% 13%;
-    --card-foreground: 0 0% 93%;
+    --card: 0 0% 8%;                 /* Dark card: #141414 */
+    --card-foreground: 40 15% 95%;
 
-    --popover: 0 0% 13%;
-    --popover-foreground: 0 0% 93%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 40 15% 95%;
 
-    /* ChatGPT green as primary accent */
-    --primary: 160 60% 40%;
+    /* Electric blue primary (Grok inspired) */
+    --primary: 204 88% 53%;          /* Electric blue: #1d9bf0 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 16%;
-    --secondary-foreground: 0 0% 93%;
+    --secondary: 0 0% 12%;           /* Elevated dark */
+    --secondary-foreground: 40 15% 95%;
 
-    --muted: 0 0% 18%;
+    --muted: 0 0% 15%;
     --muted-foreground: 0 0% 55%;
 
-    /* Claude's warm tan as accent */
-    --accent: 30 40% 50%;
+    /* Warm tan accent (Claude inspired) */
+    --accent: 32 45% 55%;            /* Warm tan: #c49a6c */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 16%;
-    --ring: 160 60% 40%;
+    --border: 0 0% 15%;              /* Subtle border */
+    --input: 0 0% 12%;
+    --ring: 204 88% 53%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 0 0% 9%;
-    --sidebar-foreground: 0 0% 93%;
-    --sidebar-primary: 160 60% 40%;
+    /* Sidebar - Pure black like Grok */
+    --sidebar-background: 0 0% 3%;   /* #080808 */
+    --sidebar-foreground: 40 15% 95%;
+    --sidebar-primary: 204 88% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 93%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 160 60% 40%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 40 15% 95%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 204 88% 53%;
     
-    --chart-1: 160 60% 40%;
-    --chart-2: 160 45% 55%;
-    --chart-3: 30 40% 50%;
+    /* Chart colors */
+    --chart-1: 204 88% 53%;
+    --chart-2: 32 45% 55%;
+    --chart-3: 142 70% 45%;
     --chart-4: 0 0% 50%;
     --chart-5: 0 0% 35%;
     
-    --success: 142 70% 40%;
-    --warning: 38 90% 50%;
+    --success: 142 70% 45%;
+    --warning: 38 90% 55%;
   }
 }
 
@@ -80,27 +82,28 @@
   }
 
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: hsl(var(--background));
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted));
-    border-radius: 4px;
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.4);
+    background: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
 @layer components {
+  /* Solid backgrounds - no glass effects for performance */
   .glass {
-    background: hsl(var(--card) / 0.9);
+    background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
   }
 
@@ -121,7 +124,7 @@
   
   .hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px hsl(var(--primary) / 0.15);
+    box-shadow: 0 4px 12px hsl(var(--primary) / 0.15);
   }
 }
 
@@ -139,45 +142,51 @@
   }
 }
 
+/* Smooth typing animation */
 @keyframes typing {
   0%, 60%, 100% {
     transform: translateY(0);
+    opacity: 0.5;
   }
   30% {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
+    opacity: 1;
   }
 }
 
 .typing-dot {
-  animation: typing 1.2s ease-in-out infinite;
+  animation: typing 1.4s ease-in-out infinite;
 }
 
 .typing-dot:nth-child(2) {
-  animation-delay: 0.15s;
+  animation-delay: 0.2s;
 }
 
 .typing-dot:nth-child(3) {
-  animation-delay: 0.3s;
+  animation-delay: 0.4s;
 }
 
-/* Subtle grid pattern for backgrounds */
-.bg-grid {
-  background-image: 
-    linear-gradient(hsl(var(--border) / 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(var(--border) / 0.15) 1px, transparent 1px);
-  background-size: 40px 40px;
+/* Message slide in animation */
+@keyframes messageSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-/* Glow effect for premium elements */
-.glow {
-  box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+.animate-message-in {
+  animation: messageSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* Smooth fade in animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -187,4 +196,41 @@
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+/* Smooth scale animation */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* Glow effect for premium elements */
+.glow {
+  box-shadow: 0 0 20px hsl(var(--primary) / 0.25);
+}
+
+/* iOS Safe Area */
+.safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 768px) {
+  button, a, [role="button"] {
+    min-height: 44px;
+  }
+  
+  input, textarea, select {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
 }

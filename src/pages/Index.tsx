@@ -14,6 +14,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
+const messageTransition = {
+  duration: 0.4,
+  ease: [0.22, 1, 0.36, 1] as const
+};
+
 const Index = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -107,17 +112,22 @@ const Index = () => {
   return (
     <div className="h-screen flex bg-background overflow-hidden">
       {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
       
       {/* Sidebar - Hidden on mobile by default */}
       <div className={`
         fixed md:relative inset-y-0 left-0 z-50 
-        transform transition-transform duration-300 ease-in-out
+        transform transition-transform duration-300 ease-[0.22,1,0.36,1]
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <ChatSidebar
@@ -147,7 +157,7 @@ const Index = () => {
         />
         
         <SubscriptionExpiryBanner />
-        <div className="p-3 md:p-4 border-b max-w-3xl w-full mx-auto">
+        <div className="p-3 md:p-4 border-b border-border max-w-3xl w-full mx-auto">
           <ModelIndicator currentModel={currentModel} />
         </div>
         
@@ -156,7 +166,7 @@ const Index = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="flex-1 overflow-y-auto"
             >
               <WelcomeScreen onQuickAction={handleQuickAction} />
@@ -171,10 +181,10 @@ const Index = () => {
                   <motion.div
                     key={message.id}
                     layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={messageTransition}
                   >
                     <ChatMessage
                       role={message.role}
@@ -190,14 +200,20 @@ const Index = () => {
               </AnimatePresence>
               <AnimatePresence>
                 {isLoading && (messages.length === 0 || messages[messages.length - 1]?.role === "user" || messages[messages.length - 1]?.content === "") && (
-                  <TypingIndicator />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <TypingIndicator />
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
           )}
 
           {/* Input area */}
-          <div className="mt-auto pt-3 md:pt-4">
+          <div className="mt-auto pt-3 md:pt-4 safe-area-bottom">
             <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} />
           </div>
         </div>
