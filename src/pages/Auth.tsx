@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Bot, Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Sparkles, Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,8 +104,8 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 mb-4">
-            <Bot className="w-7 h-7 text-primary" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary mb-4">
+            <Sparkles className="w-7 h-7 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold">
             Qurob<span className="text-primary">Ai</span>
@@ -129,7 +129,7 @@ const Auth = () => {
                     placeholder="Enter your name"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-background"
                   />
                 </div>
               </div>
@@ -148,7 +148,7 @@ const Auth = () => {
                     setEmail(e.target.value);
                     setErrors(prev => ({ ...prev, email: undefined }));
                   }}
-                  className="pl-10"
+                  className="pl-10 bg-background"
                 />
               </div>
               {errors.email && (
@@ -169,7 +169,7 @@ const Auth = () => {
                     setPassword(e.target.value);
                     setErrors(prev => ({ ...prev, password: undefined }));
                   }}
-                  className="pl-10 pr-10"
+                  className="pl-10 pr-10 bg-background"
                 />
                 <button
                   type="button"
@@ -213,7 +213,7 @@ const Auth = () => {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -244,7 +244,7 @@ const Auth = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Created by Soham from India
+          Created by Soham from India 🇮🇳
         </p>
       </div>
     </div>

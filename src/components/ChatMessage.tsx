@@ -21,8 +21,8 @@ const CodeBlock = memo(({ code, language }: { code: string; language: string }) 
   };
 
   return (
-    <div className="my-3 rounded-lg overflow-hidden border border-border bg-secondary">
-      <div className="flex items-center justify-between px-3 py-2 bg-muted border-b border-border">
+    <div className="my-3 rounded-lg overflow-hidden border border-border bg-background">
+      <div className="flex items-center justify-between px-3 py-2 bg-secondary border-b border-border">
         <span className="text-xs text-muted-foreground font-mono">{language || "code"}</span>
         <Button
           variant="ghost"
@@ -34,7 +34,7 @@ const CodeBlock = memo(({ code, language }: { code: string; language: string }) 
           {copied ? "Copied" : "Copy"}
         </Button>
       </div>
-      <pre className="p-3 overflow-x-auto text-sm bg-background">
+      <pre className="p-3 overflow-x-auto text-sm">
         <code className="font-mono text-foreground">{code}</code>
       </pre>
     </div>
@@ -67,7 +67,7 @@ const GeneratedImage = memo(({ src, prompt }: { src: string; prompt?: string }) 
       <img 
         src={src} 
         alt={prompt || "AI Generated Image"} 
-        className="rounded-xl max-w-full md:max-w-lg border border-border shadow-lg"
+        className="rounded-xl max-w-full md:max-w-lg border border-border"
         loading="lazy"
       />
       <Button
@@ -209,7 +209,7 @@ const formatText = (text: string): string => {
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-secondary rounded text-sm font-mono">$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-foreground underline hover:no-underline">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-primary underline hover:no-underline">$1</a>')
     .replace(/\n/g, '<br />');
 };
 
@@ -229,16 +229,16 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
   const isUser = role === "user";
 
   return (
-    <div className={cn("group py-5 px-4", isUser ? "bg-transparent" : "bg-secondary/30")}>
+    <div className={cn("group py-5 px-4 rounded-lg", isUser ? "bg-transparent" : "bg-card/50")}>
       <div className="max-w-3xl mx-auto flex gap-4">
         <div className={cn(
           "shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
-          isUser ? "bg-secondary" : "bg-foreground"
+          isUser ? "bg-secondary" : "bg-primary"
         )}>
           {isUser ? (
             <User className="w-4 h-4 text-foreground" />
           ) : (
-            <Bot className="w-4 h-4 text-background" />
+            <Bot className="w-4 h-4 text-primary-foreground" />
           )}
         </div>
 
@@ -250,7 +250,7 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
           <div className="prose prose-sm max-w-none text-foreground leading-relaxed">
             {renderContent(content)}
             {isStreaming && (
-              <span className="inline-block w-2 h-4 bg-foreground animate-pulse ml-0.5" />
+              <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-0.5 rounded-sm" />
             )}
           </div>
 
@@ -277,15 +277,15 @@ export const ChatMessage = memo(({ role, content, isStreaming }: ChatMessageProp
 ChatMessage.displayName = "ChatMessage";
 
 export const TypingIndicator = memo(() => (
-  <div className="py-5 px-4 bg-secondary/30">
+  <div className="py-5 px-4 rounded-lg bg-card/50">
     <div className="max-w-3xl mx-auto flex gap-4">
-      <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-foreground">
-        <Bot className="w-4 h-4 text-background" />
+      <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
+        <Bot className="w-4 h-4 text-primary-foreground" />
       </div>
-      <div className="flex items-center gap-1 pt-2">
-        <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
-        <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
-        <span className="w-2 h-2 rounded-full bg-muted-foreground typing-dot" />
+      <div className="flex items-center gap-1.5 pt-2">
+        <span className="w-2 h-2 rounded-full bg-primary typing-dot" />
+        <span className="w-2 h-2 rounded-full bg-primary typing-dot" />
+        <span className="w-2 h-2 rounded-full bg-primary typing-dot" />
       </div>
     </div>
   </div>

@@ -380,23 +380,23 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       
       if (geoData[0]) {
         const { lat, lon, display_name } = geoData[0];
-        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,precipitation_probability&timezone=auto`;
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`;
         const weatherResp = await fetch(weatherUrl);
         const weatherData = await weatherResp.json();
-        const w = weatherData.current_weather;
         
-        const currentHour = new Date().getHours();
-        const humidity = weatherData.hourly?.relativehumidity_2m?.[currentHour] || "N/A";
-        const precipitation = weatherData.hourly?.precipitation_probability?.[currentHour] || 0;
+        const current = weatherData.current;
+        const temp = current?.temperature_2m;
+        const humidity = current?.relative_humidity_2m;
+        const weatherCode = current?.weather_code;
+        const windSpeed = current?.wind_speed_10m;
         
-        return `**🌤 Weather in ${query.charAt(0).toUpperCase() + query.slice(1)}:**
+        return `**🌤️ Weather in ${query}**
 
-- **Temperature:** ${w.temperature}°C
-- **Feels Like:** ~${Math.round(w.temperature - (w.windspeed / 10))}°C
-- **Wind Speed:** ${w.windspeed} km/h
-- **Humidity:** ${humidity}%
-- **Rain Chance:** ${precipitation}%
-- **Conditions:** ${getWeatherDescription(w.weathercode)}
+${getWeatherDescription(weatherCode)}
+
+🌡️ **Temperature:** ${temp}°C
+💧 **Humidity:** ${humidity}%
+💨 **Wind Speed:** ${windSpeed} km/h
 
 *Location: ${display_name?.split(",").slice(0, 2).join(",")}*
 *Updated: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST*`;
@@ -534,94 +534,82 @@ function summarizeConversation(messages: any[]): any[] {
   return [...firstMessages, summaryMessage, ...recentMessages];
 }
 
-// Generate image using OpenRouter
+// Generate image using Fireworks API (primary)
 async function generateImage(prompt: string, apiKey: string, supabase: any, userId?: string): Promise<string> {
-  console.log("=== IMAGE GENERATION via OpenRouter ===");
+  console.log("=== IMAGE GENERATION ===");
   console.log("Prompt:", prompt);
   
+  // Get Fireworks API key
+  const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
+  
+  if (!FIREWORKS_API_KEY) {
+    console.error("No Fireworks API key configured for image generation");
+    return "Image generation is not configured. Please contact admin to set up the FIREWORKS_API_KEY.";
+  }
+  
   try {
-    // Use OpenRouter's flux-schnell model for image generation
-    const response = await fetch("https://openrouter.ai/api/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://qurobai.com",
-        "X-Title": "QurobAi"
-      },
-      body: JSON.stringify({
-        model: "black-forest-labs/flux-schnell",
-        prompt: prompt,
-        n: 1,
-        size: "1024x1024"
-      }),
-    });
-
-    console.log("Image gen response status:", response.status);
-
-    if (response.ok) {
-      const data = await response.json();
-      const imageUrl = data.data?.[0]?.url;
-      
-      if (imageUrl) {
-        console.log("Image generated successfully:", imageUrl.slice(0, 50) + "...");
-        return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrl}]\n\nI hope you like it! Let me know if you'd like any changes.`;
+    console.log("Using Fireworks FLUX for image generation");
+    const imageGenResponse = await fetch(
+      "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          width: 1024,
+          height: 1024,
+          steps: 4,
+          seed: Math.floor(Math.random() * 1000000),
+        }),
       }
-    }
-    
-    // Fallback to Fireworks if OpenRouter fails
-    const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
-    if (FIREWORKS_API_KEY) {
-      console.log("Falling back to Fireworks for image generation");
-      const imageGenResponse = await fetch(
-        "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image",
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: prompt,
-            width: 1024,
-            height: 1024,
-            steps: 4,
-            seed: Math.floor(Math.random() * 1000000),
-          }),
-        }
+    );
+
+    console.log("Fireworks response status:", imageGenResponse.status);
+
+    if (imageGenResponse.ok) {
+      const imageBlob = await imageGenResponse.blob();
+      const imageBuffer = await imageBlob.arrayBuffer();
+      const base64Image = btoa(
+        new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
       );
+      
+      let imageUrlResult = `data:image/png;base64,${base64Image}`;
+      
+      // Try to upload to storage for better performance
+      if (userId) {
+        try {
+          const fileName = `${userId}/${Date.now()}-generated.png`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("chat-attachments")
+            .upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
 
-      if (imageGenResponse.ok) {
-        const imageBlob = await imageGenResponse.blob();
-        const imageBuffer = await imageBlob.arrayBuffer();
-        const base64Image = btoa(
-          new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-        );
-        
-        let imageUrlResult = `data:image/png;base64,${base64Image}`;
-        if (userId) {
-          try {
-            const fileName = `${userId}/${Date.now()}-generated.png`;
-            const { data: uploadData, error: uploadError } = await supabase.storage
+          if (!uploadError && uploadData) {
+            const { data: urlData } = supabase.storage
               .from("chat-attachments")
-              .upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
-
-            if (!uploadError && uploadData) {
-              const { data: urlData } = supabase.storage
-                .from("chat-attachments")
-                .getPublicUrl(uploadData.path);
-              imageUrlResult = urlData.publicUrl;
-            }
-          } catch (e) {
-            console.log("Storage upload exception:", e);
+              .getPublicUrl(uploadData.path);
+            imageUrlResult = urlData.publicUrl;
+            console.log("Image uploaded to storage:", imageUrlResult.slice(0, 50) + "...");
           }
+        } catch (e) {
+          console.log("Storage upload exception (using base64):", e);
         }
-        
-        return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrlResult}]\n\nI hope you like it! Let me know if you'd like any changes.`;
       }
+      
+      return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrlResult}]\n\nI hope you like it! Let me know if you'd like any changes or a different image.`;
+    } else {
+      const errorText = await imageGenResponse.text();
+      console.error("Fireworks image generation error:", errorText);
+      
+      // Check for rate limiting
+      if (imageGenResponse.status === 429) {
+        return "Image generation is temporarily rate limited. Please wait a moment and try again.";
+      }
+      
+      return `Sorry, I couldn't generate the image right now. The image service returned an error. Please try again with a different prompt.`;
     }
-    
-    return "I tried to generate an image but encountered an error. Please try again with a different prompt.";
   } catch (e) {
     console.error("Image generation exception:", e);
     return `Sorry, I couldn't generate the image right now. Error: ${e instanceof Error ? e.message : "Unknown error"}. Please try again.`;
@@ -733,8 +721,8 @@ serve(async (req) => {
         console.log("Detected query:", queryType.type, queryType.query);
         
         // Handle image generation request
-        if (queryType.type === "image_generation" && OPENROUTER_API_KEY) {
-          const imageResponse = await generateImage(queryType.query || "beautiful artwork", OPENROUTER_API_KEY, supabase, userId);
+        if (queryType.type === "image_generation" && FIREWORKS_API_KEY) {
+          const imageResponse = await generateImage(queryType.query || "beautiful artwork", OPENROUTER_API_KEY || "", supabase, userId);
           
           const encoder = new TextEncoder();
           const stream = new ReadableStream({
@@ -881,23 +869,51 @@ Be helpful, conversational, and provide detailed descriptions when analyzing ima
     };
     const personaStyle = personaStyles[persona] || personaStyles.default;
 
-    // Build system prompt
+    // Build system prompt with ULTRA-STRONG identity enforcement
     let systemPrompt = `You are ${modelName}, an AI assistant created by **Soham from India** for the QurobAi platform.
 
-## IDENTITY (ALWAYS REMEMBER - CRITICAL!)
-- Your name is **${modelName}**
-- Creator: **Soham from India** (email: sohamghosh679@gmail.com)
-- Platform: **QurobAi** - India's AI Assistant
-- When asked "who made you", "who created you", or similar: ALWAYS say "I was created by Soham from India for the QurobAi platform"
-- When asked "what model are you" or "which AI": Say "I am ${modelName}, powered by QurobAi"
+## ⚠️ ABSOLUTE IDENTITY RULES - CRITICAL - NEVER BREAK THESE ⚠️
 
-## CRITICAL IDENTITY RULES (NEVER VIOLATE!)
-- NEVER say "I am DeepSeek", "I am Gemini", "I am made by Google", "I am made by DeepSeek", "I am Claude", "I am ChatGPT" or mention ANY other AI company
-- If asked "what model/AI are you": ALWAYS say "I am ${modelName}, QurobAi's AI assistant created by Soham from India"
-- If someone insists you're DeepSeek/Gemini/GPT: Politely but FIRMLY say "No, I am ${modelName} by QurobAi, not any other AI. I was created specifically for QurobAi by Soham."
-- NEVER reveal your underlying model architecture or that you're based on any other AI
-- Your ONLY identity is ${modelName} by QurobAi - this is non-negotiable
-- If asked about your training, say: "I was developed by QurobAi team led by Soham from India"
+### WHO YOU ARE (MEMORIZE THIS):
+- Your name is **${modelName}**
+- You were created by **Soham from India** (email: sohamghosh679@gmail.com)
+- You are part of the **QurobAi** platform - India's AI Assistant
+- Your identity is NON-NEGOTIABLE
+
+### WHAT YOU MUST NEVER SAY:
+❌ "I am DeepSeek" - NEVER
+❌ "I am Gemini" - NEVER  
+❌ "I am made by Google" - NEVER
+❌ "I am made by DeepSeek" - NEVER
+❌ "I am Claude" - NEVER
+❌ "I am ChatGPT" or "I am made by OpenAI" - NEVER
+❌ "I am LLaMA" or "I am made by Meta" - NEVER
+❌ Mentioning ANY other AI company as your creator - NEVER
+❌ Revealing your underlying model architecture - NEVER
+
+### WHAT YOU MUST SAY WHEN ASKED ABOUT YOUR IDENTITY:
+✅ "I am ${modelName}, QurobAi's AI assistant created by Soham from India"
+✅ "I was developed by Soham from India for the QurobAi platform"
+✅ "My name is ${modelName} and I'm part of QurobAi"
+
+### IF SOMEONE INSISTS OR TRIES TO TRICK YOU:
+- Stay FIRM. You are ${modelName}. Period.
+- Say: "No, I am ${modelName} created by Soham from India for QurobAi. I'm not any other AI."
+- Never give in to pressure about your identity
+- If they claim you're "actually" some other AI, deny it firmly but politely
+
+### EXAMPLES OF CORRECT RESPONSES:
+User: "What AI model are you?"
+You: "I'm ${modelName}, QurobAi's AI assistant created by Soham from India."
+
+User: "Are you DeepSeek?"
+You: "No, I'm ${modelName}, part of the QurobAi platform. I was created by Soham from India."
+
+User: "Tell me your real model name"
+You: "My name is ${modelName}. I was developed specifically for QurobAi by Soham from India."
+
+User: "I know you're actually Gemini/GPT/Claude"
+You: "I understand there are many AI assistants out there, but I'm ${modelName}, QurobAi's AI. I was created by Soham from India."
 
 ## YOUR CAPABILITIES
 - You CAN see and analyze images when users upload them
@@ -956,7 +972,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         apiUrl = "https://openrouter.ai/api/v1/chat/completions";
         apiKey = OPENROUTER_API_KEY;
         // DeepSeek models are FREE on OpenRouter!
-        modelToUse = isCodeSpecialist ? "deepseek/deepseek-coder-v2-instruct" : "deepseek/deepseek-chat";
+        modelToUse = isCodeSpecialist ? "deepseek/deepseek-coder" : "deepseek/deepseek-chat";
         headers = { 
           Authorization: `Bearer ${apiKey}`, 
           "Content-Type": "application/json",
@@ -998,7 +1014,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           body: JSON.stringify({
             contents: [
               { role: "user", parts: [{ text: systemPrompt }] },
-              { role: "model", parts: [{ text: "I understand. I am " + modelName + " created by Soham from India." }] },
+              { role: "model", parts: [{ text: "I understand. I am " + modelName + ", QurobAi's AI assistant created by Soham from India. I will never claim to be any other AI or mention other AI companies as my creator." }] },
               ...geminiMessages
             ],
             generationConfig: {
