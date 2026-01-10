@@ -22,10 +22,13 @@ import {
   Download,
   FileText,
   Scale,
-  Lock
+  Lock,
+  MessageCircle,
+  HardDrive
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PersonalizationDialog } from "./PersonalizationDialog";
+import { SupportChatbot } from "./SupportChatbot";
 import { toast } from "sonner";
 
 interface SettingsDialogProps {
@@ -40,6 +43,8 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [personalizationOpen, setPersonalizationOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [downloadingData, setDownloadingData] = useState(false);
 
   useEffect(() => {
     if (user && open) {
@@ -155,6 +160,47 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     } catch (error) {
       console.error("Export error:", error);
       toast.error("Failed to export conversations");
+    }
+  };
+
+  const handleDownloadAllData = async () => {
+    if (!user) return;
+    
+    setDownloadingData(true);
+    try {
+      // Fetch all user data
+      const [conversationsRes, messagesRes, settingsRes, profileRes, memoriesRes] = await Promise.all([
+        supabase.from("conversations").select("*").eq("user_id", user.id),
+        supabase.from("messages").select("*, conversations!inner(user_id)").eq("conversations.user_id", user.id),
+        supabase.from("user_settings").select("*").eq("user_id", user.id),
+        supabase.from("profiles").select("*").eq("user_id", user.id),
+        supabase.from("user_memory").select("*").eq("user_id", user.id),
+      ]);
+
+      const allData = {
+        exported_at: new Date().toISOString(),
+        user_email: user.email,
+        profile: profileRes.data?.[0] || null,
+        settings: settingsRes.data?.[0] || null,
+        conversations: conversationsRes.data || [],
+        messages: messagesRes.data || [],
+        memories: memoriesRes.data || [],
+      };
+
+      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `qurobai-data-export-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success("All data exported successfully!");
+    } catch (error) {
+      console.error("Data export error:", error);
+      toast.error("Failed to export data");
+    } finally {
+      setDownloadingData(false);
     }
   };
 
@@ -299,6 +345,20 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
               onClick={handleExportConversations}
             />
 
+            <MenuItem 
+              icon={HardDrive} 
+              label="Download All Data" 
+              description={downloadingData ? "Downloading..." : "Export all your QurobAi data"}
+              onClick={handleDownloadAllData}
+            />
+
+            <MenuItem 
+              icon={MessageCircle} 
+              label="Support Chat" 
+              description="Get help from support"
+              onClick={() => setSupportOpen(true)}
+            />
+
             {isAdmin && (
               <MenuItem 
                 icon={Shield} 
@@ -356,6 +416,12 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
         <PersonalizationDialog 
           open={personalizationOpen} 
           onOpenChange={setPersonalizationOpen} 
+        />
+
+        {/* Support Chatbot Dialog */}
+        <SupportChatbot 
+          open={supportOpen} 
+          onOpenChange={setSupportOpen} 
         />
       </DialogContent>
     </Dialog>

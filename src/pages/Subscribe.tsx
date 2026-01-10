@@ -229,7 +229,7 @@ export default function Subscribe() {
               POPULAR
             </div>
             <div className="absolute top-0 left-0 bg-green-600 text-white px-2 py-0.5 text-xs font-medium rounded-br">
-              + Q-06 FREE
+              + Q-06 Included
             </div>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
@@ -252,7 +252,7 @@ export default function Subscribe() {
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
-                  <strong>Advanced 70B model</strong>
+                  <strong>Advanced 70B AI model</strong>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />

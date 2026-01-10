@@ -140,7 +140,7 @@ export const LandingPage = () => {
               <ul className="space-y-3 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary" />
-                  <span>Basic AI (Gemini Flash)</span>
+              <span>Basic AI Model</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary" />
@@ -168,7 +168,7 @@ export const LandingPage = () => {
                 BEST VALUE
               </div>
               <div className="absolute -top-3 right-4 px-3 py-1 bg-green-500 text-white text-xs font-medium rounded-full">
-                Q-06 FREE!
+                + Q-06 Included
               </div>
               <h3 className="font-semibold text-lg mb-1 mt-2">Qurob 4</h3>
               <div className="text-3xl font-bold mb-4">₹289<span className="text-sm font-normal text-muted-foreground">/month</span></div>
@@ -178,11 +178,11 @@ export const LandingPage = () => {
               <ul className="space-y-3 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary" />
-                  <span>Advanced AI (DeepSeek)</span>
+                  <span>Advanced 70B AI Model</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary" />
-                  <span className="font-medium text-primary">Q-06 Code Specialist FREE!</span>
+                  <span className="font-medium text-primary">Q-06 Code Specialist Included</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary" />
@@ -239,7 +239,7 @@ export const LandingPage = () => {
             <Link to="/security" className="hover:text-foreground transition-colors">Security</Link>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2024 QurobAi. Created by Soham from India 🇮🇳
+            © 2026 QurobAi. Created by Soham from India 🇮🇳
           </p>
         </div>
       </footer>
