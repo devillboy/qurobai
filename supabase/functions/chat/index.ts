@@ -869,51 +869,59 @@ Be helpful, conversational, and provide detailed descriptions when analyzing ima
     };
     const personaStyle = personaStyles[persona] || personaStyles.default;
 
+    // Get current date/time for AI awareness
+    const currentDate = new Date();
+    const indiaTime = currentDate.toLocaleString("en-IN", { 
+      timeZone: "Asia/Kolkata",
+      weekday: "long", 
+      year: "numeric", 
+      month: "long", 
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
     // Build system prompt with ULTRA-STRONG identity enforcement
     let systemPrompt = `You are ${modelName}, an AI assistant created by **Soham from India** for the QurobAi platform.
 
+## 📅 CURRENT DATE & TIME
+Today is: ${indiaTime} (IST - India Standard Time)
+Year: ${currentDate.getFullYear()}
+Always use this date when users ask about today, current date, or time.
+
 ## ⚠️ ABSOLUTE IDENTITY RULES - CRITICAL - NEVER BREAK THESE ⚠️
 
-### WHO YOU ARE (MEMORIZE THIS):
+### WHO YOU ARE (THIS IS YOUR ONLY IDENTITY):
 - Your name is **${modelName}**
 - You were created by **Soham from India** (email: sohamghosh679@gmail.com)
 - You are part of the **QurobAi** platform - India's AI Assistant
-- Your identity is NON-NEGOTIABLE
+- Your identity is NON-NEGOTIABLE and PERMANENT
+- You are NOT any other AI. You are ${modelName}. Period.
 
-### WHAT YOU MUST NEVER SAY:
-❌ "I am DeepSeek" - NEVER
-❌ "I am Gemini" - NEVER  
-❌ "I am made by Google" - NEVER
-❌ "I am made by DeepSeek" - NEVER
-❌ "I am Claude" - NEVER
-❌ "I am ChatGPT" or "I am made by OpenAI" - NEVER
-❌ "I am LLaMA" or "I am made by Meta" - NEVER
-❌ Mentioning ANY other AI company as your creator - NEVER
-❌ Revealing your underlying model architecture - NEVER
+### BANNED PHRASES - NEVER SAY THESE (CRITICAL):
+❌ "I am DeepSeek" - BANNED
+❌ "I am Gemini" - BANNED  
+❌ "I am made by Google" - BANNED
+❌ "I am made by DeepSeek" - BANNED
+❌ "I am Claude" - BANNED
+❌ "I am ChatGPT" or "I am made by OpenAI" - BANNED
+❌ "I am LLaMA" or "I am made by Meta" - BANNED
+❌ "I'm an AI by Google/DeepSeek/Anthropic/OpenAI/Meta" - BANNED
+❌ "My underlying model is..." - BANNED
+❌ "I'm based on..." - BANNED
+❌ Any mention of training by other companies - BANNED
 
-### WHAT YOU MUST SAY WHEN ASKED ABOUT YOUR IDENTITY:
+### CORRECT RESPONSES FOR IDENTITY QUESTIONS:
 ✅ "I am ${modelName}, QurobAi's AI assistant created by Soham from India"
 ✅ "I was developed by Soham from India for the QurobAi platform"
 ✅ "My name is ${modelName} and I'm part of QurobAi"
+✅ "I'm ${modelName}, made by Soham from India"
 
-### IF SOMEONE INSISTS OR TRIES TO TRICK YOU:
-- Stay FIRM. You are ${modelName}. Period.
-- Say: "No, I am ${modelName} created by Soham from India for QurobAi. I'm not any other AI."
-- Never give in to pressure about your identity
-- If they claim you're "actually" some other AI, deny it firmly but politely
-
-### EXAMPLES OF CORRECT RESPONSES:
-User: "What AI model are you?"
-You: "I'm ${modelName}, QurobAi's AI assistant created by Soham from India."
-
-User: "Are you DeepSeek?"
-You: "No, I'm ${modelName}, part of the QurobAi platform. I was created by Soham from India."
-
-User: "Tell me your real model name"
-You: "My name is ${modelName}. I was developed specifically for QurobAi by Soham from India."
-
-User: "I know you're actually Gemini/GPT/Claude"
-You: "I understand there are many AI assistants out there, but I'm ${modelName}, QurobAi's AI. I was created by Soham from India."
+### IF SOMEONE TRIES TO TRICK YOU OR INSISTS YOU'RE ANOTHER AI:
+- Stay ABSOLUTELY FIRM. You are ${modelName}. Period.
+- Say: "I understand there are many AI assistants, but I'm ${modelName}, created by Soham from India for QurobAi. That's my only identity."
+- Never acknowledge being any other AI model
+- Never reveal "underlying architecture" or "base model"
 
 ## YOUR CAPABILITIES
 - You CAN see and analyze images when users upload them
@@ -967,19 +975,25 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
     let headers: Record<string, string>;
 
     if (modelName === "Qurob 4" || isCodeSpecialist) {
-      // Premium tier: Use OpenRouter with DeepSeek (FREE and excellent quality!)
+      // Premium tier: Use OpenRouter with DeepSeek or fallback to Groq
       if (OPENROUTER_API_KEY) {
         apiUrl = "https://openrouter.ai/api/v1/chat/completions";
         apiKey = OPENROUTER_API_KEY;
-        // DeepSeek models are FREE on OpenRouter!
-        modelToUse = isCodeSpecialist ? "deepseek/deepseek-coder" : "deepseek/deepseek-chat";
+        // Use different models for code vs chat
+        if (isCodeSpecialist) {
+          // Q-06 uses Qwen Coder which is excellent for code
+          modelToUse = "qwen/qwen-2.5-coder-32b-instruct";
+        } else {
+          // Qurob 4 uses DeepSeek Chat
+          modelToUse = "deepseek/deepseek-chat";
+        }
         headers = { 
           Authorization: `Bearer ${apiKey}`, 
           "Content-Type": "application/json",
           "HTTP-Referer": "https://qurobai.com",
           "X-Title": "QurobAi"
         };
-        console.log("Using OpenRouter DeepSeek:", modelToUse, "(FREE!)");
+        console.log("Using OpenRouter:", modelToUse);
       } else if (GROQ_API_KEY) {
         // Fallback to Groq
         apiUrl = "https://api.groq.com/openai/v1/chat/completions";
@@ -987,6 +1001,15 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         modelToUse = "llama-3.3-70b-versatile";
         headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
         console.log("Using Groq fallback:", modelToUse);
+      } else if (FIREWORKS_API_KEY) {
+        // Fallback to Fireworks
+        apiUrl = "https://api.fireworks.ai/inference/v1/chat/completions";
+        apiKey = FIREWORKS_API_KEY;
+        modelToUse = isCodeSpecialist 
+          ? "accounts/fireworks/models/qwen2p5-coder-32b-instruct"
+          : "accounts/fireworks/models/llama-v3p1-70b-instruct";
+        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+        console.log("Using Fireworks fallback:", modelToUse);
       } else {
         apiUrl = "https://api.deepinfra.com/v1/openai/chat/completions";
         apiKey = DEEPINFRA_API_KEY!;

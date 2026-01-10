@@ -8,13 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send, AlertCircle } from "lucide-react";
+import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send, AlertCircle, Loader2, Bot, UserX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface UserData {
   id: string;
@@ -77,6 +87,20 @@ export default function AdminPanel() {
   const [emailMessage, setEmailMessage] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
 
+  // Push notification state
+  const [pushTitle, setPushTitle] = useState("");
+  const [pushMessage, setPushMessage] = useState("");
+  const [pushTarget, setPushTarget] = useState("all");
+  const [sendingPush, setSendingPush] = useState(false);
+  const [pushStats, setPushStats] = useState({ subscribed: 0, sent: 0 });
+
+  // AI Verification state
+  const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null);
+
+  // User delete state
+  const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
+
   // Stats
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -124,8 +148,79 @@ export default function AdminPanel() {
       loadAnnouncements(),
       loadMaintenanceStatus(),
       loadPlans(),
+      loadPushStats(),
     ]);
     setLoading(false);
+  };
+
+  const loadPushStats = async () => {
+    const { count } = await supabase
+      .from("push_subscriptions")
+      .select("id", { count: "exact", head: true });
+    setPushStats(prev => ({ ...prev, subscribed: count || 0 }));
+  };
+
+  const handleSendPush = async () => {
+    if (!pushTitle || !pushMessage) {
+      toast.error("Title and message are required");
+      return;
+    }
+    setSendingPush(true);
+    try {
+      const { error } = await supabase.functions.invoke("send-push", {
+        body: { action: "send", title: pushTitle, message: pushMessage },
+      });
+      if (error) throw error;
+      toast.success("Push notification sent!");
+      setPushTitle("");
+      setPushMessage("");
+    } catch (e) {
+      toast.error("Failed to send push notification");
+    } finally {
+      setSendingPush(false);
+    }
+  };
+
+  const handleAIVerifyPayment = async (paymentId: string) => {
+    setVerifyingPayment(paymentId);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-payment", {
+        body: { paymentId },
+      });
+      if (error) throw error;
+      if (data?.action === "approved") {
+        toast.success("Payment auto-approved by AI!");
+      } else if (data?.action === "rejected") {
+        toast.error("Payment rejected by AI");
+      } else {
+        toast.info("Manual review required");
+      }
+      loadData();
+    } catch (e) {
+      toast.error("AI verification failed");
+    } finally {
+      setVerifyingPayment(null);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeletingUser(true);
+    try {
+      // Delete user data (conversations, messages, settings, etc.)
+      await supabase.from("messages").delete().eq("conversation_id", userToDelete.user_id);
+      await supabase.from("conversations").delete().eq("user_id", userToDelete.user_id);
+      await supabase.from("user_settings").delete().eq("user_id", userToDelete.user_id);
+      await supabase.from("user_subscriptions").delete().eq("user_id", userToDelete.user_id);
+      await supabase.from("profiles").delete().eq("user_id", userToDelete.user_id);
+      toast.success("User data deleted");
+      setUserToDelete(null);
+      loadUsers();
+    } catch (e) {
+      toast.error("Failed to delete user data");
+    } finally {
+      setDeletingUser(false);
+    }
   };
 
   const loadPlans = async () => {
