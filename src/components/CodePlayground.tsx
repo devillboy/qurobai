@@ -116,7 +116,7 @@ export const CodePlayground = memo(({ code, language }: CodePlaygroundProps) => 
   return (
     <div className={cn(
       "my-4 rounded-xl overflow-hidden border border-border bg-card transition-all",
-      isExpanded && "fixed inset-4 z-50"
+      isExpanded && "fixed inset-2 md:inset-4 z-50"
     )}>
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-muted border-b border-border">
@@ -125,10 +125,10 @@ export const CodePlayground = memo(({ code, language }: CodePlaygroundProps) => 
           <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Playground</span>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={copyCode}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 md:h-7 md:px-2 touch-manipulation" onClick={copyCode}>
             {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setIsExpanded(!isExpanded)}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 md:h-7 md:px-2 touch-manipulation" onClick={() => setIsExpanded(!isExpanded)}>
             {isExpanded ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
           </Button>
         </div>
@@ -137,16 +137,16 @@ export const CodePlayground = memo(({ code, language }: CodePlaygroundProps) => 
       {/* Code Display */}
       <pre className={cn(
         "p-3 overflow-auto text-sm bg-background",
-        isExpanded ? "max-h-[40vh]" : "max-h-64"
+        isExpanded ? "max-h-[35vh]" : "max-h-48 md:max-h-64"
       )}>
-        <code className="font-mono text-foreground whitespace-pre-wrap">{code}</code>
+        <code className="font-mono text-foreground whitespace-pre-wrap text-xs md:text-sm">{code}</code>
       </pre>
 
       {/* Controls */}
       <div className="flex items-center gap-2 px-3 py-2 bg-muted border-t border-border">
         <Button
           size="sm"
-          className="h-7"
+          className="h-8 md:h-7 touch-manipulation"
           onClick={runCode}
           disabled={isRunning}
         >
@@ -156,7 +156,7 @@ export const CodePlayground = memo(({ code, language }: CodePlaygroundProps) => 
         <Button
           variant="outline"
           size="sm"
-          className="h-7"
+          className="h-8 md:h-7 touch-manipulation"
           onClick={resetCode}
         >
           <RotateCcw className="w-3 h-3 mr-1" />
@@ -168,17 +168,17 @@ export const CodePlayground = memo(({ code, language }: CodePlaygroundProps) => 
       {(output || showIframe) && (
         <div className={cn(
           "border-t border-border",
-          isExpanded ? "h-[40vh]" : "max-h-64"
+          isExpanded ? "h-[35vh]" : "max-h-48 md:max-h-64"
         )}>
           {showIframe ? (
             <iframe
               ref={iframeRef}
               title="Code Playground Output"
-              className="w-full h-full bg-background"
+              className="w-full h-full bg-background min-h-[120px]"
               sandbox="allow-scripts allow-same-origin"
             />
           ) : output && (
-            <pre className="p-3 text-sm font-mono text-foreground bg-secondary overflow-auto h-full">
+            <pre className="p-3 text-xs md:text-sm font-mono text-foreground bg-secondary overflow-auto h-full">
               {output}
             </pre>
           )}

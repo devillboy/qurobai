@@ -21,6 +21,8 @@ serve(async (req) => {
       );
     }
 
+    console.log("Verifying payment:", paymentId);
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -33,6 +35,7 @@ serve(async (req) => {
       .single();
 
     if (paymentError || !payment) {
+      console.error("Payment not found:", paymentError);
       return new Response(
         JSON.stringify({ error: "Payment not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -43,10 +46,15 @@ serve(async (req) => {
     const screenshotUrl = payment.screenshot_url;
     const expectedAmount = payment.subscription_plans?.price_inr || payment.amount_paid;
 
-    // Use OpenRouter with vision model to verify payment
+    console.log("Screenshot URL:", screenshotUrl);
+    console.log("Expected amount:", expectedAmount);
+
+    // Try multiple vision APIs
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     
-    if (!OPENROUTER_API_KEY) {
+    if (!OPENROUTER_API_KEY && !GOOGLE_GEMINI_API_KEY) {
+      console.error("No vision API configured");
       return new Response(
         JSON.stringify({ 
           error: "AI verification not configured",
@@ -55,9 +63,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log("Verifying payment screenshot:", screenshotUrl);
-    console.log("Expected amount:", expectedAmount);
 
     const verificationPrompt = `You are a payment verification AI for QurobAi. Analyze this payment screenshot and verify:
 
@@ -68,7 +73,7 @@ serve(async (req) => {
 
 The expected payment amount is ₹${expectedAmount} (or close to it with possible coupon discount).
 
-Respond in this exact JSON format:
+Respond in this exact JSON format ONLY, no other text:
 {
   "is_valid_screenshot": true/false,
   "is_successful_payment": true/false,
@@ -78,71 +83,136 @@ Respond in this exact JSON format:
   "confidence": "high"/"medium"/"low",
   "recommendation": "approve"/"reject"/"manual_review",
   "reason": "Brief explanation"
-}
+}`;
 
-Only respond with the JSON, no other text.`;
+    let verification = null;
 
-    const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://qurobai.com",
-        "X-Title": "QurobAi Payment Verification"
-      },
-      body: JSON.stringify({
-        model: "qwen/qwen-2-vl-72b-instruct",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: verificationPrompt },
-              { type: "image_url", image_url: { url: screenshotUrl } }
-            ]
+    // Try OpenRouter first with Gemini Flash (good and cheap vision model)
+    if (OPENROUTER_API_KEY) {
+      console.log("Trying OpenRouter with Gemini Flash...");
+      try {
+        const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://qurobai.com",
+            "X-Title": "QurobAi Payment Verification"
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.0-flash-001",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: verificationPrompt },
+                  { type: "image_url", image_url: { url: screenshotUrl } }
+                ]
+              }
+            ],
+            temperature: 0.1,
+            max_tokens: 500,
+          }),
+        });
+
+        if (visionResponse.ok) {
+          const visionData = await visionResponse.json();
+          const aiResponse = visionData.choices?.[0]?.message?.content || "";
+          console.log("OpenRouter AI Response:", aiResponse);
+
+          // Parse AI response
+          try {
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              verification = JSON.parse(jsonMatch[0]);
+            }
+          } catch (e) {
+            console.error("Failed to parse OpenRouter response:", e);
           }
-        ],
-        temperature: 0.1,
-        max_tokens: 500,
-      }),
-    });
-
-    if (!visionResponse.ok) {
-      console.error("Vision API error:", await visionResponse.text());
-      return new Response(
-        JSON.stringify({ 
-          error: "AI verification failed",
-          manual_review_required: true 
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const visionData = await visionResponse.json();
-    const aiResponse = visionData.choices?.[0]?.message?.content || "";
-
-    console.log("AI Response:", aiResponse);
-
-    // Parse AI response
-    let verification;
-    try {
-      // Extract JSON from response
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        verification = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("No JSON found in response");
+        } else {
+          console.error("OpenRouter error:", await visionResponse.text());
+        }
+      } catch (e) {
+        console.error("OpenRouter exception:", e);
       }
-    } catch (e) {
-      console.error("Failed to parse AI response:", e);
+    }
+
+    // Fallback to Google Gemini directly if OpenRouter failed
+    if (!verification && GOOGLE_GEMINI_API_KEY) {
+      console.log("Trying Google Gemini directly...");
+      try {
+        // First, fetch the image and convert to base64
+        const imageResponse = await fetch(screenshotUrl);
+        const imageBlob = await imageResponse.blob();
+        const imageBuffer = await imageBlob.arrayBuffer();
+        const base64Image = btoa(
+          new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+        );
+        const mimeType = imageBlob.type || "image/jpeg";
+
+        const geminiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: verificationPrompt },
+                  { inline_data: { mime_type: mimeType, data: base64Image } }
+                ]
+              }],
+              generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 500,
+              }
+            }),
+          }
+        );
+
+        if (geminiResponse.ok) {
+          const geminiData = await geminiResponse.json();
+          const aiResponse = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          console.log("Gemini AI Response:", aiResponse);
+
+          try {
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              verification = JSON.parse(jsonMatch[0]);
+            }
+          } catch (e) {
+            console.error("Failed to parse Gemini response:", e);
+          }
+        } else {
+          console.error("Gemini error:", await geminiResponse.text());
+        }
+      } catch (e) {
+        console.error("Gemini exception:", e);
+      }
+    }
+
+    // If no verification result, require manual review
+    if (!verification) {
+      console.log("All vision APIs failed, requiring manual review");
+      await supabase
+        .from("payment_screenshots")
+        .update({
+          admin_notes: "AI verification failed - please verify manually",
+        })
+        .eq("id", paymentId);
+
       return new Response(
         JSON.stringify({ 
-          error: "Could not parse AI verification",
-          manual_review_required: true,
-          ai_response: aiResponse
+          success: false, 
+          action: "manual_review",
+          error: "Could not verify automatically",
+          manual_review_required: true
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Verification result:", verification);
 
     // Auto-approve if high confidence and recommendation is approve
     if (verification.recommendation === "approve" && verification.confidence === "high") {
@@ -220,11 +290,11 @@ Only respond with the JSON, no other text.`;
       );
     }
 
-    // Manual review required
+    // Manual review required for medium/low confidence
     await supabase
       .from("payment_screenshots")
       .update({
-        admin_notes: `AI Review (needs manual check): ${verification.reason}`,
+        admin_notes: `AI Review (needs manual check): ${verification.reason} | Confidence: ${verification.confidence}`,
       })
       .eq("id", paymentId);
 
