@@ -174,6 +174,7 @@ export default function AdminPanel() {
       toast.success("Push notification sent!");
       setPushTitle("");
       setPushMessage("");
+      setPushStats(prev => ({ ...prev, sent: prev.sent + 1 }));
     } catch (e) {
       toast.error("Failed to send push notification");
     } finally {
@@ -193,11 +194,12 @@ export default function AdminPanel() {
       } else if (data?.action === "rejected") {
         toast.error("Payment rejected by AI");
       } else {
-        toast.info("Manual review required");
+        toast.info("Manual review required - AI confidence was low");
       }
       loadData();
     } catch (e) {
-      toast.error("AI verification failed");
+      console.error("AI verification error:", e);
+      toast.error("AI verification failed - please verify manually");
     } finally {
       setVerifyingPayment(null);
     }
@@ -212,11 +214,13 @@ export default function AdminPanel() {
       await supabase.from("conversations").delete().eq("user_id", userToDelete.user_id);
       await supabase.from("user_settings").delete().eq("user_id", userToDelete.user_id);
       await supabase.from("user_subscriptions").delete().eq("user_id", userToDelete.user_id);
+      await supabase.from("user_memory").delete().eq("user_id", userToDelete.user_id);
       await supabase.from("profiles").delete().eq("user_id", userToDelete.user_id);
-      toast.success("User data deleted");
+      toast.success("User data deleted successfully");
       setUserToDelete(null);
       loadUsers();
     } catch (e) {
+      console.error("Delete user error:", e);
       toast.error("Failed to delete user data");
     } finally {
       setDeletingUser(false);
@@ -643,6 +647,28 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Delete User Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User Data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all data for {userToDelete?.display_name || "this user"} including conversations, messages, settings, and subscriptions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deletingUser}
+            >
+              {deletingUser ? "Deleting..." : "Delete User Data"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -720,6 +746,10 @@ export default function AdminPanel() {
                 )}
               </TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="push">
+                <Bell className="w-4 h-4 mr-1" />
+                Push
+              </TabsTrigger>
               <TabsTrigger value="coupons">Coupons</TabsTrigger>
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>
@@ -766,6 +796,14 @@ export default function AdminPanel() {
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
                     Review Payments ({stats.pendingPayments})
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setActiveTab("push")}
+                  >
+                    <Bell className="w-4 h-4 mr-2" />
+                    Send Push Notification
                   </Button>
                   <Button 
                     variant="outline" 
@@ -831,7 +869,20 @@ export default function AdminPanel() {
                         {new Date(payment.created_at).toLocaleString()}
                         {payment.coupon_code && ` • Coupon: ${payment.coupon_code}`}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleAIVerifyPayment(payment.id)}
+                          disabled={verifyingPayment === payment.id}
+                        >
+                          {verifyingPayment === payment.id ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Bot className="w-4 h-4 mr-1" />
+                          )}
+                          AI Verify
+                        </Button>
                         <Button 
                           size="sm" 
                           className="flex-1"
@@ -878,24 +929,132 @@ export default function AdminPanel() {
             <div className="grid gap-2">
               {filteredUsers.slice(0, 50).map((u) => (
                 <Card key={u.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{u.display_name || "Unnamed"}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{u.user_id}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{u.display_name || "Unnamed"}</div>
+                      <div className="text-xs text-muted-foreground font-mono truncate">{u.user_id}</div>
                     </div>
-                    <div className="text-right">
+                    <div className="flex items-center gap-2 shrink-0">
                       {u.subscription ? (
                         <Badge className="bg-primary">{u.subscription.plan_name}</Badge>
                       ) : (
                         <Badge variant="outline">Free</Badge>
                       )}
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Joined {new Date(u.created_at).toLocaleDateString()}
-                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => setUserToDelete(u)}
+                      >
+                        <UserX className="w-4 h-4" />
+                      </Button>
                     </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Joined {new Date(u.created_at).toLocaleDateString()}
                   </div>
                 </Card>
               ))}
+            </div>
+          </TabsContent>
+
+          {/* Push Notifications Tab */}
+          <TabsContent value="push" className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Bell className="w-5 h-5" />
+                    Send Push Notification
+                  </CardTitle>
+                  <CardDescription>
+                    Send a push notification to all subscribed users
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="text-xs">Target</Label>
+                    <Select value={pushTarget} onValueChange={setPushTarget}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Users</SelectItem>
+                        <SelectItem value="premium">Premium Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Title</Label>
+                    <Input
+                      value={pushTitle}
+                      onChange={(e) => setPushTitle(e.target.value)}
+                      placeholder="Notification title"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Message</Label>
+                    <Textarea
+                      value={pushMessage}
+                      onChange={(e) => setPushMessage(e.target.value)}
+                      placeholder="Notification message"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  {/* Preview */}
+                  {(pushTitle || pushMessage) && (
+                    <div className="p-3 bg-muted rounded-lg border border-border">
+                      <div className="text-xs text-muted-foreground mb-1">Preview:</div>
+                      <div className="font-medium text-sm">{pushTitle || "Notification Title"}</div>
+                      <div className="text-sm text-muted-foreground">{pushMessage || "Notification message..."}</div>
+                    </div>
+                  )}
+                  
+                  <Button onClick={handleSendPush} disabled={sendingPush} className="w-full">
+                    {sendingPush ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Send Push Notification
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Push Statistics</CardTitle>
+                  <CardDescription>
+                    Overview of push notification reach
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted rounded-lg text-center">
+                      <div className="text-3xl font-bold text-primary">{pushStats.subscribed}</div>
+                      <div className="text-xs text-muted-foreground">Subscribed Devices</div>
+                    </div>
+                    <div className="p-4 bg-muted rounded-lg text-center">
+                      <div className="text-3xl font-bold text-success">{pushStats.sent}</div>
+                      <div className="text-xs text-muted-foreground">Sent This Session</div>
+                    </div>
+                  </div>
+                  
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Push notifications are sent to users who have enabled browser notifications. 
+                      Not all users may receive them if their browser doesn't support push or notifications are disabled.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 

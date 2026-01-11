@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
-import { ChatMessage, TypingIndicator } from "@/components/ChatMessage";
+import { ChatMessage } from "@/components/ChatMessage";
+import { ThinkingIndicator } from "@/components/ThinkingIndicator";
 import { ChatInputEnhanced } from "@/components/ChatInputEnhanced";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -96,6 +97,13 @@ const Index = () => {
   const handleQuickAction = (prompt: string) => {
     handleSendMessage(prompt);
   };
+
+  // Check if we should show the thinking indicator
+  const showThinking = isLoading && (
+    messages.length === 0 || 
+    messages[messages.length - 1]?.role === "user" || 
+    messages[messages.length - 1]?.content === ""
+  );
 
   if (authLoading) {
     return (
@@ -198,14 +206,17 @@ const Index = () => {
                   </motion.div>
                 ))}
               </AnimatePresence>
+              
+              {/* ChatGPT-style Thinking Indicator */}
               <AnimatePresence>
-                {isLoading && (messages.length === 0 || messages[messages.length - 1]?.role === "user" || messages[messages.length - 1]?.content === "") && (
+                {showThinking && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <TypingIndicator />
+                    <ThinkingIndicator isThinking={showThinking} />
                   </motion.div>
                 )}
               </AnimatePresence>

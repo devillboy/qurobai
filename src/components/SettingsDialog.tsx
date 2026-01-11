@@ -24,12 +24,19 @@ import {
   Scale,
   Lock,
   MessageCircle,
-  HardDrive
+  HardDrive,
+  Palette,
+  Search,
+  Mic,
+  Key,
+  Construction
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PersonalizationDialog } from "./PersonalizationDialog";
 import { SupportChatbot } from "./SupportChatbot";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -209,208 +216,268 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     label, 
     description, 
     onClick, 
-    highlight 
+    highlight,
+    disabled,
+    badge
   }: { 
     icon: any; 
     label: string; 
     description?: string; 
     onClick: () => void;
     highlight?: boolean;
+    disabled?: boolean;
+    badge?: string;
   }) => (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
-        highlight 
-          ? "bg-foreground/5 border border-foreground/10 hover:bg-foreground/10" 
-          : "bg-secondary hover:bg-secondary/80"
+      disabled={disabled}
+      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors touch-manipulation ${
+        disabled 
+          ? "opacity-50 cursor-not-allowed bg-secondary"
+          : highlight 
+            ? "bg-foreground/5 border border-foreground/10 hover:bg-foreground/10" 
+            : "bg-secondary hover:bg-secondary/80"
       }`}
+      style={{ minHeight: '56px' }}
     >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
         highlight ? "bg-foreground/10" : "bg-muted"
       }`}>
         <Icon className={`w-5 h-5 ${highlight ? "text-foreground" : "text-muted-foreground"}`} />
       </div>
-      <div className="flex-1 text-left">
-        <div className={`text-sm font-medium ${highlight ? "text-foreground" : ""}`}>{label}</div>
+      <div className="flex-1 text-left min-w-0">
+        <div className={`text-sm font-medium flex items-center gap-2 ${highlight ? "text-foreground" : ""}`}>
+          <span className="truncate">{label}</span>
+          {badge && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {badge}
+            </Badge>
+          )}
+        </div>
         {description && (
-          <div className="text-xs text-muted-foreground">{description}</div>
+          <div className="text-xs text-muted-foreground truncate">{description}</div>
         )}
       </div>
-      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
     </button>
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-card border-border p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="sm:max-w-md bg-card border-border p-0 overflow-hidden max-h-[90vh]">
+        <DialogHeader className="p-4 md:p-6 pb-0">
           <DialogTitle className="text-center text-xl">Settings</DialogTitle>
         </DialogHeader>
 
-        <div className="p-6 space-y-6">
-          {/* User Profile Card */}
-          <div className="p-4 rounded-xl bg-secondary border border-border">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-foreground flex items-center justify-center text-background text-xl font-bold">
-                {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg">
-                  {profile?.display_name || "User"}
-                </h3>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Mail className="w-3 h-3" />
-                  {user?.email}
+        <ScrollArea className="max-h-[calc(90vh-80px)]">
+          <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+            {/* User Profile Card */}
+            <div className="p-4 rounded-xl bg-secondary border border-border">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-foreground flex items-center justify-center text-background text-lg md:text-xl font-bold shrink-0">
+                  {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base md:text-lg truncate">
+                    {profile?.display_name || "User"}
+                  </h3>
+                  <div className="flex items-center gap-1 text-xs md:text-sm text-muted-foreground">
+                    <Mail className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{user?.email}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            {profile?.created_at && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
-                <Calendar className="w-3 h-3" />
-                Member since {formatDate(profile.created_at)}
-              </div>
-            )}
-          </div>
-
-          {/* Subscription Status */}
-          <div className={`p-4 rounded-xl border ${
-            subscription 
-              ? "bg-foreground/5 border-foreground/10" 
-              : "bg-secondary border-border"
-          }`}>
-            <div className="flex items-center gap-3">
-              <Crown className={`w-5 h-5 ${subscription ? "text-foreground" : "text-muted-foreground"}`} />
-              <div className="flex-1">
-                <div className="text-sm font-medium">
-                  {subscription ? subscription.subscription_plans?.name : "Free Plan"}
+              {profile?.created_at && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
+                  <Calendar className="w-3 h-3" />
+                  Member since {formatDate(profile.created_at)}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {subscription 
-                    ? `Expires ${formatDate(subscription.expires_at)}` 
-                    : "Using Qurob 2 model"}
-                </div>
-              </div>
-              {subscription ? (
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleNavigate("/subscription-history")}
-                  className="text-xs"
-                >
-                  Manage
-                </Button>
-              ) : (
-                <Button 
-                  size="sm" 
-                  onClick={() => handleNavigate("/subscribe")}
-                  className="text-xs"
-                >
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Upgrade
-                </Button>
               )}
             </div>
-          </div>
 
-          {/* Menu Items */}
-          <div className="space-y-2">
-            <MenuItem 
-              icon={Sliders} 
-              label="Personalization" 
-              description="Customize AI tone & instructions"
-              onClick={() => setPersonalizationOpen(true)}
-            />
-            
-            {!subscription && (
+            {/* Subscription Status */}
+            <div className={`p-4 rounded-xl border ${
+              subscription 
+                ? "bg-foreground/5 border-foreground/10" 
+                : "bg-secondary border-border"
+            }`}>
+              <div className="flex items-center gap-3">
+                <Crown className={`w-5 h-5 shrink-0 ${subscription ? "text-foreground" : "text-muted-foreground"}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">
+                    {subscription ? subscription.subscription_plans?.name : "Free Plan"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {subscription 
+                      ? `Expires ${formatDate(subscription.expires_at)}` 
+                      : "Using Qurob 2 model"}
+                  </div>
+                </div>
+                {subscription ? (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleNavigate("/subscription-history")}
+                    className="text-xs shrink-0"
+                  >
+                    Manage
+                  </Button>
+                ) : (
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleNavigate("/subscribe")}
+                    className="text-xs shrink-0"
+                  >
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Upgrade
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Menu Items */}
+            <div className="space-y-2">
               <MenuItem 
-                icon={CreditCard} 
-                label="Upgrade to Qurob 4" 
-                description="Get better answers with premium AI + Q-06 Code AI"
-                onClick={() => handleNavigate("/subscribe")}
-                highlight
+                icon={Sliders} 
+                label="Personalization" 
+                description="Customize AI tone & instructions"
+                onClick={() => setPersonalizationOpen(true)}
               />
-            )}
-            
-            <MenuItem 
-              icon={History} 
-              label="Subscription History" 
-              description="View past payments & subscriptions"
-              onClick={() => handleNavigate("/subscription-history")}
-            />
-
-            <MenuItem 
-              icon={Download} 
-              label="Export Conversations" 
-              description="Download all your chat history"
-              onClick={handleExportConversations}
-            />
-
-            <MenuItem 
-              icon={HardDrive} 
-              label="Download All Data" 
-              description={downloadingData ? "Downloading..." : "Export all your QurobAi data"}
-              onClick={handleDownloadAllData}
-            />
-
-            <MenuItem 
-              icon={MessageCircle} 
-              label="Support Chat" 
-              description="Get help from support"
-              onClick={() => setSupportOpen(true)}
-            />
-
-            {isAdmin && (
+              
+              {!subscription && (
+                <MenuItem 
+                  icon={CreditCard} 
+                  label="Upgrade to Qurob 4" 
+                  description="Get better answers with premium AI + Q-06 Code AI"
+                  onClick={() => handleNavigate("/subscribe")}
+                  highlight
+                />
+              )}
+              
               <MenuItem 
-                icon={Shield} 
-                label="Admin Panel" 
-                description="Manage payments & users"
-                onClick={() => handleNavigate("/admin")}
+                icon={History} 
+                label="Subscription History" 
+                description="View past payments & subscriptions"
+                onClick={() => handleNavigate("/subscription-history")}
               />
-            )}
-          </div>
 
-          {/* Legal Links */}
-          <div className="space-y-2">
-            <div className="text-xs text-muted-foreground font-medium px-1">Legal & Privacy</div>
-            <MenuItem 
-              icon={FileText} 
-              label="Privacy Policy" 
-              onClick={() => handleNavigate("/privacy")}
-            />
-            <MenuItem 
-              icon={Scale} 
-              label="Terms of Service" 
-              onClick={() => handleNavigate("/terms")}
-            />
-            <MenuItem 
-              icon={Lock} 
-              label="Security" 
-              onClick={() => handleNavigate("/security")}
-            />
-          </div>
+              <MenuItem 
+                icon={Download} 
+                label="Export Conversations" 
+                description="Download all your chat history"
+                onClick={handleExportConversations}
+              />
 
-          {/* About QurobAi */}
-          <div className="p-4 rounded-xl bg-secondary border border-border">
-            <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-              <Sparkles className="w-4 h-4" />
-              About QurobAi
-            </h4>
-            <p className="text-xs text-muted-foreground">
-              QurobAi is your AI companion, created by Soham from India 🇮🇳. 
-              Designed to help you with coding, writing, brainstorming, and more!
-            </p>
-          </div>
+              <MenuItem 
+                icon={HardDrive} 
+                label="Download All Data" 
+                description={downloadingData ? "Downloading..." : "Export all your QurobAi data"}
+                onClick={handleDownloadAllData}
+              />
 
-          {/* Sign Out */}
-          <Button 
-            variant="outline" 
-            className="w-full" 
-            onClick={handleSignOut}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
+              <MenuItem 
+                icon={MessageCircle} 
+                label="Support Chat" 
+                description="Get help from support"
+                onClick={() => setSupportOpen(true)}
+              />
+
+              {isAdmin && (
+                <MenuItem 
+                  icon={Shield} 
+                  label="Admin Panel" 
+                  description="Manage payments & users"
+                  onClick={() => handleNavigate("/admin")}
+                />
+              )}
+            </div>
+
+            {/* Coming Soon Features */}
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground font-medium px-1 flex items-center gap-2">
+                <Construction className="w-3 h-3" />
+                Coming Soon
+              </div>
+              <MenuItem 
+                icon={Palette} 
+                label="AI Themes" 
+                description="Customize app appearance"
+                onClick={() => toast.info("Coming soon! 🚧")}
+                disabled
+                badge="Soon"
+              />
+              <MenuItem 
+                icon={Search} 
+                label="Chat Search" 
+                description="Search through your conversations"
+                onClick={() => toast.info("Coming soon! 🚧")}
+                disabled
+                badge="Soon"
+              />
+              <MenuItem 
+                icon={Mic} 
+                label="Voice Mode" 
+                description="Talk to AI with voice"
+                onClick={() => toast.info("Coming soon! 🚧")}
+                disabled
+                badge="Soon"
+              />
+              <MenuItem 
+                icon={Key} 
+                label="API Access" 
+                description="Use QurobAi via API"
+                onClick={() => toast.info("Coming soon! 🚧")}
+                disabled
+                badge="Soon"
+              />
+            </div>
+
+            {/* Legal Links */}
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground font-medium px-1">Legal & Privacy</div>
+              <MenuItem 
+                icon={FileText} 
+                label="Privacy Policy" 
+                onClick={() => handleNavigate("/privacy")}
+              />
+              <MenuItem 
+                icon={Scale} 
+                label="Terms of Service" 
+                onClick={() => handleNavigate("/terms")}
+              />
+              <MenuItem 
+                icon={Lock} 
+                label="Security" 
+                onClick={() => handleNavigate("/security")}
+              />
+            </div>
+
+            {/* About QurobAi */}
+            <div className="p-4 rounded-xl bg-secondary border border-border">
+              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                About QurobAi
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                QurobAi is your AI companion, created by Soham from India 🇮🇳. 
+                Designed to help you with coding, writing, brainstorming, and more!
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                © 2026 QurobAi. All rights reserved.
+              </p>
+            </div>
+
+            {/* Sign Out */}
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleSignOut}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </ScrollArea>
 
         {/* Personalization Dialog */}
         <PersonalizationDialog 

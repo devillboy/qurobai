@@ -37,17 +37,17 @@ export const ThinkingIndicator = ({ isThinking }: ThinkingIndicatorProps) => {
       <div className="flex flex-col">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-foreground">
-            {showLonger ? "Thinking deeper..." : "Thinking"}
+            {showLonger ? "Thinking deeper" : "Thinking"}
           </span>
           <div className="flex gap-0.5">
-            <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
           </div>
         </div>
         {seconds > 0 && (
           <span className="text-xs text-muted-foreground">
-            {seconds}s
+            Thought for {seconds}s
           </span>
         )}
       </div>

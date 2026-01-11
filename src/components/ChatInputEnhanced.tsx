@@ -228,7 +228,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
   }, [message]);
 
   return (
-    <div className="border-t border-border bg-background p-4">
+    <div className="bg-background p-3 md:p-4 safe-area-bottom">
       <div className="max-w-3xl mx-auto">
         {/* Templates Picker */}
         {showTemplates && (
@@ -246,16 +246,17 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
                   <img
                     src={file.url}
                     alt={file.name}
-                    className="h-16 w-16 object-cover rounded-lg border border-border"
+                    className="h-14 w-14 md:h-16 md:w-16 object-cover rounded-lg border border-border"
                   />
                 ) : (
-                  <div className="h-16 px-3 flex items-center bg-secondary rounded-lg border border-border">
-                    <span className="text-xs truncate max-w-[100px]">{file.name}</span>
+                  <div className="h-14 md:h-16 px-3 flex items-center bg-secondary rounded-lg border border-border">
+                    <span className="text-xs truncate max-w-[80px] md:max-w-[100px]">{file.name}</span>
                   </div>
                 )}
                 <button
                   onClick={() => removeAttachment(index)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity touch-manipulation"
+                  style={{ minHeight: '20px', minWidth: '20px' }}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -271,7 +272,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
           </div>
         )}
 
-        <div className="relative flex items-end gap-2 bg-secondary rounded-xl border border-border p-2">
+        <div className="relative flex items-end gap-1.5 md:gap-2 bg-secondary rounded-xl border border-border p-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -285,7 +286,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="shrink-0 h-10 w-10 md:h-9 md:w-9 text-muted-foreground hover:text-foreground touch-manipulation"
             onClick={() => setShowTemplates(!showTemplates)}
             title="Quick Templates"
           >
@@ -295,7 +296,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="shrink-0 h-10 w-10 md:h-9 md:w-9 text-muted-foreground hover:text-foreground touch-manipulation"
             onClick={() => fileInputRef.current?.click()}
             disabled={isLoading || uploading}
           >
@@ -309,7 +310,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
             onKeyDown={handleKeyDown}
             placeholder="Message QurobAi..."
             disabled={isLoading}
-            className="flex-1 min-h-[40px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 px-1"
+            className="flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-2 text-base md:text-sm"
             rows={1}
           />
 
@@ -317,7 +318,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
             variant="ghost"
             size="icon"
             className={cn(
-              "shrink-0 h-9 w-9 transition-colors",
+              "shrink-0 h-10 w-10 md:h-9 md:w-9 transition-colors touch-manipulation",
               isRecording ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-foreground"
             )}
             onClick={toggleRecording}
@@ -328,7 +329,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
 
           <Button
             size="icon"
-            className="shrink-0 h-9 w-9"
+            className="shrink-0 h-10 w-10 md:h-9 md:w-9 touch-manipulation"
             onClick={handleSubmit}
             disabled={isLoading || uploading || (!message.trim() && attachments.length === 0)}
           >
