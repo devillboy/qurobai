@@ -14,6 +14,7 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import Security from "@/pages/Security";
 import NotFound from "@/pages/NotFound";
+import ApiAccess from "@/pages/ApiAccess";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const AppRoutes = () => {
       <Route path="/subscribe" element={<ProtectedRoute><Subscribe /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
       <Route path="/subscription-history" element={<ProtectedRoute><SubscriptionHistory /></ProtectedRoute>} />
+      <Route path="/api-access" element={<ProtectedRoute><ApiAccess /></ProtectedRoute>} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/security" element={<Security />} />

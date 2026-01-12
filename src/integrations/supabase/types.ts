@@ -71,6 +71,95 @@ export type Database = {
         }
         Relationships: []
       }
+      api_keys: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_trial: boolean | null
+          key_hash: string
+          key_preview: string
+          last_used_at: string | null
+          model: string | null
+          name: string | null
+          requests_month: number | null
+          requests_today: number | null
+          total_requests: number | null
+          trial_expires_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_trial?: boolean | null
+          key_hash: string
+          key_preview: string
+          last_used_at?: string | null
+          model?: string | null
+          name?: string | null
+          requests_month?: number | null
+          requests_today?: number | null
+          total_requests?: number | null
+          trial_expires_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_trial?: boolean | null
+          key_hash?: string
+          key_preview?: string
+          last_used_at?: string | null
+          model?: string | null
+          name?: string | null
+          requests_month?: number | null
+          requests_today?: number | null
+          total_requests?: number | null
+          trial_expires_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      api_usage: {
+        Row: {
+          api_key_id: string | null
+          created_at: string | null
+          endpoint: string | null
+          id: string
+          model: string | null
+          status_code: number | null
+          tokens_used: number | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string | null
+          endpoint?: string | null
+          id?: string
+          model?: string | null
+          status_code?: number | null
+          tokens_used?: number | null
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string | null
+          endpoint?: string | null
+          id?: string
+          model?: string | null
+          status_code?: number | null
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_templates: {
         Row: {
           category: string
@@ -111,6 +200,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          project_id: string | null
           title: string
           updated_at: string
           user_id: string
@@ -118,6 +208,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          project_id?: string | null
           title?: string
           updated_at?: string
           user_id: string
@@ -125,11 +216,20 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          project_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coupon_codes: {
         Row: {
@@ -332,6 +432,39 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
