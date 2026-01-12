@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight, 
-  LogOut, Sparkles, Settings, Shield
+  LogOut, Sparkles, Settings, Shield, Search, Code
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { ProjectsSection } from "./ProjectsSection";
+import { ChatSearch } from "./ChatSearch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +27,7 @@ interface Conversation {
   id: string;
   title: string;
   updated_at: string;
+  project_id: string | null;
 }
 
 interface ChatSidebarProps {
@@ -43,8 +46,15 @@ export const ChatSidebar = ({
   const [collapsed, setCollapsed] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  // Filter conversations by project
+  const filteredConversations = selectedProject
+    ? conversations.filter(c => c.project_id === selectedProject)
+    : conversations;
 
   useEffect(() => {
     if (user) {
@@ -144,6 +154,20 @@ export const ChatSidebar = ({
         </Button>
       </div>
 
+      {/* Search Button */}
+      {!collapsed && (
+        <div className="px-3 mb-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowSearch(true)}
+            className="w-full justify-start gap-2 rounded-lg"
+          >
+            <Search className="w-4 h-4 shrink-0" />
+            <span>Search chats...</span>
+          </Button>
+        </div>
+      )}
+
       {/* New Chat Button */}
       <div className="px-3 mb-2">
         <Button
@@ -157,9 +181,16 @@ export const ChatSidebar = ({
         </Button>
       </div>
 
+      {/* Projects Section */}
+      <ProjectsSection
+        collapsed={collapsed}
+        selectedProject={selectedProject}
+        onSelectProject={setSelectedProject}
+      />
+
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto px-3 space-y-1">
-        {conversations.map((conv) => (
+        {filteredConversations.map((conv) => (
           <div
             key={conv.id}
             className={`group relative flex items-center rounded-lg transition-all duration-200 ${
@@ -243,6 +274,17 @@ export const ChatSidebar = ({
 
         <Button
           variant="ghost"
+          onClick={() => navigate("/api-access")}
+          className={`w-full justify-start gap-2 rounded-lg ${
+            collapsed ? "px-3" : ""
+          }`}
+        >
+          <Code className="w-4 h-4 shrink-0" />
+          {!collapsed && <span>API Access</span>}
+        </Button>
+
+        <Button
+          variant="ghost"
           onClick={onOpenSettings}
           className={`w-full justify-start gap-2 rounded-lg ${
             collapsed ? "px-3" : ""
@@ -263,6 +305,14 @@ export const ChatSidebar = ({
           {!collapsed && <span>Sign Out</span>}
         </Button>
       </div>
+
+      {/* Search Overlay */}
+      {showSearch && (
+        <ChatSearch
+          onSelectConversation={onSelectConversation}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
     </motion.aside>
   );
 };
