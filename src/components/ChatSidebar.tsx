@@ -79,7 +79,7 @@ export const ChatSidebar = ({
 
     const { data, error } = await supabase
       .from("conversations")
-      .select("id, title, updated_at")
+      .select("id, title, updated_at, project_id")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
 
