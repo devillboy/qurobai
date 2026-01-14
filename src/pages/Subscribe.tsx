@@ -126,7 +126,7 @@ export default function Subscribe() {
 
       const finalPrice = selectedPlan.price_inr * (1 - discount / 100);
 
-      const { error: insertError } = await supabase
+      const { data: insertData, error: insertError } = await supabase
         .from("payment_screenshots")
         .insert({
           user_id: user?.id,
@@ -134,7 +134,9 @@ export default function Subscribe() {
           screenshot_url: urlData.publicUrl,
           amount_paid: Math.round(finalPrice),
           coupon_code: couponCode || null,
-        });
+        })
+        .select()
+        .single();
 
       if (insertError) throw insertError;
 
@@ -153,7 +155,36 @@ export default function Subscribe() {
         }
       }
 
-      toast.success("Payment submitted! Waiting for admin approval.");
+      // Auto-trigger AI verification
+      toast.loading("Verifying payment...", { id: "verify" });
+      try {
+        const { data: verifyResult, error: verifyError } = await supabase.functions.invoke("verify-payment", {
+          body: { paymentId: insertData.id },
+        });
+        
+        if (verifyError) {
+          console.error("Verification error:", verifyError);
+          toast.dismiss("verify");
+          toast.info("Payment submitted! AI verification pending, admin will review shortly.");
+        } else if (verifyResult?.action === "approved") {
+          toast.dismiss("verify");
+          toast.success("🎉 Payment verified and approved! Your subscription is now active.");
+        } else if (verifyResult?.action === "rejected") {
+          toast.dismiss("verify");
+          toast.error("Payment could not be verified. Please contact support.");
+        } else if (verifyResult?.retryable) {
+          toast.dismiss("verify");
+          toast.info("Verification service busy. Admin will review your payment shortly.");
+        } else {
+          toast.dismiss("verify");
+          toast.info("Payment submitted! Admin will verify within 24 hours.");
+        }
+      } catch (e) {
+        console.error("Verification invoke error:", e);
+        toast.dismiss("verify");
+        toast.info("Payment submitted! Admin will review shortly.");
+      }
+
       navigate("/");
     } catch (error) {
       console.error(error);

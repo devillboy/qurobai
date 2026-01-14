@@ -209,12 +209,25 @@ export default function AdminPanel() {
     if (!userToDelete) return;
     setDeletingUser(true);
     try {
-      // Delete user data (conversations, messages, settings, etc.)
-      await supabase.from("messages").delete().eq("conversation_id", userToDelete.user_id);
+      // First get all conversation IDs for this user
+      const { data: userConversations } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("user_id", userToDelete.user_id);
+      
+      // Delete messages for those conversations
+      if (userConversations && userConversations.length > 0) {
+        const convIds = userConversations.map(c => c.id);
+        await supabase.from("messages").delete().in("conversation_id", convIds);
+      }
+      
+      // Delete other user data
       await supabase.from("conversations").delete().eq("user_id", userToDelete.user_id);
       await supabase.from("user_settings").delete().eq("user_id", userToDelete.user_id);
       await supabase.from("user_subscriptions").delete().eq("user_id", userToDelete.user_id);
       await supabase.from("user_memory").delete().eq("user_id", userToDelete.user_id);
+      await supabase.from("api_keys").delete().eq("user_id", userToDelete.user_id);
+      await supabase.from("projects").delete().eq("user_id", userToDelete.user_id);
       await supabase.from("profiles").delete().eq("user_id", userToDelete.user_id);
       toast.success("User data deleted successfully");
       setUserToDelete(null);
@@ -256,12 +269,33 @@ export default function AdminPanel() {
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p.display_name]) || []);
       
-      const paymentsWithProfiles = payments.map(payment => ({
-        ...payment,
-        display_name: profileMap.get(payment.user_id) || "Unknown User"
+      // Generate signed URLs for each payment screenshot
+      const paymentsWithSignedUrls = await Promise.all(payments.map(async (payment) => {
+        let signedUrl = payment.screenshot_url;
+        
+        // Extract storage path and generate signed URL
+        if (payment.screenshot_url?.includes("/payment-screenshots/")) {
+          const parts = payment.screenshot_url.split("/payment-screenshots/");
+          const storagePath = parts[1];
+          if (storagePath) {
+            const { data: signedData } = await supabase
+              .storage
+              .from("payment-screenshots")
+              .createSignedUrl(storagePath, 600); // 10 min expiry
+            if (signedData?.signedUrl) {
+              signedUrl = signedData.signedUrl;
+            }
+          }
+        }
+        
+        return {
+          ...payment,
+          display_name: profileMap.get(payment.user_id) || "Unknown User",
+          signed_screenshot_url: signedUrl
+        };
       }));
 
-      setPendingPayments(paymentsWithProfiles);
+      setPendingPayments(paymentsWithSignedUrls);
     } else {
       setPendingPayments([]);
     }
@@ -851,15 +885,15 @@ export default function AdminPanel() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {payment.screenshot_url && (
+                      {(payment.signed_screenshot_url || payment.screenshot_url) && (
                         <a 
-                          href={payment.screenshot_url} 
+                          href={payment.signed_screenshot_url || payment.screenshot_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="block"
                         >
                           <img 
-                            src={payment.screenshot_url} 
+                            src={payment.signed_screenshot_url || payment.screenshot_url} 
                             alt="Payment screenshot" 
                             className="w-full h-32 object-cover rounded border border-border"
                           />
