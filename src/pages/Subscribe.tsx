@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { 
   ArrowLeft, Upload, Check, Sparkles, Code, Zap, Brain, 
-  Smartphone, Copy, CreditCard, Gift, Wallet, QrCode,
-  Building2, Banknote
+  Smartphone, Copy, Gift, Wallet, QrCode,
+  Building2, Crown, Shield, Star, Rocket
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,12 +25,13 @@ interface PaymentDetails {
   accountHolder: string;
 }
 
+// ⚠️ UPDATE THESE WITH YOUR REAL PAYMENT DETAILS
 const paymentDetails: PaymentDetails = {
-  upiId: "7864084241@ybl",
-  bankName: "State Bank of India",
-  accountNumber: "40364689383",
-  ifscCode: "SBIN0007859",
-  accountHolder: "SOHAM GHOSH",
+  upiId: "yourname@upi",        // Replace with your real UPI ID
+  bankName: "Your Bank Name",   // Replace with your bank name
+  accountNumber: "XXXXXXXXXXXX", // Replace with your account number
+  ifscCode: "XXXX0XXXXXX",      // Replace with your IFSC code
+  accountHolder: "YOUR NAME",   // Replace with your name
 };
 
 export default function Subscribe() {
@@ -216,29 +217,24 @@ export default function Subscribe() {
           });
           
           if (verifyError) {
-            console.error("Verification error:", verifyError);
             toast.dismiss("verify");
-            toast.info("Payment submitted! AI verification pending, admin will review shortly.");
+            toast.info("Payment submitted! AI verification pending.");
           } else if (verifyResult?.action === "approved") {
             toast.dismiss("verify");
-            toast.success("🎉 Payment verified and approved! Your subscription is now active.");
+            toast.success("🎉 Payment verified! Subscription active.");
           } else if (verifyResult?.action === "rejected") {
             toast.dismiss("verify");
-            toast.error("Payment could not be verified. Please contact support.");
-          } else if (verifyResult?.retryable) {
-            toast.dismiss("verify");
-            toast.info("Verification service busy. Admin will review your payment shortly.");
+            toast.error("Payment verification failed. Contact support.");
           } else {
             toast.dismiss("verify");
-            toast.info("Payment submitted! Admin will verify within 24 hours.");
+            toast.info("Payment submitted! Admin will verify shortly.");
           }
         } catch (e) {
-          console.error("Verification invoke error:", e);
           toast.dismiss("verify");
-          toast.info("Payment submitted! Admin will review shortly.");
+          toast.info("Payment submitted! Admin will review.");
         }
       } else {
-        toast.success("Payment submitted! Admin will verify your redeem code within 24 hours.");
+        toast.success("Payment submitted! Admin will verify within 24 hours.");
       }
 
       navigate("/");
@@ -256,37 +252,44 @@ export default function Subscribe() {
   const finalPrice = selectedPlan ? selectedPlan.price_inr * (1 - discount / 100) : 0;
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-screen bg-background gradient-mesh p-4 md:p-6">
       <div className="max-w-5xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate("/")} className="mb-6">
+        <Button variant="ghost" onClick={() => navigate("/")} className="mb-6 hover-lift">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
 
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl md:text-3xl font-bold">Upgrade Your AI</h1>
+        {/* Premium Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+            <Crown className="w-5 h-5 text-primary animate-pulse-glow" />
+            <span className="text-sm font-medium text-primary">Unlock Premium Features</span>
           </div>
-          <p className="text-muted-foreground text-sm">Choose the plan that fits your needs</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">
+            <span className="text-gradient">Upgrade Your AI Experience</span>
+          </h1>
+          <p className="text-muted-foreground">Choose the perfect plan for your needs</p>
         </div>
 
         {/* Plan Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           {/* Free Plan */}
-          <Card className="border border-border">
-            <CardHeader className="pb-3">
+          <Card className="premium-card relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-transparent opacity-50" />
+            <CardHeader className="pb-3 relative z-10">
               <Badge className="w-fit mb-2" variant="secondary">Current Plan</Badge>
               <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-muted-foreground" />
+                <div className="p-2 rounded-lg bg-muted">
+                  <Zap className="w-5 h-5 text-muted-foreground" />
+                </div>
                 <CardTitle className="text-lg">Qurob 2</CardTitle>
               </div>
-              <CardDescription className="text-xl font-bold text-foreground">
-                ₹0<span className="text-sm font-normal text-muted-foreground"> / forever</span>
+              <CardDescription className="text-2xl font-bold text-foreground mt-2">
+                Free<span className="text-sm font-normal text-muted-foreground ml-1">forever</span>
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-muted-foreground">
+            <CardContent className="relative z-10">
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
                   Basic AI responses
@@ -305,26 +308,30 @@ export default function Subscribe() {
 
           {/* Premium Plan */}
           <Card 
-            className={`border-2 relative cursor-pointer transition-all ${
+            className={`relative overflow-hidden cursor-pointer transition-all duration-300 ${
               selectedPlan?.name === "Premium" 
-                ? "border-primary" 
-                : "border-border hover:border-primary/50"
+                ? "border-2 border-primary glow" 
+                : "premium-card hover:border-primary/50"
             }`}
             onClick={() => premiumPlan && setSelectedPlan(premiumPlan)}
           >
-            <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-2 py-0.5 text-xs font-medium rounded-bl">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/5" />
+            <div className="absolute top-0 right-0 bg-gradient-to-r from-primary to-accent text-white px-3 py-1 text-xs font-semibold rounded-bl-lg">
+              <Star className="w-3 h-3 inline mr-1" />
               POPULAR
             </div>
-            <div className="absolute top-0 left-0 bg-green-600 text-white px-2 py-0.5 text-xs font-medium rounded-br">
-              + Q-06 Included
+            <div className="absolute top-0 left-0 bg-success text-white px-2 py-1 text-xs font-medium rounded-br-lg">
+              + Q-06
             </div>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 relative z-10 pt-8">
               <div className="flex items-center gap-2">
-                <Brain className="w-5 h-5 text-primary" />
+                <div className="p-2 rounded-lg gradient-primary">
+                  <Brain className="w-5 h-5 text-white" />
+                </div>
                 <CardTitle className="text-lg">Qurob 4</CardTitle>
               </div>
-              <CardDescription>
-                <span className="text-xl font-bold text-foreground">
+              <CardDescription className="mt-2">
+                <span className="text-2xl font-bold text-foreground">
                   ₹{premiumPlan ? Math.round(premiumPlan.price_inr * (1 - (selectedPlan?.name === "Premium" ? discount : 0) / 100)) : 289}
                 </span>
                 {selectedPlan?.name === "Premium" && discount > 0 && (
@@ -332,14 +339,14 @@ export default function Subscribe() {
                     ₹{premiumPlan?.price_inr}
                   </span>
                 )}
-                <span className="text-sm font-normal text-muted-foreground"> / month</span>
+                <span className="text-sm font-normal text-muted-foreground ml-1">/ month</span>
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
+            <CardContent className="relative z-10">
+              <ul className="space-y-2.5 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
-                  <strong>Advanced 70B AI model</strong>
+                  <strong>Advanced 70B AI</strong>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
@@ -359,23 +366,27 @@ export default function Subscribe() {
 
           {/* Q-06 Plan */}
           <Card 
-            className={`border-2 relative cursor-pointer transition-all ${
+            className={`relative overflow-hidden cursor-pointer transition-all duration-300 ${
               selectedPlan?.name === "Code Specialist" 
-                ? "border-primary" 
-                : "border-border hover:border-primary/50"
+                ? "border-2 border-primary glow" 
+                : "premium-card hover:border-primary/50"
             }`}
             onClick={() => codePlan && setSelectedPlan(codePlan)}
           >
-            <div className="absolute top-0 right-0 bg-foreground text-background px-2 py-0.5 text-xs font-medium rounded-bl">
+            <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-primary/5" />
+            <div className="absolute top-0 right-0 bg-foreground text-background px-3 py-1 text-xs font-semibold rounded-bl-lg">
+              <Rocket className="w-3 h-3 inline mr-1" />
               CODE EXPERT
             </div>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 relative z-10 pt-8">
               <div className="flex items-center gap-2">
-                <Code className="w-5 h-5 text-primary" />
+                <div className="p-2 rounded-lg bg-accent/20">
+                  <Code className="w-5 h-5 text-accent" />
+                </div>
                 <CardTitle className="text-lg">Q-06</CardTitle>
               </div>
-              <CardDescription>
-                <span className="text-xl font-bold text-foreground">
+              <CardDescription className="mt-2">
+                <span className="text-2xl font-bold text-foreground">
                   ₹{codePlan ? Math.round(codePlan.price_inr * (1 - (selectedPlan?.name === "Code Specialist" ? discount : 0) / 100)) : 320}
                 </span>
                 {selectedPlan?.name === "Code Specialist" && discount > 0 && (
@@ -383,11 +394,11 @@ export default function Subscribe() {
                     ₹{codePlan?.price_inr}
                   </span>
                 )}
-                <span className="text-sm font-normal text-muted-foreground"> / month</span>
+                <span className="text-sm font-normal text-muted-foreground ml-1">/ month</span>
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
+            <CardContent className="relative z-10">
+              <ul className="space-y-2.5 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
                   <strong>Expert-level coding</strong>
@@ -411,83 +422,86 @@ export default function Subscribe() {
 
         {/* Purchase Form */}
         {selectedPlan && selectedPlan.price_inr > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                Complete Your Purchase - {selectedPlan.name === "Code Specialist" ? "Q-06" : selectedPlan.name}
+          <Card className="premium-card overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-50" />
+            <CardHeader className="relative z-10">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                Complete Your Purchase
               </CardTitle>
               <CardDescription>
-                Choose your preferred payment method
+                Secure payment for {selectedPlan.name === "Code Specialist" ? "Q-06" : selectedPlan.name}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5 relative z-10">
               {/* Coupon */}
-              <div>
-                <Label className="text-sm">Coupon Code (Optional)</Label>
-                <div className="flex gap-2 mt-1">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Label className="text-sm text-muted-foreground">Have a coupon?</Label>
                   <Input
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    placeholder="Enter coupon"
-                    className="flex-1"
+                    placeholder="Enter code"
+                    className="mt-1 bg-input/50"
                   />
-                  <Button onClick={validateCoupon} variant="outline" size="sm">
-                    Apply
-                  </Button>
                 </div>
+                <Button onClick={validateCoupon} variant="outline" className="mt-6">
+                  Apply
+                </Button>
               </div>
 
               {/* Price Display */}
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <div className="text-3xl font-bold text-primary">₹{Math.round(finalPrice)}</div>
+              <div className="text-center p-6 rounded-xl bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border border-primary/20">
+                <div className="text-4xl font-bold text-gradient">₹{Math.round(finalPrice)}</div>
                 {discount > 0 && (
-                  <div className="text-sm text-muted-foreground">
-                    <span className="line-through">₹{selectedPlan.price_inr}</span> • {discount}% off
+                  <div className="text-sm text-muted-foreground mt-1">
+                    <span className="line-through">₹{selectedPlan.price_inr}</span>
+                    <Badge className="ml-2" variant="secondary">{discount}% OFF</Badge>
                   </div>
                 )}
               </div>
 
               {/* Payment Methods */}
-              <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="upi" className="flex items-center gap-1">
-                    <QrCode className="w-4 h-4" />
-                    <span className="hidden sm:inline">UPI</span>
+              <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 bg-muted/50">
+                  <TabsTrigger value="upi" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+                    <QrCode className="w-4 h-4 mr-1.5" />
+                    UPI
                   </TabsTrigger>
-                  <TabsTrigger value="google_redeem" className="flex items-center gap-1">
-                    <Gift className="w-4 h-4" />
-                    <span className="hidden sm:inline">Redeem Code</span>
+                  <TabsTrigger value="google_redeem" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+                    <Gift className="w-4 h-4 mr-1.5" />
+                    Redeem
                   </TabsTrigger>
-                  <TabsTrigger value="bank_transfer" className="flex items-center gap-1">
-                    <Building2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Bank</span>
+                  <TabsTrigger value="bank_transfer" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+                    <Building2 className="w-4 h-4 mr-1.5" />
+                    Bank
                   </TabsTrigger>
                 </TabsList>
 
                 {/* UPI Payment */}
                 <TabsContent value="upi" className="space-y-4 mt-4">
-                  <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+                    <div className="flex items-center gap-2">
                       <Wallet className="w-5 h-5 text-primary" />
-                      <span className="font-medium">Pay via UPI</span>
+                      <span className="font-semibold">Pay via UPI</span>
                     </div>
                     
-                    <div className="flex items-center gap-2 p-3 bg-background rounded border">
-                      <span className="text-sm">UPI ID:</span>
-                      <code className="font-mono text-primary flex-1">{paymentDetails.upiId}</code>
+                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                      <span className="text-sm text-muted-foreground">UPI ID:</span>
+                      <code className="font-mono text-primary flex-1 font-medium">{paymentDetails.upiId}</code>
                       <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentDetails.upiId, "UPI ID")}>
                         <Copy className="w-4 h-4" />
                       </Button>
                     </div>
 
-                    <Button onClick={openUpiApp} variant="outline" className="w-full">
+                    <Button onClick={openUpiApp} variant="outline" className="w-full hover-lift">
                       <Smartphone className="w-4 h-4 mr-2" />
-                      Open UPI App (PhonePe, GPay, Paytm)
+                      Open UPI App
                     </Button>
 
-                    <div className="grid grid-cols-4 gap-2 py-2">
+                    <div className="grid grid-cols-4 gap-2">
                       {["PhonePe", "GPay", "Paytm", "BHIM"].map((app) => (
-                        <div key={app} className="text-center text-xs text-muted-foreground p-2 rounded bg-background border">
+                        <div key={app} className="text-center text-xs text-muted-foreground p-2 rounded-lg bg-muted/30 border border-border/50">
                           {app}
                         </div>
                       ))}
@@ -497,87 +511,60 @@ export default function Subscribe() {
 
                 {/* Google Play Redeem Code */}
                 <TabsContent value="google_redeem" className="space-y-4 mt-4">
-                  <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Gift className="w-5 h-5 text-green-500" />
-                      <span className="font-medium">Google Play Redeem Code</span>
+                  <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Gift className="w-5 h-5 text-success" />
+                      <span className="font-semibold">Google Play Redeem Code</span>
                     </div>
 
-                    <div className="bg-background p-3 rounded border space-y-2">
+                    <div className="bg-muted/30 p-4 rounded-lg border border-border/50 space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        You can pay using Google Play gift card / redeem code worth ₹{Math.round(finalPrice)}
+                        Pay using Google Play gift card worth ₹{Math.round(finalPrice)} or more
                       </p>
                       <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                        <li>Buy a Google Play gift card of ₹{Math.round(finalPrice)} or more</li>
-                        <li>Enter the redeem code below</li>
+                        <li>Buy a Google Play gift card from Amazon, Flipkart, or local stores</li>
+                        <li>Enter the 16-character redeem code below</li>
                         <li>Admin will verify and activate your subscription</li>
                       </ol>
                     </div>
 
                     <div>
-                      <Label className="text-sm">Enter Redeem Code</Label>
+                      <Label className="text-sm">Redeem Code</Label>
                       <Input
                         value={redeemCode}
                         onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
                         placeholder="XXXX-XXXX-XXXX-XXXX"
-                        className="mt-1 font-mono tracking-wider"
+                        className="mt-1 font-mono tracking-widest bg-input/50 text-center text-lg"
                       />
                     </div>
-
-                    <p className="text-xs text-muted-foreground">
-                      💡 You can buy Google Play gift cards from stores like Amazon, Flipkart, or local retailers
-                    </p>
                   </div>
                 </TabsContent>
 
                 {/* Bank Transfer */}
                 <TabsContent value="bank_transfer" className="space-y-4 mt-4">
-                  <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+                    <div className="flex items-center gap-2">
                       <Building2 className="w-5 h-5 text-blue-500" />
-                      <span className="font-medium">Bank Transfer (NEFT/IMPS/RTGS)</span>
+                      <span className="font-semibold">Bank Transfer (NEFT/IMPS)</span>
                     </div>
 
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between p-2 bg-background rounded border">
-                        <span className="text-sm text-muted-foreground">Bank Name</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{paymentDetails.bankName}</span>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentDetails.bankName, "Bank Name")}>
-                            <Copy className="w-3 h-3" />
-                          </Button>
+                      {[
+                        { label: "Bank Name", value: paymentDetails.bankName },
+                        { label: "Account No", value: paymentDetails.accountNumber },
+                        { label: "IFSC Code", value: paymentDetails.ifscCode },
+                        { label: "Holder", value: paymentDetails.accountHolder },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border/50">
+                          <span className="text-sm text-muted-foreground">{label}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-medium text-sm">{value}</span>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(value, label)}>
+                              <Copy className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex items-center justify-between p-2 bg-background rounded border">
-                        <span className="text-sm text-muted-foreground">Account Number</span>
-                        <div className="flex items-center gap-2">
-                          <code className="font-mono">{paymentDetails.accountNumber}</code>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentDetails.accountNumber, "Account Number")}>
-                            <Copy className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between p-2 bg-background rounded border">
-                        <span className="text-sm text-muted-foreground">IFSC Code</span>
-                        <div className="flex items-center gap-2">
-                          <code className="font-mono">{paymentDetails.ifscCode}</code>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentDetails.ifscCode, "IFSC Code")}>
-                            <Copy className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between p-2 bg-background rounded border">
-                        <span className="text-sm text-muted-foreground">Account Holder</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{paymentDetails.accountHolder}</span>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentDetails.accountHolder, "Account Holder")}>
-                            <Copy className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
+                      ))}
                     </div>
 
                     <div>
@@ -586,67 +573,58 @@ export default function Subscribe() {
                         value={transactionId}
                         onChange={(e) => setTransactionId(e.target.value)}
                         placeholder="Enter UTR / Transaction ID"
-                        className="mt-1"
+                        className="mt-1 bg-input/50"
                       />
                     </div>
                   </div>
                 </TabsContent>
               </Tabs>
 
-              {/* Screenshot Upload (for UPI and Bank Transfer) */}
+              {/* Screenshot Upload */}
               {paymentMethod !== "google_redeem" && (
-                <div>
+                <div className="space-y-2">
                   <Label className="text-sm">Upload Payment Screenshot</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="mt-1 cursor-pointer"
-                  />
-                  {previewUrl && (
-                    <img
-                      src={previewUrl}
-                      alt="Payment screenshot"
-                      className="mt-3 rounded-lg border max-h-48 object-contain"
+                  <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
                     />
-                  )}
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Payment screenshot"
+                        className="max-h-48 mx-auto rounded-lg object-contain"
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Click to upload screenshot</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-
-              {/* Instructions */}
-              <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
-                <p className="font-medium mb-1">📝 After Payment:</p>
-                <ol className="space-y-1 list-decimal list-inside">
-                  {paymentMethod === "google_redeem" ? (
-                    <>
-                      <li>Enter the complete redeem code above</li>
-                      <li>Submit your payment</li>
-                      <li>Admin will verify the code and activate your subscription within 24 hours</li>
-                    </>
-                  ) : (
-                    <>
-                      <li>Take a screenshot of successful payment</li>
-                      <li>Upload the screenshot above</li>
-                      <li>Admin will verify within 24 hours (usually faster with AI!)</li>
-                    </>
-                  )}
-                </ol>
-              </div>
 
               <Button
                 onClick={handleSubmit}
                 disabled={loading || (paymentMethod === "google_redeem" ? !redeemCode : !screenshot)}
-                className="w-full"
+                className="w-full btn-premium h-12 text-base"
               >
                 {loading ? (
-                  "Submitting..."
+                  "Processing..."
                 ) : (
                   <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Submit Payment
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Complete Purchase
                   </>
                 )}
               </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                🔒 Secure payment • Admin verification within 24 hours
+              </p>
             </CardContent>
           </Card>
         )}
