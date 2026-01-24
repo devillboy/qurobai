@@ -22,6 +22,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { ThreeDText } from "@/components/ThreeDText";
 
 type PaymentMethod = "upi" | "google_redeem" | "bank_transfer";
 
@@ -303,7 +304,7 @@ export default function Subscribe() {
             <span className="text-sm font-medium text-primary">Unlock Premium Features</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            <span className="text-gradient">Upgrade Your AI Experience</span>
+            <ThreeDText as="span">Upgrade Your AI Experience</ThreeDText>
           </h1>
           <p className="text-muted-foreground">Choose the perfect plan for your needs</p>
         </div>
