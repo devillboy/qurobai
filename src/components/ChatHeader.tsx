@@ -1,6 +1,7 @@
 import { ArrowLeft, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { ThreeDText } from "@/components/ThreeDText";
 
 interface ChatHeaderProps {
   onBack?: () => void;
@@ -46,8 +47,10 @@ export const ChatHeader = ({
           )}
         </div>
         
-        <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent truncate">
-          {title}
+        <h1 className="text-lg font-bold truncate">
+          <ThreeDText as="span" className="text-lg">
+            {title}
+          </ThreeDText>
         </h1>
         
         <div className="w-9" /> {/* Spacer for centering */}

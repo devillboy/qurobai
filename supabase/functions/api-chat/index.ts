@@ -112,6 +112,29 @@ serve(async (req) => {
 
     console.log("API key validated for user:", keyData.user_id);
 
+    // Enforce payment for Qurob 4 API keys
+    if (keyData.model === "qurob-4") {
+      const nowIso = new Date().toISOString();
+      const { data: activeSub, error: subError } = await supabase
+        .from("user_subscriptions")
+        .select("id")
+        .eq("user_id", keyData.user_id)
+        .eq("status", "active")
+        .gt("expires_at", nowIso)
+        .limit(1);
+
+      if (subError || !activeSub || activeSub.length === 0) {
+        return new Response(
+          JSON.stringify({
+            error: "Premium subscription required for Qurob 4 API.",
+            code: "PAYMENT_REQUIRED",
+            upgrade_url: "https://qurobai.lovable.app/subscribe",
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Check trial expiry
     if (keyData.is_trial && keyData.trial_expires_at) {
       if (new Date(keyData.trial_expires_at) < new Date()) {

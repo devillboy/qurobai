@@ -4,6 +4,7 @@ import {
   Brain, ArrowRight, MessageSquare, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThreeDText } from "@/components/ThreeDText";
 
 export const LandingPage = () => {
   return (
@@ -40,9 +41,11 @@ export const LandingPage = () => {
             AI Assistant by Soham from India
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
-            Qurob<span className="text-primary">Ai</span>
-          </h1>
+           <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
+             <ThreeDText as="span" className="leading-none">
+               QurobAi
+             </ThreeDText>
+           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed">
             Your intelligent AI companion for coding, creating, and solving problems. Built in India, for the world.

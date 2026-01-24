@@ -14,6 +14,7 @@ import {
   Sparkles, Terminal, Shield, Rocket, CheckCircle2
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ThreeDText } from "@/components/ThreeDText";
 
 interface ApiKey {
   id: string;
@@ -40,6 +41,7 @@ export default function ApiAccess() {
   const [selectedModel, setSelectedModel] = useState("qurob-2");
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
+  const [hasPremium, setHasPremium] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -47,7 +49,26 @@ export default function ApiAccess() {
       return;
     }
     fetchApiKeys();
+    checkPremium();
   }, [user]);
+
+  const checkPremium = async () => {
+    if (!user) return;
+    try {
+      const nowIso = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("user_subscriptions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .gt("expires_at", nowIso)
+        .limit(1);
+
+      if (!error) setHasPremium(Boolean(data && data.length > 0));
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchApiKeys = async () => {
     if (!user) return;
@@ -65,6 +86,11 @@ export default function ApiAccess() {
 
   const generateApiKey = async () => {
     if (!user) return;
+    if (selectedModel === "qurob-4" && !hasPremium) {
+      toast.error("Qurob 4 API unlock karne ke liye pehle Premium subscription chahiye.");
+      navigate("/subscribe");
+      return;
+    }
     setCreating(true);
 
     try {
@@ -159,7 +185,7 @@ export default function ApiAccess() {
             <span className="text-sm font-medium text-primary">Developer Tools</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold flex items-center gap-3">
-            <span className="text-gradient">API Access</span>
+            <ThreeDText as="span">API Access</ThreeDText>
           </h1>
           <p className="text-muted-foreground mt-2">
             Integrate QurobAi into your applications with our powerful API
@@ -216,6 +242,19 @@ export default function ApiAccess() {
                     </select>
                   </div>
                 </div>
+
+                {selectedModel === "qurob-4" && !hasPremium && (
+                  <div className="p-4 rounded-xl border border-warning/30 bg-warning/10 animate-fade-in">
+                    <p className="text-sm text-foreground font-medium">Premium required</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Qurob 4 API key generate karne se pehle premium subscription activate hona chahiye.
+                    </p>
+                    <Button className="mt-3 btn-premium" onClick={() => navigate("/subscribe")}>
+                      Unlock via Payment
+                      <ExternalLink className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                )}
                 <Button onClick={generateApiKey} disabled={creating} className="btn-premium">
                   <Sparkles className="w-4 h-4 mr-2" />
                   {creating ? "Creating..." : "Generate API Key"}
