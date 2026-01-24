@@ -369,7 +369,7 @@ export type Database = {
           plan_id: string
           reviewed_at: string | null
           reviewed_by: string | null
-          screenshot_url: string
+          screenshot_url: string | null
           status: string
           user_id: string
         }
@@ -382,7 +382,7 @@ export type Database = {
           plan_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
-          screenshot_url: string
+          screenshot_url?: string | null
           status?: string
           user_id: string
         }
@@ -395,7 +395,7 @@ export type Database = {
           plan_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
-          screenshot_url?: string
+          screenshot_url?: string | null
           status?: string
           user_id?: string
         }

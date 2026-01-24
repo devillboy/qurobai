@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,25 +14,18 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 type PaymentMethod = "upi" | "google_redeem" | "bank_transfer";
 
-interface PaymentDetails {
-  upiId: string;
-  bankName: string;
-  accountNumber: string;
-  ifscCode: string;
-  accountHolder: string;
-}
-
-// ⚠️ UPDATE THESE WITH YOUR REAL PAYMENT DETAILS
-const paymentDetails: PaymentDetails = {
-  upiId: "yourname@upi",        // Replace with your real UPI ID
-  bankName: "Your Bank Name",   // Replace with your bank name
-  accountNumber: "XXXXXXXXXXXX", // Replace with your account number
-  ifscCode: "XXXX0XXXXXX",      // Replace with your IFSC code
-  accountHolder: "YOUR NAME",   // Replace with your name
-};
+type DrawerStep = "pay" | "proof";
 
 export default function Subscribe() {
   const { user } = useAuth();
@@ -47,6 +40,23 @@ export default function Subscribe() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
   const [redeemCode, setRedeemCode] = useState("");
   const [transactionId, setTransactionId] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerStep, setDrawerStep] = useState<DrawerStep>("pay");
+
+  // Payment config (kept on backend; fallback to hardcoded for safety)
+  const [upiId, setUpiId] = useState<string>("7864084241@ybl");
+
+  // Bank details are optional for now (can be moved to backend later)
+  const bankDetails = useMemo(
+    () =>
+      [
+        { label: "Bank Name", value: "—" },
+        { label: "Account No", value: "—" },
+        { label: "IFSC Code", value: "—" },
+        { label: "Holder", value: "—" },
+      ] as const,
+    [],
+  );
 
   useEffect(() => {
     if (!user) {
@@ -54,7 +64,24 @@ export default function Subscribe() {
       return;
     }
     loadPlans();
+    loadPaymentSettings();
   }, [user]);
+
+  const loadPaymentSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("setting_value")
+        .eq("setting_key", "upi_id")
+        .maybeSingle();
+
+      if (!error && data?.setting_value) {
+        setUpiId(String(data.setting_value));
+      }
+    } catch {
+      // ignore and keep fallback
+    }
+  };
 
   const loadPlans = async () => {
     const { data, error } = await supabase
@@ -121,26 +148,28 @@ export default function Subscribe() {
   const openUpiApp = () => {
     if (!selectedPlan) return;
     const finalPrice = Math.round(selectedPlan.price_inr * (1 - discount / 100));
-    const upiLink = `upi://pay?pa=${paymentDetails.upiId}&pn=QurobAi&am=${finalPrice}&cu=INR&tn=QurobAi%20${selectedPlan.name}%20Subscription`;
+    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=QurobAi&am=${finalPrice}&cu=INR&tn=QurobAi%20${encodeURIComponent(
+      selectedPlan.name,
+    )}%20Subscription`;
     window.location.href = upiLink;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (): Promise<boolean> => {
     if (paymentMethod === "google_redeem") {
       if (!redeemCode.trim()) {
         toast.error("Please enter the Google Play redeem code");
-        return;
+        return false;
       }
     } else {
       if (!screenshot) {
         toast.error("Please upload payment screenshot");
-        return;
+        return false;
       }
     }
 
     if (!selectedPlan) {
       toast.error("Please select a plan");
-      return;
+      return false;
     }
 
     setLoading(true);
@@ -156,10 +185,8 @@ export default function Subscribe() {
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from("payment-screenshots")
-          .getPublicUrl(fileName);
-
+        // Bucket is private; we store a stable URL-looking string so the verifier can extract path.
+        const { data: urlData } = supabase.storage.from("payment-screenshots").getPublicUrl(fileName);
         screenshotUrl = urlData.publicUrl;
       }
 
@@ -238,9 +265,11 @@ export default function Subscribe() {
       }
 
       navigate("/");
+      return true;
     } catch (error) {
       console.error(error);
       toast.error("Failed to submit payment");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -250,6 +279,14 @@ export default function Subscribe() {
   const codePlan = plans.find(p => p.name === "Code Specialist");
   
   const finalPrice = selectedPlan ? selectedPlan.price_inr * (1 - discount / 100) : 0;
+  const canOpenDrawer = Boolean(selectedPlan && selectedPlan.price_inr > 0);
+
+  const canContinueToProof =
+    paymentMethod === "google_redeem" ? Boolean(redeemCode.trim()) : true;
+
+  const canSubmit =
+    !loading &&
+    (paymentMethod === "google_redeem" ? Boolean(redeemCode.trim()) : Boolean(screenshot));
 
   return (
     <div className="min-h-screen bg-background gradient-mesh p-4 md:p-6">
@@ -420,214 +457,277 @@ export default function Subscribe() {
           </Card>
         </div>
 
-        {/* Purchase Form */}
-        {selectedPlan && selectedPlan.price_inr > 0 && (
-          <Card className="premium-card overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-50" />
-            <CardHeader className="relative z-10">
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                Complete Your Purchase
-              </CardTitle>
-              <CardDescription>
-                Secure payment for {selectedPlan.name === "Code Specialist" ? "Q-06" : selectedPlan.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5 relative z-10">
-              {/* Coupon */}
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Label className="text-sm text-muted-foreground">Have a coupon?</Label>
-                  <Input
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    placeholder="Enter code"
-                    className="mt-1 bg-input/50"
-                  />
-                </div>
-                <Button onClick={validateCoupon} variant="outline" className="mt-6">
-                  Apply
-                </Button>
-              </div>
-
-              {/* Price Display */}
-              <div className="text-center p-6 rounded-xl bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border border-primary/20">
-                <div className="text-4xl font-bold text-gradient">₹{Math.round(finalPrice)}</div>
-                {discount > 0 && (
-                  <div className="text-sm text-muted-foreground mt-1">
+        {/* Mobile-first payment wizard (bottom sheet) */}
+        {canOpenDrawer && (
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+              <div className="flex-1">
+                <div className="text-xs text-muted-foreground">Payable</div>
+                <div className="text-lg font-semibold leading-tight">₹{Math.round(finalPrice)}</div>
+                {discount > 0 && selectedPlan && (
+                  <div className="text-xs text-muted-foreground">
                     <span className="line-through">₹{selectedPlan.price_inr}</span>
-                    <Badge className="ml-2" variant="secondary">{discount}% OFF</Badge>
+                    <Badge className="ml-2" variant="secondary">
+                      {discount}% OFF
+                    </Badge>
                   </div>
                 )}
               </div>
 
-              {/* Payment Methods */}
-              <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-muted/50">
-                  <TabsTrigger value="upi" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                    <QrCode className="w-4 h-4 mr-1.5" />
-                    UPI
-                  </TabsTrigger>
-                  <TabsTrigger value="google_redeem" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                    <Gift className="w-4 h-4 mr-1.5" />
-                    Redeem
-                  </TabsTrigger>
-                  <TabsTrigger value="bank_transfer" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                    <Building2 className="w-4 h-4 mr-1.5" />
-                    Bank
-                  </TabsTrigger>
-                </TabsList>
+              <Button
+                className="btn-premium h-11"
+                onClick={() => {
+                  setDrawerStep("pay");
+                  setDrawerOpen(true);
+                }}
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Continue
+              </Button>
+            </div>
+          </div>
+        )}
 
-                {/* UPI Payment */}
-                <TabsContent value="upi" className="space-y-4 mt-4">
-                  <div className="p-4 rounded-xl bg-card border border-border space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="w-5 h-5 text-primary" />
-                      <span className="font-semibold">Pay via UPI</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
-                      <span className="text-sm text-muted-foreground">UPI ID:</span>
-                      <code className="font-mono text-primary flex-1 font-medium">{paymentDetails.upiId}</code>
-                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(paymentDetails.upiId, "UPI ID")}>
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DrawerContent className="max-h-[88vh]">
+            <DrawerHeader className="text-left">
+              <DrawerTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-primary" />
+                  Payment Gateway
+                </span>
+                <DrawerClose asChild>
+                  <Button variant="ghost" size="sm">
+                    Close
+                  </Button>
+                </DrawerClose>
+              </DrawerTitle>
+              <p className="text-sm text-muted-foreground">
+                {selectedPlan?.name === "Code Specialist" ? "Q-06" : selectedPlan?.name} • ₹{Math.round(finalPrice)}
+              </p>
+            </DrawerHeader>
 
-                    <Button onClick={openUpiApp} variant="outline" className="w-full hover-lift">
-                      <Smartphone className="w-4 h-4 mr-2" />
-                      Open UPI App
-                    </Button>
+            <div className="px-4 pb-4 overflow-y-auto">
+              {/* Step indicator */}
+              <div className="mb-4 flex items-center gap-2">
+                <div
+                  className={`h-1.5 flex-1 rounded-full ${drawerStep === "pay" ? "bg-primary" : "bg-primary/30"}`}
+                />
+                <div
+                  className={`h-1.5 flex-1 rounded-full ${drawerStep === "proof" ? "bg-primary" : "bg-primary/30"}`}
+                />
+              </div>
 
-                    <div className="grid grid-cols-4 gap-2">
-                      {["PhonePe", "GPay", "Paytm", "BHIM"].map((app) => (
-                        <div key={app} className="text-center text-xs text-muted-foreground p-2 rounded-lg bg-muted/30 border border-border/50">
-                          {app}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Google Play Redeem Code */}
-                <TabsContent value="google_redeem" className="space-y-4 mt-4">
-                  <div className="p-4 rounded-xl bg-card border border-border space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Gift className="w-5 h-5 text-success" />
-                      <span className="font-semibold">Google Play Redeem Code</span>
-                    </div>
-
-                    <div className="bg-muted/30 p-4 rounded-lg border border-border/50 space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        Pay using Google Play gift card worth ₹{Math.round(finalPrice)} or more
-                      </p>
-                      <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                        <li>Buy a Google Play gift card from Amazon, Flipkart, or local stores</li>
-                        <li>Enter the 16-character redeem code below</li>
-                        <li>Admin will verify and activate your subscription</li>
-                      </ol>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm">Redeem Code</Label>
+              {drawerStep === "pay" && (
+                <div className="space-y-4">
+                  {/* Coupon */}
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Label className="text-sm text-muted-foreground">Coupon</Label>
                       <Input
-                        value={redeemCode}
-                        onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
-                        placeholder="XXXX-XXXX-XXXX-XXXX"
-                        className="mt-1 font-mono tracking-widest bg-input/50 text-center text-lg"
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Bank Transfer */}
-                <TabsContent value="bank_transfer" className="space-y-4 mt-4">
-                  <div className="p-4 rounded-xl bg-card border border-border space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-blue-500" />
-                      <span className="font-semibold">Bank Transfer (NEFT/IMPS)</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {[
-                        { label: "Bank Name", value: paymentDetails.bankName },
-                        { label: "Account No", value: paymentDetails.accountNumber },
-                        { label: "IFSC Code", value: paymentDetails.ifscCode },
-                        { label: "Holder", value: paymentDetails.accountHolder },
-                      ].map(({ label, value }) => (
-                        <div key={label} className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border/50">
-                          <span className="text-sm text-muted-foreground">{label}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-medium text-sm">{value}</span>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(value, label)}>
-                              <Copy className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div>
-                      <Label className="text-sm">Transaction ID (Optional)</Label>
-                      <Input
-                        value={transactionId}
-                        onChange={(e) => setTransactionId(e.target.value)}
-                        placeholder="Enter UTR / Transaction ID"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        placeholder="Enter code"
                         className="mt-1 bg-input/50"
                       />
                     </div>
+                    <Button onClick={validateCoupon} variant="outline" className="mt-6">
+                      Apply
+                    </Button>
                   </div>
-                </TabsContent>
-              </Tabs>
 
-              {/* Screenshot Upload */}
-              {paymentMethod !== "google_redeem" && (
-                <div className="space-y-2">
-                  <Label className="text-sm">Upload Payment Screenshot</Label>
-                  <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                    {previewUrl ? (
-                      <img
-                        src={previewUrl}
-                        alt="Payment screenshot"
-                        className="max-h-48 mx-auto rounded-lg object-contain"
-                      />
-                    ) : (
-                      <div className="space-y-2">
-                        <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">Click to upload screenshot</p>
+                  {/* Payment methods */}
+                  <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 bg-muted/50">
+                      <TabsTrigger value="upi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                        <QrCode className="w-4 h-4 mr-1.5" />
+                        UPI
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="google_redeem"
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                      >
+                        <Gift className="w-4 h-4 mr-1.5" />
+                        Redeem
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="bank_transfer"
+                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                      >
+                        <Building2 className="w-4 h-4 mr-1.5" />
+                        Bank
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="upi" className="space-y-3 mt-4">
+                      <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="w-5 h-5 text-primary" />
+                          <span className="font-semibold">Pay via UPI</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                          <span className="text-sm text-muted-foreground">UPI ID:</span>
+                          <code className="font-mono text-primary flex-1 font-medium">{upiId}</code>
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(upiId, "UPI ID")}
+                            aria-label="Copy UPI ID"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        <Button onClick={openUpiApp} variant="outline" className="w-full hover-lift">
+                          <Smartphone className="w-4 h-4 mr-2" />
+                          Open UPI App
+                        </Button>
                       </div>
-                    )}
-                  </div>
+                    </TabsContent>
+
+                    <TabsContent value="google_redeem" className="space-y-3 mt-4">
+                      <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Gift className="w-5 h-5 text-success" />
+                          <span className="font-semibold">Google Play Redeem Code</span>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm">Redeem Code</Label>
+                          <Input
+                            value={redeemCode}
+                            onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+                            placeholder="XXXX-XXXX-XXXX-XXXX"
+                            className="mt-1 font-mono tracking-widest bg-input/50 text-center text-lg"
+                          />
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          Tip: Gift card amount should be around ₹{Math.round(finalPrice)}.
+                        </p>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="bank_transfer" className="space-y-3 mt-4">
+                      <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-5 h-5 text-primary" />
+                          <span className="font-semibold">Bank Transfer</span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {bankDetails.map(({ label, value }) => (
+                            <div
+                              key={label}
+                              className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border/50"
+                            >
+                              <span className="text-sm text-muted-foreground">{label}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-medium text-sm">{value}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyToClipboard(value, label)}
+                                  aria-label={`Copy ${label}`}
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div>
+                          <Label className="text-sm">Transaction ID (Optional)</Label>
+                          <Input
+                            value={transactionId}
+                            onChange={(e) => setTransactionId(e.target.value)}
+                            placeholder="Enter UTR / Transaction ID"
+                            className="mt-1 bg-input/50"
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               )}
 
-              <Button
-                onClick={handleSubmit}
-                disabled={loading || (paymentMethod === "google_redeem" ? !redeemCode : !screenshot)}
-                className="w-full btn-premium h-12 text-base"
-              >
-                {loading ? (
-                  "Processing..."
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Complete Purchase
-                  </>
-                )}
-              </Button>
+              {drawerStep === "proof" && (
+                <div className="space-y-3">
+                  {paymentMethod !== "google_redeem" ? (
+                    <>
+                      <Label className="text-sm">Upload Payment Screenshot</Label>
+                      <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        {previewUrl ? (
+                          <img
+                            src={previewUrl}
+                            alt="Payment screenshot preview"
+                            loading="lazy"
+                            className="max-h-52 mx-auto rounded-lg object-contain"
+                          />
+                        ) : (
+                          <div className="space-y-2">
+                            <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">Tap to upload screenshot</p>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-card border border-border">
+                      <p className="text-sm text-muted-foreground">
+                        Redeem code submitted without screenshot.
+                      </p>
+                    </div>
+                  )}
 
-              <p className="text-xs text-center text-muted-foreground">
-                🔒 Secure payment • Admin verification within 24 hours
-              </p>
-            </CardContent>
-          </Card>
-        )}
+                  <p className="text-xs text-center text-muted-foreground">
+                    🔒 Secure payment • Admin verification within 24 hours
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DrawerFooter>
+              {drawerStep === "pay" ? (
+                <Button
+                  className="btn-premium h-12"
+                  disabled={!canContinueToProof}
+                  onClick={() => setDrawerStep("proof")}
+                >
+                  Continue to Proof
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" className="h-12 flex-1" onClick={() => setDrawerStep("pay")}
+                    disabled={loading}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    className="btn-premium h-12 flex-1"
+                    onClick={async () => {
+                      const ok = await handleSubmit();
+                      if (ok) setDrawerOpen(false);
+                    }}
+                    disabled={!canSubmit}
+                  >
+                    {loading ? "Processing..." : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Submit
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       </div>
     </div>
   );
