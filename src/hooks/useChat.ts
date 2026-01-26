@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  isPinned?: boolean;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -115,6 +116,19 @@ export const useChat = (conversationId: string | null) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentModel, setCurrentModel] = useState<string>("Qurob 2");
   const { user } = useAuth();
+  
+  // Refs for stable callbacks
+  const messagesRef = useRef<Message[]>([]);
+  const isLoadingRef = useRef(false);
+  
+  // Keep refs in sync
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   // Load user's model on mount
   useEffect(() => {
@@ -123,11 +137,11 @@ export const useChat = (conversationId: string | null) => {
     }
   }, [user]);
 
-  const loadUserModel = async () => {
+  const loadUserModel = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.rpc("get_user_model", { user_id: user.id });
     if (data) setCurrentModel(data);
-  };
+  }, [user]);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -138,7 +152,7 @@ export const useChat = (conversationId: string | null) => {
     }
   }, [conversationId, user]);
 
-  const loadMessages = async (convId: string) => {
+  const loadMessages = useCallback(async (convId: string) => {
     const { data, error } = await supabase
       .from("messages")
       .select("*")
@@ -154,12 +168,13 @@ export const useChat = (conversationId: string | null) => {
           role: m.role as "user" | "assistant",
           content: m.content,
           timestamp: new Date(m.created_at),
+          isPinned: false, // TODO: add pinned column to messages table
         }))
       );
     }
-  };
+  }, []);
 
-  const saveMessage = async (
+  const saveMessage = useCallback(async (
     convId: string,
     role: "user" | "assistant",
     content: string
@@ -175,7 +190,8 @@ export const useChat = (conversationId: string | null) => {
     }
 
     // Update conversation title if first user message
-    if (role === "user" && messages.length === 0) {
+    const currentMessages = messagesRef.current;
+    if (role === "user" && currentMessages.length === 0) {
       const title = content.slice(0, 50) + (content.length > 50 ? "..." : "");
       await supabase
         .from("conversations")
@@ -187,11 +203,11 @@ export const useChat = (conversationId: string | null) => {
         .update({ updated_at: new Date().toISOString() })
         .eq("id", convId);
     }
-  };
+  }, []);
 
   const sendMessage = useCallback(async (content: string, convId: string) => {
     // Prevent duplicate calls
-    if (!content.trim() || isLoading || !user || !convId) return;
+    if (!content.trim() || isLoadingRef.current || !user || !convId) return;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -211,7 +227,8 @@ export const useChat = (conversationId: string | null) => {
     let hasAddedAssistantMessage = false;
 
     // Send more message history for better context (up to 20 messages)
-    const recentMessages = [...messages, userMessage].slice(-20);
+    const currentMessages = messagesRef.current;
+    const recentMessages = [...currentMessages, userMessage].slice(-20);
     const messageHistory = recentMessages.map((m) => ({
       role: m.role,
       content: m.content,
@@ -305,17 +322,134 @@ export const useChat = (conversationId: string | null) => {
         });
       },
     });
-  }, [messages, isLoading, user]);
+  }, [user, saveMessage, loadUserModel]);
+
+  const regenerateLastMessage = useCallback(async (convId: string) => {
+    const currentMessages = messagesRef.current;
+    if (currentMessages.length < 2 || isLoadingRef.current) return;
+    
+    // Find the last user message
+    const lastUserMsgIndex = currentMessages.map(m => m.role).lastIndexOf("user");
+    if (lastUserMsgIndex === -1) return;
+    
+    const lastUserMessage = currentMessages[lastUserMsgIndex];
+    
+    // Remove the last assistant message
+    setMessages(prev => prev.slice(0, -1));
+    
+    // Regenerate
+    const assistantMessageId = crypto.randomUUID();
+    let assistantContent = "";
+    let hasAddedAssistantMessage = false;
+    
+    setIsLoading(true);
+    
+    const messageHistory = currentMessages.slice(0, lastUserMsgIndex + 1).map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    
+    let pendingUpdate = false;
+    let lastUpdateTime = 0;
+    const MIN_UPDATE_INTERVAL = 50;
+    
+    await streamChat({
+      messages: messageHistory,
+      userId: user?.id,
+      onDelta: (delta) => {
+        assistantContent += delta;
+        
+        const now = Date.now();
+        if (!pendingUpdate && (now - lastUpdateTime) >= MIN_UPDATE_INTERVAL) {
+          pendingUpdate = true;
+          lastUpdateTime = now;
+          
+          requestAnimationFrame(() => {
+            setMessages((prev) => {
+              const lastMsg = prev[prev.length - 1];
+              if (lastMsg?.id === assistantMessageId) {
+                return prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: assistantContent }
+                    : msg
+                );
+              } else if (!hasAddedAssistantMessage) {
+                hasAddedAssistantMessage = true;
+                return [
+                  ...prev,
+                  {
+                    id: assistantMessageId,
+                    role: "assistant" as const,
+                    content: assistantContent,
+                    timestamp: new Date(),
+                  },
+                ];
+              }
+              return prev;
+            });
+            pendingUpdate = false;
+          });
+        }
+      },
+      onDone: async () => {
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.id === assistantMessageId) {
+            return prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? { ...msg, content: assistantContent }
+                : msg
+            );
+          } else if (!hasAddedAssistantMessage && assistantContent) {
+            return [
+              ...prev,
+              {
+                id: assistantMessageId,
+                role: "assistant" as const,
+                content: assistantContent,
+                timestamp: new Date(),
+              },
+            ];
+          }
+          return prev;
+        });
+        
+        setIsLoading(false);
+        if (assistantContent) {
+          await saveMessage(convId, "assistant", assistantContent);
+        }
+      },
+      onError: (error) => {
+        console.error("Regenerate error:", error);
+        setIsLoading(false);
+        setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+  }, [user, saveMessage]);
+
+  const togglePinMessage = useCallback((messageId: string) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, isPinned: !msg.isPinned } : msg
+    ));
+  }, []);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
   }, []);
 
-  return {
+  // Memoize return value to prevent unnecessary re-renders
+  return useMemo(() => ({
     messages,
     isLoading,
     sendMessage,
     clearMessages,
     currentModel,
-  };
+    regenerateLastMessage,
+    togglePinMessage,
+  }), [messages, isLoading, sendMessage, clearMessages, currentModel, regenerateLastMessage, togglePinMessage]);
 };
