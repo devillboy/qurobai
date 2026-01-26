@@ -2,6 +2,7 @@ import { ArrowLeft, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ThreeDText } from "@/components/ThreeDText";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface ChatHeaderProps {
   onBack?: () => void;
@@ -53,7 +54,7 @@ export const ChatHeader = ({
           </ThreeDText>
         </h1>
         
-        <div className="w-9" /> {/* Spacer for centering */}
+        <NotificationBell />
       </div>
     </motion.header>
   );
