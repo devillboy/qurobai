@@ -24,7 +24,7 @@ const Index = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { messages, isLoading, sendMessage, clearMessages, currentModel } = useChat(currentConversationId);
+  const { messages, isLoading, sendMessage, clearMessages, currentModel, regenerateLastMessage, togglePinMessage } = useChat(currentConversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -185,7 +185,7 @@ const Index = () => {
               className="flex-1 overflow-y-auto space-y-4 md:space-y-6 pb-4 scroll-smooth"
             >
               <AnimatePresence mode="popLayout">
-                {messages.map((message) => (
+                {messages.map((message, index) => (
                   <motion.div
                     key={message.id}
                     layout
@@ -197,11 +197,21 @@ const Index = () => {
                     <ChatMessage
                       role={message.role}
                       content={message.content}
+                      messageId={message.id}
+                      isPinned={message.isPinned}
                       isStreaming={
                         isLoading &&
                         message.role === "assistant" &&
                         message.id === messages[messages.length - 1]?.id
                       }
+                      onRegenerate={
+                        message.role === "assistant" && 
+                        index === messages.length - 1 && 
+                        currentConversationId
+                          ? () => regenerateLastMessage(currentConversationId)
+                          : undefined
+                      }
+                      onPin={() => togglePinMessage(message.id)}
                     />
                   </motion.div>
                 ))}
