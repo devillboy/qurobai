@@ -1,5 +1,5 @@
-import { memo, useState, useCallback } from "react";
-import { Bot, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2 } from "lucide-react";
+import { memo, useState, useCallback, useMemo } from "react";
+import { Bot, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceOutput } from "@/components/VoiceOutput";
@@ -7,6 +7,7 @@ import { CodePlayground } from "@/components/CodePlayground";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -18,40 +19,39 @@ interface ChatMessageProps {
   messageId?: string;
 }
 
+// Claude-style code block with enhanced design
 const CodeBlock = memo(({ code, language }: { code: string; language: string }) => {
   const [copied, setCopied] = useState(false);
 
   const copyCode = useCallback(async () => {
     await navigator.clipboard.writeText(code);
     setCopied(true);
+    toast.success("Code copied!");
     setTimeout(() => setCopied(false), 2000);
   }, [code]);
 
   return (
-    <div className="my-3 rounded-xl overflow-hidden border border-border/50 bg-card/30 backdrop-blur-sm shadow-sm transition-all duration-300 hover:shadow-md hover:border-border">
-      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/50 border-b border-border/50">
-        <span className="text-xs text-muted-foreground font-mono uppercase tracking-wide">{language || "code"}</span>
+    <div className="my-4 rounded-xl overflow-hidden border border-border/60 bg-[hsl(225_15%_8%)] shadow-lg transition-all duration-300 hover:shadow-xl hover:border-primary/30 group">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/40">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-red-500/80" />
+            <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
+            <span className="w-3 h-3 rounded-full bg-green-500/80" />
+          </div>
+          <span className="text-xs text-muted-foreground font-mono uppercase tracking-wider ml-2">{language || "code"}</span>
+        </div>
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2.5 text-xs gap-1.5 transition-all duration-200 hover:bg-primary/10"
+          className="h-7 px-2.5 text-xs gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity"
           onClick={copyCode}
         >
-          <span className={cn(
-            "transition-all duration-200",
-            copied ? "text-green-500" : "text-muted-foreground"
-          )}>
-            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          </span>
-          <span className={cn(
-            "transition-colors duration-200",
-            copied ? "text-green-500" : ""
-          )}>
-            {copied ? "Copied!" : "Copy"}
-          </span>
+          {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+          <span>{copied ? "Copied!" : "Copy"}</span>
         </Button>
       </div>
-      <pre className="p-4 overflow-x-auto text-sm leading-relaxed">
+      <pre className="p-4 overflow-x-auto text-sm leading-relaxed scrollbar-thin">
         <code className="font-mono text-foreground/90">{code}</code>
       </pre>
     </div>
@@ -60,9 +60,11 @@ const CodeBlock = memo(({ code, language }: { code: string; language: string }) 
 
 CodeBlock.displayName = "CodeBlock";
 
-// Render generated images
+// Generated image with enhanced design
 const GeneratedImage = memo(({ src, prompt }: { src: string; prompt?: string }) => {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true);
@@ -78,49 +80,90 @@ const GeneratedImage = memo(({ src, prompt }: { src: string; prompt?: string }) 
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       toast.success("Image downloaded!");
-    } catch (error) {
-      console.error("Download failed:", error);
+    } catch (err) {
+      console.error("Download failed:", err);
       toast.error("Download failed");
     } finally {
       setIsDownloading(false);
     }
   }, [src]);
 
+  if (error) {
+    return (
+      <div className="my-4 p-8 rounded-xl border border-border/50 bg-muted/20 text-center">
+        <p className="text-muted-foreground text-sm">Failed to load image</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="my-4 relative group rounded-xl overflow-hidden">
+    <div className="my-4 relative group rounded-xl overflow-hidden shadow-lg">
+      {!loaded && (
+        <div className="absolute inset-0 bg-muted/30 animate-pulse rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
       <img 
         src={src} 
         alt={prompt || "AI Generated Image"} 
-        className="rounded-xl max-w-full md:max-w-lg border border-border/50 transition-transform duration-300 group-hover:scale-[1.02]"
+        className={cn(
+          "rounded-xl max-w-full md:max-w-lg border border-border/50 transition-all duration-500",
+          loaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
+          "group-hover:shadow-xl group-hover:border-primary/30"
+        )}
         loading="lazy"
+        onLoad={() => setLoaded(true)}
+        onError={() => setError(true)}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      <Button
-        variant="secondary"
-        size="sm"
-        className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 shadow-lg"
-        onClick={handleDownload}
-        disabled={isDownloading}
-      >
-        <Download className={cn("w-4 h-4 mr-1.5", isDownloading && "animate-bounce")} />
-        {isDownloading ? "Downloading..." : "Download"}
-      </Button>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-xl" />
+      <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="shadow-lg backdrop-blur-sm bg-background/80"
+          onClick={handleDownload}
+          disabled={isDownloading}
+        >
+          <Download className={cn("w-4 h-4 mr-1.5", isDownloading && "animate-bounce")} />
+          {isDownloading ? "..." : "Save"}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="shadow-lg backdrop-blur-sm bg-background/80"
+          onClick={() => window.open(src, "_blank")}
+        >
+          <Maximize2 className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 });
 
 GeneratedImage.displayName = "GeneratedImage";
 
+// Secure text formatting with XSS protection
+const formatText = (text: string): string => {
+  const formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+    .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-sm font-mono">$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline underline-offset-2 hover:no-underline transition-all">$1</a>')
+    .replace(/\n/g, '<br />');
+  
+  // Sanitize HTML to prevent XSS attacks
+  return sanitizeHtml(formatted);
+};
+
 const renderContent = (content: string) => {
-  // First, remove image data from display
+  // Remove image data from display
   let cleanContent = content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "");
   
-  // Check for generated images
-  const generatedImageRegex = /\[GeneratedImage:(.*?)\]/g;
+  // Check for generated images with improved regex
+  const generatedImageRegex = /\[GeneratedImage:((?:https?:\/\/[^\]]+|data:image\/[^\]]+))\]/g;
   const parts: React.ReactNode[] = [];
   let match;
   
-  // Find all generated images first
   const imageMatches: { index: number; url: string; fullMatch: string }[] = [];
   while ((match = generatedImageRegex.exec(cleanContent)) !== null) {
     imageMatches.push({
@@ -130,44 +173,36 @@ const renderContent = (content: string) => {
     });
   }
   
-  // If we have generated images, process them
   if (imageMatches.length > 0) {
-    let processedContent = cleanContent;
+    let lastIndex = 0;
     
     for (const img of imageMatches) {
-      const beforeImg = processedContent.slice(0, img.index - (cleanContent.length - processedContent.length));
-      const afterImg = processedContent.slice(img.index - (cleanContent.length - processedContent.length) + img.fullMatch.length);
+      const beforeImg = cleanContent.slice(lastIndex, img.index);
       
-      // Add text before image
-      if (beforeImg) {
+      if (beforeImg.trim()) {
         parts.push(...renderTextWithCode(beforeImg, parts.length));
       }
       
-      // Add image
       parts.push(<GeneratedImage key={`img-${parts.length}`} src={img.url} />);
-      
-      processedContent = afterImg;
+      lastIndex = img.index + img.fullMatch.length;
     }
     
-    // Add remaining text
-    if (processedContent) {
-      parts.push(...renderTextWithCode(processedContent, parts.length));
+    const remaining = cleanContent.slice(lastIndex);
+    if (remaining.trim()) {
+      parts.push(...renderTextWithCode(remaining, parts.length));
     }
     
     return parts;
   }
   
-  // No generated images, process normally with code blocks
   return renderTextWithCode(cleanContent, 0);
 };
 
 const renderTextWithCode = (content: string, keyOffset: number): React.ReactNode[] => {
-  // Check for playground code blocks first
   const playgroundRegex = /```\[Playground\](\w+)?\n([\s\S]*?)```/g;
   const parts: React.ReactNode[] = [];
   let match;
 
-  // First handle playground blocks
   const playgroundMatches: { index: number; lang: string; code: string; fullMatch: string }[] = [];
   
   while ((match = playgroundRegex.exec(content)) !== null) {
@@ -179,7 +214,6 @@ const renderTextWithCode = (content: string, keyOffset: number): React.ReactNode
     });
   }
 
-  // Replace playground blocks with placeholders and render
   if (playgroundMatches.length > 0) {
     let offset = 0;
     for (const pm of playgroundMatches) {
@@ -192,7 +226,6 @@ const renderTextWithCode = (content: string, keyOffset: number): React.ReactNode
     }
     const remaining = content.slice(offset);
     if (remaining) {
-      // Process remaining for normal code blocks
       return [...parts, ...renderNormalCode(remaining, keyOffset + 1000)];
     }
     return parts;
@@ -226,16 +259,7 @@ const renderNormalCode = (content: string, keyOffset: number): React.ReactNode[]
   return parts;
 };
 
-const formatText = (text: string): string => {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-    .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-sm font-mono">$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-primary underline underline-offset-2 hover:no-underline transition-all">$1</a>')
-    .replace(/\n/g, '<br />');
-};
-
-// Action button component for consistency
+// Action button with Claude-inspired design
 const ActionButton = memo(({ 
   icon: Icon, 
   label, 
@@ -299,7 +323,7 @@ export const ChatMessage = memo(({
       .replace(/\[GeneratedImage:.*?\]/g, "[Image]");
     await navigator.clipboard.writeText(cleanContent);
     setCopied(true);
-    toast.success("Copied to clipboard!");
+    toast.success("Copied!");
     setTimeout(() => setCopied(false), 2000);
   }, [content]);
 
@@ -310,13 +334,8 @@ export const ChatMessage = memo(({
     
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: "QurobAi Response",
-          text: cleanContent
-        });
-      } catch (err) {
-        // User cancelled or error
-      }
+        await navigator.share({ title: "QurobAi Response", text: cleanContent });
+      } catch { /* User cancelled */ }
     } else {
       await navigator.clipboard.writeText(cleanContent);
       toast.success("Copied for sharing!");
@@ -326,39 +345,44 @@ export const ChatMessage = memo(({
   const handleRegenerate = useCallback(() => {
     if (onRegenerate) {
       onRegenerate();
-      toast.info("Regenerating response...");
+      toast.info("Regenerating...");
     }
   }, [onRegenerate]);
 
   const handlePin = useCallback(() => {
     if (onPin) {
       onPin();
-      toast.success(isPinned ? "Message unpinned" : "Message pinned!");
+      toast.success(isPinned ? "Unpinned" : "Pinned!");
     }
   }, [onPin, isPinned]);
 
   const isUser = role === "user";
 
+  // Memoize rendered content
+  const renderedContent = useMemo(() => renderContent(content), [content]);
+
   return (
     <div 
       className={cn(
-        "group py-5 px-4 rounded-2xl transition-all duration-300",
-        isUser ? "bg-transparent" : "bg-card/50 backdrop-blur-sm border border-transparent hover:border-border/30",
-        isPinned && "ring-2 ring-primary/20 bg-primary/5"
+        "group py-5 px-4 md:px-6 rounded-2xl transition-all duration-300",
+        isUser 
+          ? "bg-transparent" 
+          : "bg-gradient-to-br from-card/60 to-card/40 backdrop-blur-sm border border-border/20 hover:border-border/40 shadow-sm hover:shadow-md",
+        isPinned && "ring-2 ring-primary/30 bg-primary/5"
       )}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       <div className="max-w-3xl mx-auto flex gap-4">
-        {/* Avatar */}
+        {/* Avatar - Claude style */}
         <div className={cn(
-          "shrink-0 w-9 h-9 rounded-xl flex items-center justify-center shadow-sm transition-all duration-300",
+          "shrink-0 w-9 h-9 rounded-xl flex items-center justify-center shadow-md transition-all duration-300",
           isUser 
-            ? "bg-gradient-to-br from-secondary to-muted" 
-            : "bg-gradient-to-br from-primary to-primary/80"
+            ? "bg-gradient-to-br from-muted to-muted/80 border border-border/50" 
+            : "bg-gradient-to-br from-primary via-primary to-accent shadow-primary/20"
         )}>
           {isUser ? (
-            <User className="w-4 h-4 text-foreground" />
+            <User className="w-4 h-4 text-foreground/80" />
           ) : (
             <Bot className="w-4 h-4 text-primary-foreground" />
           )}
@@ -366,34 +390,34 @@ export const ChatMessage = memo(({
 
         <div className="flex-1 min-w-0">
           {/* Header */}
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className={cn(
+              "text-xs font-semibold uppercase tracking-wider",
+              isUser ? "text-muted-foreground" : "text-primary"
+            )}>
               {isUser ? "You" : "QurobAi"}
             </span>
             {isPinned && (
-              <Pin className="w-3 h-3 text-primary animate-fade-in" />
+              <Pin className="w-3 h-3 text-amber-500 animate-fade-in" />
             )}
           </div>
           
           {/* Content */}
-          <div className="prose prose-sm max-w-none text-foreground leading-relaxed">
-            {renderContent(content)}
+          <div className="prose prose-sm max-w-none text-foreground/90 leading-relaxed">
+            {renderedContent}
             {isStreaming && (
-              <span className="inline-flex items-center gap-0.5 ml-1">
-                <span className="w-1.5 h-4 bg-primary rounded-full animate-pulse" />
-                <span className="w-1.5 h-4 bg-primary/70 rounded-full animate-pulse" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-4 bg-primary/40 rounded-full animate-pulse" style={{ animationDelay: "300ms" }} />
+              <span className="inline-flex items-center gap-1 ml-1.5 align-middle">
+                <span className="w-2 h-5 bg-primary rounded-sm animate-pulse" />
               </span>
             )}
           </div>
 
-          {/* Action bar for assistant messages */}
+          {/* Action bar - Claude style */}
           {!isUser && !isStreaming && (
             <div className={cn(
               "mt-4 flex items-center gap-1 transition-all duration-300",
-              showActions ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1 pointer-events-none sm:pointer-events-auto sm:opacity-0 sm:group-hover:opacity-100 sm:group-hover:translate-y-0"
+              showActions ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1 pointer-events-none sm:group-hover:pointer-events-auto sm:group-hover:opacity-100 sm:group-hover:translate-y-0"
             )}>
-              {/* Copy */}
               <ActionButton
                 icon={copied ? Check : Copy}
                 label={copied ? "Copied!" : "Copy"}
@@ -401,7 +425,6 @@ export const ChatMessage = memo(({
                 variant={copied ? "success" : "default"}
               />
 
-              {/* Regenerate */}
               {onRegenerate && (
                 <ActionButton
                   icon={RefreshCw}
@@ -410,7 +433,6 @@ export const ChatMessage = memo(({
                 />
               )}
 
-              {/* Pin */}
               {onPin && (
                 <ActionButton
                   icon={isPinned ? PinOff : Pin}
@@ -420,10 +442,8 @@ export const ChatMessage = memo(({
                 />
               )}
 
-              {/* Voice */}
               <VoiceOutput text={content} />
 
-              {/* More options */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -444,7 +464,7 @@ export const ChatMessage = memo(({
             </div>
           )}
 
-          {/* Action bar for user messages */}
+          {/* User message actions */}
           {isUser && !isStreaming && (
             <div className={cn(
               "mt-3 flex items-center gap-1 transition-all duration-300",
@@ -463,7 +483,6 @@ export const ChatMessage = memo(({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison for memo - only re-render when necessary
   return (
     prevProps.content === nextProps.content &&
     prevProps.isStreaming === nextProps.isStreaming &&
@@ -476,9 +495,9 @@ export const ChatMessage = memo(({
 ChatMessage.displayName = "ChatMessage";
 
 export const TypingIndicator = memo(() => (
-  <div className="py-5 px-4 rounded-2xl bg-card/50 backdrop-blur-sm animate-fade-in">
+  <div className="py-5 px-4 md:px-6 rounded-2xl bg-gradient-to-br from-card/60 to-card/40 backdrop-blur-sm border border-border/20 animate-fade-in">
     <div className="max-w-3xl mx-auto flex gap-4">
-      <div className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-primary/80 shadow-sm">
+      <div className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-accent shadow-md shadow-primary/20">
         <Bot className="w-4 h-4 text-primary-foreground" />
       </div>
       <div className="flex items-center gap-1.5 pt-2">

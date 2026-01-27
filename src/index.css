@@ -6,58 +6,58 @@
 
 @layer base {
   :root {
-    /* QurobAi Premium Theme - Modern & Sleek */
-    --background: 225 15% 8%;         /* Deep slate: #121419 */
-    --foreground: 210 20% 95%;        /* Clean white: #f0f3f7 */
+    /* QurobAi Premium Theme - Claude 30% + Perplexity 70% Inspired */
+    --background: 225 14% 6%;         /* Deep dark: #0d0f14 */
+    --foreground: 210 20% 96%;        /* Clean white: #f2f5f8 */
 
-    --card: 225 15% 11%;              /* Elevated card: #181b22 */
-    --card-foreground: 210 20% 95%;
+    --card: 225 12% 10%;              /* Elevated card: #171a21 */
+    --card-foreground: 210 20% 96%;
 
-    --popover: 225 15% 12%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 225 12% 11%;
+    --popover-foreground: 210 20% 96%;
 
-    /* Vibrant blue-violet primary */
-    --primary: 230 85% 60%;           /* Electric blue: #4f6af5 */
+    /* Perplexity-inspired teal-blue primary */
+    --primary: 200 80% 55%;           /* Teal-blue: #24a8d8 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 225 15% 15%;
+    --secondary: 225 12% 14%;
     --secondary-foreground: 210 20% 90%;
 
-    --muted: 225 12% 18%;
-    --muted-foreground: 220 10% 50%;
+    --muted: 225 10% 17%;
+    --muted-foreground: 220 8% 48%;
 
-    /* Accent - Warm gradient partner */
-    --accent: 280 70% 55%;            /* Purple: #9b4dca */
+    /* Accent - Perplexity teal */
+    --accent: 175 65% 45%;            /* Teal: #20a89c */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 225 12% 18%;
-    --input: 225 15% 14%;
-    --ring: 230 85% 60%;
+    --border: 225 10% 16%;
+    --input: 225 12% 13%;
+    --ring: 200 80% 55%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
-    /* Sidebar */
-    --sidebar-background: 225 15% 6%;
+    /* Sidebar - Darker for contrast */
+    --sidebar-background: 225 14% 5%;
     --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 230 85% 60%;
+    --sidebar-primary: 200 80% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 225 15% 12%;
+    --sidebar-accent: 225 12% 11%;
     --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 225 12% 15%;
-    --sidebar-ring: 230 85% 60%;
+    --sidebar-border: 225 10% 13%;
+    --sidebar-ring: 200 80% 55%;
     
-    /* Chart colors */
-    --chart-1: 230 85% 60%;
-    --chart-2: 280 70% 55%;
-    --chart-3: 160 70% 45%;
-    --chart-4: 40 90% 55%;
+    /* Chart colors - Vibrant palette */
+    --chart-1: 200 80% 55%;
+    --chart-2: 175 65% 45%;
+    --chart-3: 145 60% 45%;
+    --chart-4: 35 90% 55%;
     --chart-5: 340 75% 55%;
     
-    --success: 160 70% 45%;
-    --warning: 40 90% 55%;
+    --success: 145 60% 45%;
+    --warning: 35 90% 55%;
   }
 }
 
