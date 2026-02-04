@@ -392,6 +392,38 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
               )}
             </div>
 
+            {/* Developer & Features */}
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground font-medium px-1 flex items-center gap-2">
+                <Key className="w-3 h-3" />
+                Developer & Features
+              </div>
+              <MenuItem 
+                icon={Search} 
+                label="Chat Search" 
+                description="Search through your conversations"
+                onClick={() => {
+                  onOpenChange(false);
+                  toast.success("Use the search bar in the sidebar to search chats!");
+                }}
+              />
+              <MenuItem 
+                icon={Mic} 
+                label="Voice Mode" 
+                description="Talk to AI with voice - enabled in chat!"
+                onClick={() => {
+                  onOpenChange(false);
+                  toast.success("Voice input is available! Click the mic button in chat.");
+                }}
+              />
+              <MenuItem 
+                icon={Key} 
+                label="API Access" 
+                description="Use QurobAi via API"
+                onClick={() => handleNavigate("/api-access")}
+              />
+            </div>
+
             {/* Coming Soon Features */}
             <div className="space-y-2">
               <div className="text-xs text-muted-foreground font-medium px-1 flex items-center gap-2">
@@ -402,30 +434,6 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                 icon={Palette} 
                 label="AI Themes" 
                 description="Customize app appearance"
-                onClick={() => toast.info("Coming soon! 🚧")}
-                disabled
-                badge="Soon"
-              />
-              <MenuItem 
-                icon={Search} 
-                label="Chat Search" 
-                description="Search through your conversations"
-                onClick={() => toast.info("Coming soon! 🚧")}
-                disabled
-                badge="Soon"
-              />
-              <MenuItem 
-                icon={Mic} 
-                label="Voice Mode" 
-                description="Talk to AI with voice"
-                onClick={() => toast.info("Coming soon! 🚧")}
-                disabled
-                badge="Soon"
-              />
-              <MenuItem 
-                icon={Key} 
-                label="API Access" 
-                description="Use QurobAi via API"
                 onClick={() => toast.info("Coming soon! 🚧")}
                 disabled
                 badge="Soon"

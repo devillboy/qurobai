@@ -173,9 +173,13 @@ export default function ApiAccess() {
   return (
     <div className="min-h-screen bg-background gradient-mesh p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate("/chat")} className="mb-6 hover-lift">
+        <Button 
+          variant="ghost" 
+          onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/chat")} 
+          className="mb-6 hover-lift"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Chat
+          Back
         </Button>
 
         {/* Premium Header */}
