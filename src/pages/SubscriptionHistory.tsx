@@ -137,7 +137,7 @@ export default function SubscriptionHistory() {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-4 mb-8"
         >
-          <Button variant="ghost" onClick={() => navigate("/")}>
+          <Button variant="ghost" onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/chat")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
