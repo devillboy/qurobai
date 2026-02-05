@@ -31,35 +31,47 @@ Tech Stack: React, TypeScript, Tailwind CSS, Supabase, Multiple AI APIs
 
 ### AI MODELS AVAILABLE
 
-**1. Qurob 2 (Free Tier)**
-- Type: Fast Standard AI Model (Google Gemini Flash)
-- Best For: Quick questions, general conversations, basic tasks
-- Features: Fast responses, real-time data access, basic code help
+ **1. Qurob 2 (Free Tier) - 260B+ Parameter Class**
+ - Type: Advanced Standard AI Model (Google Gemini 2.0 Flash)
+ - Parameters: 260B+ equivalent reasoning capability
+ - Best For: Quick questions, general conversations, coding assistance
+ - Features: Fast responses, real-time data, image analysis, code help
 - Access: FREE for all registered users
-- Speed: Very fast (optimized for instant responses)
-- Capabilities: Weather, news, crypto, stocks, cricket scores, currency exchange, web search
+ - Speed: Ultra-fast (optimized for instant responses)
+ - Capabilities: Weather, news, crypto, stocks, cricket, currency, web search, vision
+ - Knowledge: Deep training on current events, programming, science, math, languages
 
-**2. Qurob 4 (Premium - ₹289/month)**
-- Type: Advanced AI Model (DeepSeek Chat - GPT-4 class)
+ **2. Qurob 4 (Premium - ₹289/month) - 1 Trillion+ Parameter Class**
+ - Type: Most Advanced AI Model (DeepSeek Chat - Beyond GPT-4)
+ - Parameters: 1T+ equivalent deep reasoning capability
 - Best For: Complex analysis, detailed research, professional work
-- Features: Deeper understanding, nuanced responses, better accuracy
+ - Features: Deep understanding, nuanced responses, highest accuracy
 - Access: Requires Premium subscription (₹289/month)
-- Includes: All Qurob 2 features plus enhanced capabilities, Q-06 Code Specialist bundled FREE!
+ - Includes: All Qurob 2 features plus:
+   • Deep reasoning and multi-step problem solving
+   • Advanced mathematical and logical analysis
+   • Professional writing and content creation
+   • Complex code understanding and generation
+   • Vision analysis with detailed descriptions
 
-**3. Q-06 (Code Specialist - Bundled with Qurob 4)**
-- Type: Specialized Programming AI (DeepSeek Coder V2)
+ **3. Q-06 (Code Specialist - ₹320/month) - Separate Premium**
+ - Type: Specialized Programming AI (Qwen 2.5 Coder 32B)
+ - Parameters: Specialized code-optimized architecture
 - Best For: Complex coding, architecture design, debugging, code review
-- Features: Expert-level coding in ALL languages, clean modular code
-- Access: Included FREE with Qurob 4 subscription!
+ - Features: Expert-level coding in ALL languages, production-ready code
+ - Access: Separate subscription at ₹320/month
 - Languages: JavaScript, TypeScript, Python, Java, C++, Go, Rust, PHP, Ruby, Swift, Kotlin, and 100+ more
 - Specialties: Full-stack development, API design, database optimization, DevOps
+ - Code Quality: Clean, modular, well-documented, follows best practices
+ - Architecture: Design patterns, system design, scalability recommendations
 
 ### SUBSCRIPTION & PRICING
 
 | Plan | Price | Model | Features |
 |------|-------|-------|----------|
-| Free | ₹0/month | Qurob 2 (Gemini Flash) | Basic AI, real-time data, web search |
-| Premium | ₹289/month | Qurob 4 (DeepSeek) + Q-06 | Advanced AI, code specialist, all features |
+ | Free | ₹0/month | Qurob 2 (260B+ Class) | Advanced AI, real-time data, vision, web search |
+ | Premium | ₹289/month | Qurob 4 (1T+ Class) | Deep reasoning, professional analysis |
+ | Code Specialist | ₹320/month | Q-06 (Code AI) | Expert coding, architecture design |
 
 **Payment Process (Manual UPI):**
 1. Go to Subscribe page in QurobAi
@@ -103,10 +115,13 @@ A: Within 24 hours after admin approval.
 A: Soham from India created QurobAi.
 
 **Q: What makes Qurob 4 better?**
-A: Uses DeepSeek Chat (GPT-4 class model) for more accurate, nuanced responses.
+ A: Uses 1 Trillion+ parameter class model for deep reasoning, complex analysis, and professional-grade responses.
 
 **Q: Is Q-06 included with Qurob 4?**
-A: Yes! Q-06 Code Specialist is now bundled FREE with Qurob 4 subscription.
+ A: No, Q-06 is a separate subscription at ₹320/month. It's specialized for coding and worth it for developers who need expert code assistance.
+ 
+ **Q: What are the parameter equivalents?**
+ A: Qurob 2 has 260B+ equivalent reasoning (comparable to top-tier free models), Qurob 4 has 1T+ equivalent (beyond GPT-4 class), and Q-06 is specialized for code with deep programming knowledge.
 `;
 
 // Enhanced query detection with cricket and currency

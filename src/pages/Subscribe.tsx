@@ -7,10 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { 
-  ArrowLeft, Upload, Check, Sparkles, Code, Zap, Brain, 
-  Smartphone, Copy, Gift, Wallet, QrCode,
-  Building2, Crown, Shield, Star, Rocket
+ import {
+   ArrowLeft, Upload, Check, Sparkles, Code, Zap, Brain,
+   Smartphone, Copy, Gift, Wallet, QrCode,
+   Building2, Crown, Shield, Star, Rocket, Terminal, Cpu
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -277,7 +277,7 @@ export default function Subscribe() {
   };
 
   const premiumPlan = plans.find(p => p.name === "Premium");
-  const codePlan = plans.find(p => p.name === "Code Specialist");
+   const q06Plan = plans.find(p => p.name === "Code Specialist" || p.model_name === "Q-06");
   
   const finalPrice = selectedPlan ? selectedPlan.price_inr * (1 - discount / 100) : 0;
   const canOpenDrawer = Boolean(selectedPlan && selectedPlan.price_inr > 0);
@@ -314,7 +314,7 @@ export default function Subscribe() {
         </div>
 
         {/* Plan Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 max-w-3xl mx-auto">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 max-w-5xl mx-auto">
           {/* Free Plan */}
           <Card className="premium-card relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-transparent opacity-50" />
@@ -349,7 +349,8 @@ export default function Subscribe() {
           </Card>
 
           {/* Premium Plan - Qurob 4 + Q-06 Bundled */}
-          <Card 
+           {/* Premium Plan - Qurob 4 ONLY */}
+           <Card
             className={`relative overflow-hidden cursor-pointer transition-all duration-300 ${
               selectedPlan?.name === "Premium" 
                 ? "border-2 border-primary glow" 
@@ -358,16 +359,16 @@ export default function Subscribe() {
             onClick={() => premiumPlan && setSelectedPlan(premiumPlan)}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/5" />
-            <div className="absolute top-0 right-0 bg-gradient-to-r from-primary to-accent text-white px-3 py-1 text-xs font-semibold rounded-bl-lg">
-              <Star className="w-3 h-3 inline mr-1" />
-              BEST VALUE
-            </div>
+             <div className="absolute top-0 right-0 bg-gradient-to-r from-primary to-accent text-white px-3 py-1 text-xs font-semibold rounded-bl-lg flex items-center gap-1">
+               <Sparkles className="w-3 h-3" />
+               POPULAR
+             </div>
             <CardHeader className="pb-3 relative z-10 pt-8">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg gradient-primary">
                   <Brain className="w-5 h-5 text-white" />
                 </div>
-                <CardTitle className="text-lg">Qurob 4 Premium</CardTitle>
+                 <CardTitle className="text-lg">Qurob 4</CardTitle>
               </div>
               <CardDescription className="mt-2">
                 <span className="text-2xl font-bold text-foreground">
@@ -385,32 +386,84 @@ export default function Subscribe() {
               <ul className="space-y-2.5 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
-                  <strong>Advanced 70B AI (Qurob 4)</strong>
+                   <strong>1T+ Parameter Class AI</strong>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
-                  <strong>Superior reasoning & analysis</strong>
+                   Deep reasoning & analysis
                 </li>
                 <li className="flex items-center gap-2 text-muted-foreground">
                   <Check className="w-4 h-4 text-primary shrink-0" />
-                  Priority support
+                   Real-time data access
+                 </li>
+                 <li className="flex items-center gap-2 text-muted-foreground">
+                   <Check className="w-4 h-4 text-primary shrink-0" />
+                   Vision & image analysis
                 </li>
               </ul>
-              
-              {/* Q-06 Bundled Badge */}
-              <div className="mt-4 p-3 rounded-lg bg-success/10 border border-success/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <Code className="w-4 h-4 text-success" />
-                  <span className="text-sm font-semibold text-success">Q-06 Code AI Included FREE!</span>
-                </div>
-                <ul className="text-xs text-muted-foreground space-y-1 ml-6">
-                  <li>• Expert-level coding in 100+ languages</li>
-                  <li>• Clean modular architecture design</li>
-                  <li>• Worth ₹320/month - FREE with Premium</li>
-                </ul>
-              </div>
             </CardContent>
           </Card>
+
+           {/* Q-06 Code Specialist - SEPARATE PAID */}
+           <Card
+             className={`relative overflow-hidden cursor-pointer transition-all duration-300 ${
+               selectedPlan?.model_name === "Q-06" || selectedPlan?.name === "Code Specialist"
+                 ? "border-2 border-accent glow"
+                 : "premium-card hover:border-accent/50"
+             }`}
+             onClick={() => q06Plan && setSelectedPlan(q06Plan)}
+           >
+             <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-primary/5" />
+             <div className="absolute top-0 right-0 bg-gradient-to-r from-accent to-green-500 text-white px-3 py-1 text-xs font-semibold rounded-bl-lg flex items-center gap-1">
+               <Terminal className="w-3 h-3" />
+               CODE AI
+             </div>
+             <CardHeader className="pb-3 relative z-10 pt-8">
+               <div className="flex items-center gap-2">
+                 <div className="p-2 rounded-lg bg-gradient-to-br from-accent to-green-500">
+                   <Code className="w-5 h-5 text-white" />
+                 </div>
+                 <CardTitle className="text-lg">Q-06</CardTitle>
+               </div>
+               <CardDescription className="mt-2">
+                 <span className="text-2xl font-bold text-foreground">
+                   ₹{q06Plan ? Math.round(q06Plan.price_inr * (1 - discount / 100)) : 320}
+                 </span>
+                 {discount > 0 && q06Plan && (
+                   <span className="ml-2 line-through text-muted-foreground text-sm">
+                     ₹{q06Plan.price_inr}
+                   </span>
+                 )}
+                 <span className="text-sm font-normal text-muted-foreground ml-1">/ month</span>
+               </CardDescription>
+             </CardHeader>
+             <CardContent className="relative z-10">
+               <ul className="space-y-2.5 text-sm">
+                 <li className="flex items-center gap-2">
+                   <Check className="w-4 h-4 text-accent shrink-0" />
+                   <strong>Expert Code Specialist AI</strong>
+                 </li>
+                 <li className="flex items-center gap-2">
+                   <Check className="w-4 h-4 text-accent shrink-0" />
+                   100+ programming languages
+                 </li>
+                 <li className="flex items-center gap-2 text-muted-foreground">
+                   <Check className="w-4 h-4 text-accent shrink-0" />
+                   Architecture & design patterns
+                 </li>
+                 <li className="flex items-center gap-2 text-muted-foreground">
+                   <Check className="w-4 h-4 text-accent shrink-0" />
+                   Production-ready code
+                 </li>
+               </ul>
+               <div className="mt-4 p-2 rounded-lg bg-accent/10 border border-accent/20">
+                 <div className="flex items-center gap-2">
+                   <Cpu className="w-3 h-3 text-accent" />
+                   <span className="text-xs text-accent">Deep code training • Optimized for developers</span>
+                 </div>
+               </div>
+             </CardContent>
+           </Card>
         </div>
 
         {/* Mobile-first payment wizard (bottom sheet) */}
