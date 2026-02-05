@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+ import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +17,7 @@ import Security from "@/pages/Security";
 import NotFound from "@/pages/NotFound";
 import ApiAccess from "@/pages/ApiAccess";
 import { HelmetProvider } from "react-helmet-async";
+ import { SplashScreen } from "@/components/SplashScreen";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +79,25 @@ const AppRoutes = () => {
 };
 
 function App() {
+   const [showSplash, setShowSplash] = useState(true);
+ 
+   // Only show splash on initial app load (not route changes)
+   useEffect(() => {
+     const hasSeenSplash = sessionStorage.getItem("qurobai_splash_shown");
+     if (hasSeenSplash) {
+       setShowSplash(false);
+     }
+   }, []);
+ 
+   const handleSplashComplete = () => {
+     setShowSplash(false);
+     sessionStorage.setItem("qurobai_splash_shown", "true");
+   };
+ 
+   if (showSplash) {
+     return <SplashScreen onComplete={handleSplashComplete} />;
+   }
+ 
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>

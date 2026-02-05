@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/sanitize";
+ import { Skeleton } from "@/components/ui/skeleton";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -19,6 +20,32 @@ interface ChatMessageProps {
   messageId?: string;
 }
 
+ // Loading skeleton component for messages
+ export const ChatMessageSkeleton = memo(() => {
+   return (
+     <div className="py-5 px-4 md:px-6 rounded-2xl bg-gradient-to-br from-card/60 to-card/40 backdrop-blur-sm border border-border/20">
+       <div className="max-w-3xl mx-auto flex gap-4">
+         {/* Avatar skeleton */}
+         <div className="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-primary/50 to-accent/50 skeleton-pulse" />
+         
+         <div className="flex-1 min-w-0 space-y-3">
+           {/* Header skeleton */}
+           <Skeleton className="h-3 w-16 bg-primary/20" />
+           
+           {/* Content skeleton lines */}
+           <div className="space-y-2">
+             <Skeleton className="h-4 w-full bg-muted/50" />
+             <Skeleton className="h-4 w-[90%] bg-muted/50" />
+             <Skeleton className="h-4 w-[75%] bg-muted/50" />
+           </div>
+         </div>
+       </div>
+     </div>
+   );
+ });
+ 
+ ChatMessageSkeleton.displayName = "ChatMessageSkeleton";
+ 
 // Claude-style code block with enhanced design
 const CodeBlock = memo(({ code, language }: { code: string; language: string }) => {
   const [copied, setCopied] = useState(false);
