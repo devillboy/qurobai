@@ -100,6 +100,14 @@ export default function AdminPanel() {
   // User delete state
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
+  const [deleteByIdInput, setDeleteByIdInput] = useState("");
+  const [deleteByIdLoading, setDeleteByIdLoading] = useState(false);
+
+  // Analytics state
+  const [analyticsData, setAnalyticsData] = useState<{
+    weeklyUsers: number[];
+    weeklyRevenue: number[];
+  }>({ weeklyUsers: [], weeklyRevenue: [] });
 
   // Stats
   const [stats, setStats] = useState({
@@ -109,6 +117,8 @@ export default function AdminPanel() {
     totalRevenue: 0,
     todayRevenue: 0,
     monthlyRevenue: 0,
+    totalConversations: 0,
+    totalMessages: 0,
   });
 
   useEffect(() => {
@@ -149,8 +159,42 @@ export default function AdminPanel() {
       loadMaintenanceStatus(),
       loadPlans(),
       loadPushStats(),
+      loadAnalytics(),
     ]);
     setLoading(false);
+  };
+
+  const loadAnalytics = async () => {
+    // Get last 7 days of user signups
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    const { data: recentProfiles } = await supabase
+      .from("profiles")
+      .select("created_at")
+      .gte("created_at", weekAgo.toISOString());
+
+    const { data: recentPayments } = await supabase
+      .from("payment_screenshots")
+      .select("created_at, amount_paid")
+      .eq("status", "approved")
+      .gte("created_at", weekAgo.toISOString());
+
+    // Group by day
+    const usersByDay = new Array(7).fill(0);
+    const revenueByDay = new Array(7).fill(0);
+    
+    recentProfiles?.forEach(p => {
+      const dayIndex = 6 - Math.floor((Date.now() - new Date(p.created_at).getTime()) / (1000 * 60 * 60 * 24));
+      if (dayIndex >= 0 && dayIndex < 7) usersByDay[dayIndex]++;
+    });
+
+    recentPayments?.forEach(p => {
+      const dayIndex = 6 - Math.floor((Date.now() - new Date(p.created_at).getTime()) / (1000 * 60 * 60 * 24));
+      if (dayIndex >= 0 && dayIndex < 7) revenueByDay[dayIndex] += p.amount_paid;
+    });
+
+    setAnalyticsData({ weeklyUsers: usersByDay, weeklyRevenue: revenueByDay });
   };
 
   const loadPushStats = async () => {
@@ -392,13 +436,15 @@ export default function AdminPanel() {
     today.setHours(0, 0, 0, 0);
     const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const [usersRes, subsRes, paymentsRes, revenueRes, todayRes, monthRes] = await Promise.all([
+    const [usersRes, subsRes, paymentsRes, revenueRes, todayRes, monthRes, convsRes, msgsRes] = await Promise.all([
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("user_subscriptions").select("id", { count: "exact", head: true }).eq("status", "active"),
       supabase.from("payment_screenshots").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("payment_screenshots").select("amount_paid").eq("status", "approved"),
       supabase.from("payment_screenshots").select("amount_paid").eq("status", "approved").gte("created_at", today.toISOString()),
       supabase.from("payment_screenshots").select("amount_paid").eq("status", "approved").gte("created_at", firstOfMonth.toISOString()),
+      supabase.from("conversations").select("id", { count: "exact", head: true }),
+      supabase.from("messages").select("id", { count: "exact", head: true }),
     ]);
 
     setStats({
@@ -408,7 +454,54 @@ export default function AdminPanel() {
       totalRevenue: revenueRes.data?.reduce((sum, p) => sum + p.amount_paid, 0) || 0,
       todayRevenue: todayRes.data?.reduce((sum, p) => sum + p.amount_paid, 0) || 0,
       monthlyRevenue: monthRes.data?.reduce((sum, p) => sum + p.amount_paid, 0) || 0,
+      totalConversations: convsRes.count || 0,
+      totalMessages: msgsRes.count || 0,
     });
+  };
+
+  const handleDeleteUserById = async () => {
+    if (!deleteByIdInput.trim()) {
+      toast.error("Please enter a user ID");
+      return;
+    }
+    
+    setDeleteByIdLoading(true);
+    try {
+      const userId = deleteByIdInput.trim();
+      
+      // Get all conversation IDs for this user
+      const { data: userConversations } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("user_id", userId);
+      
+      // Delete messages for those conversations
+      if (userConversations && userConversations.length > 0) {
+        const convIds = userConversations.map(c => c.id);
+        await supabase.from("messages").delete().in("conversation_id", convIds);
+      }
+      
+      // Delete all user data
+      await supabase.from("conversations").delete().eq("user_id", userId);
+      await supabase.from("user_settings").delete().eq("user_id", userId);
+      await supabase.from("user_subscriptions").delete().eq("user_id", userId);
+      await supabase.from("user_memory").delete().eq("user_id", userId);
+      await supabase.from("api_keys").delete().eq("user_id", userId);
+      await supabase.from("projects").delete().eq("user_id", userId);
+      await supabase.from("push_subscriptions").delete().eq("user_id", userId);
+      await supabase.from("notifications").delete().eq("user_id", userId);
+      await supabase.from("profiles").delete().eq("user_id", userId);
+      await supabase.from("user_roles").delete().eq("user_id", userId);
+      
+      toast.success("User data deleted successfully!");
+      setDeleteByIdInput("");
+      loadData();
+    } catch (e) {
+      console.error("Delete user by ID error:", e);
+      toast.error("Failed to delete user data");
+    } finally {
+      setDeleteByIdLoading(false);
+    }
   };
 
   const handleApprovePayment = async (payment: any) => {
@@ -944,6 +1037,35 @@ export default function AdminPanel() {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-4">
+            {/* Delete User by ID */}
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2 text-destructive">
+                  <UserX className="w-5 h-5" />
+                  Delete User by ID
+                </CardTitle>
+                <CardDescription>Permanently delete all data for a user by their UUID</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter user UUID..."
+                    value={deleteByIdInput}
+                    onChange={(e) => setDeleteByIdInput(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeleteUserById}
+                    disabled={deleteByIdLoading || !deleteByIdInput.trim()}
+                  >
+                    {deleteByIdLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
