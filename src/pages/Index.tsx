@@ -164,7 +164,7 @@ const Index = () => {
     <>
       <SEOHead title="Chat" />
       
-      <div className="h-screen flex bg-background overflow-hidden">
+      <div className="h-screen h-[100dvh] flex bg-background overflow-hidden">
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {sidebarOpen && (

@@ -228,7 +228,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
   }, [message]);
 
   return (
-    <div className="bg-background p-3 md:p-4 safe-area-bottom">
+    <div className="bg-background/95 backdrop-blur-sm p-3 md:p-4 safe-area-bottom border-t border-border/50">
       <div className="max-w-3xl mx-auto">
         {/* Templates Picker */}
         {showTemplates && (
@@ -255,8 +255,8 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
                 )}
                 <button
                   onClick={() => removeAttachment(index)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity touch-manipulation"
-                  style={{ minHeight: '20px', minWidth: '20px' }}
+                  className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity touch-manipulation"
+                  style={{ minHeight: '24px', minWidth: '24px' }}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -266,13 +266,13 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
         )}
 
         {isRecording && (
-          <div className="flex items-center gap-2 mb-3 text-sm text-foreground animate-pulse">
+          <div className="flex items-center gap-2 mb-3 text-sm text-foreground animate-pulse bg-red-500/10 p-2 rounded-lg">
             <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
             <span>Listening... Speak now</span>
           </div>
         )}
 
-        <div className="relative flex items-end gap-1.5 md:gap-2 bg-secondary rounded-xl border border-border p-2">
+        <div className="relative flex items-end gap-2 bg-secondary/80 backdrop-blur-sm rounded-2xl border border-border/50 p-2 shadow-lg">
           <input
             ref={fileInputRef}
             type="file"
@@ -286,21 +286,21 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-10 w-10 md:h-9 md:w-9 text-muted-foreground hover:text-foreground touch-manipulation"
+            className="shrink-0 h-11 w-11 md:h-10 md:w-10 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-xl touch-manipulation"
             onClick={() => setShowTemplates(!showTemplates)}
             title="Quick Templates"
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-5 h-5 md:w-4 md:h-4" />
           </Button>
 
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-10 w-10 md:h-9 md:w-9 text-muted-foreground hover:text-foreground touch-manipulation"
+            className="shrink-0 h-11 w-11 md:h-10 md:w-10 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-xl touch-manipulation"
             onClick={() => fileInputRef.current?.click()}
             disabled={isLoading || uploading}
           >
-            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+            {uploading ? <Loader2 className="w-5 h-5 md:w-4 md:h-4 animate-spin" /> : <Paperclip className="w-5 h-5 md:w-4 md:h-4" />}
           </Button>
 
           <Textarea
@@ -310,7 +310,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
             onKeyDown={handleKeyDown}
             placeholder="Message QurobAi..."
             disabled={isLoading}
-            className="flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-2 text-base md:text-sm"
+            className="flex-1 min-h-[48px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-3 px-2 text-base placeholder:text-muted-foreground/60"
             rows={1}
           />
 
@@ -318,26 +318,33 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
             variant="ghost"
             size="icon"
             className={cn(
-              "shrink-0 h-10 w-10 md:h-9 md:w-9 transition-colors touch-manipulation",
-              isRecording ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-foreground"
+              "shrink-0 h-11 w-11 md:h-10 md:w-10 rounded-xl transition-all touch-manipulation",
+              isRecording 
+                ? "text-red-500 bg-red-500/20 hover:bg-red-500/30 animate-pulse" 
+                : "text-muted-foreground hover:text-foreground hover:bg-primary/10"
             )}
             onClick={toggleRecording}
             disabled={isLoading}
           >
-            {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            {isRecording ? <MicOff className="w-5 h-5 md:w-4 md:h-4" /> : <Mic className="w-5 h-5 md:w-4 md:h-4" />}
           </Button>
 
           <Button
             size="icon"
-            className="shrink-0 h-10 w-10 md:h-9 md:w-9 touch-manipulation"
+            className={cn(
+              "shrink-0 h-11 w-11 md:h-10 md:w-10 rounded-xl touch-manipulation transition-all",
+              message.trim() || attachments.length > 0 
+                ? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25" 
+                : "bg-muted text-muted-foreground"
+            )}
             onClick={handleSubmit}
             disabled={isLoading || uploading || (!message.trim() && attachments.length === 0)}
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-5 h-5 md:w-4 md:h-4" />
           </Button>
         </div>
 
-        <p className="text-xs text-muted-foreground text-center mt-2">
+        <p className="text-[11px] text-muted-foreground/60 text-center mt-2">
           QurobAi can see images & generate images • Try "generate an image of..."
         </p>
       </div>
