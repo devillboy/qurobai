@@ -389,9 +389,22 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
               label="Theme"
               description="Choose your preferred theme"
               action={
-                <select 
+              <select 
                   value={settings.theme_preference}
-                  onChange={(e) => updateSetting("theme_preference", e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateSetting("theme_preference", val);
+                    // Apply theme immediately
+                    if (val === "light") {
+                      document.documentElement.classList.remove("dark");
+                    } else if (val === "dark") {
+                      document.documentElement.classList.add("dark");
+                    } else {
+                      // System preference
+                      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+                      document.documentElement.classList.toggle("dark", prefersDark);
+                    }
+                  }}
                   className="h-8 px-2 rounded-md border border-input bg-background text-sm"
                 >
                   <option value="dark">Dark</option>
@@ -428,18 +441,49 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                 <select 
                   value={settings.language_preference}
                   onChange={(e) => updateSetting("language_preference", e.target.value)}
-                  className="h-8 px-2 rounded-md border border-input bg-background text-sm"
+                  className="h-8 px-2 rounded-md border border-input bg-background text-sm max-w-[140px]"
                 >
                   <option value="en">English</option>
-                  <option value="hi">Hindi</option>
-                  <option value="es">Spanish</option>
-                  <option value="fr">French</option>
-                  <option value="de">German</option>
-                  <option value="ja">Japanese</option>
-                  <option value="ko">Korean</option>
-                  <option value="zh">Chinese</option>
-                  <option value="ar">Arabic</option>
-                  <option value="pt">Portuguese</option>
+                  <option value="hi">हिन्दी (Hindi)</option>
+                  <option value="es">Español</option>
+                  <option value="fr">Français</option>
+                  <option value="de">Deutsch</option>
+                  <option value="zh">中文 (Chinese)</option>
+                  <option value="zh-TW">繁體中文</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                  <option value="pt">Português</option>
+                  <option value="ar">العربية</option>
+                  <option value="ru">Русский</option>
+                  <option value="it">Italiano</option>
+                  <option value="nl">Nederlands</option>
+                  <option value="tr">Türkçe</option>
+                  <option value="pl">Polski</option>
+                  <option value="vi">Tiếng Việt</option>
+                  <option value="th">ไทย</option>
+                  <option value="id">Bahasa Indonesia</option>
+                  <option value="ms">Bahasa Melayu</option>
+                  <option value="tl">Filipino</option>
+                  <option value="bn">বাংলা (Bengali)</option>
+                  <option value="ta">தமிழ் (Tamil)</option>
+                  <option value="te">తెలుగు (Telugu)</option>
+                  <option value="mr">मराठी (Marathi)</option>
+                  <option value="gu">ગુજરાતી (Gujarati)</option>
+                  <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                  <option value="ml">മലയാളം (Malayalam)</option>
+                  <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                  <option value="ur">اردو (Urdu)</option>
+                  <option value="fa">فارسی (Persian)</option>
+                  <option value="he">עברית (Hebrew)</option>
+                  <option value="el">Ελληνικά</option>
+                  <option value="sv">Svenska</option>
+                  <option value="no">Norsk</option>
+                  <option value="da">Dansk</option>
+                  <option value="fi">Suomi</option>
+                  <option value="cs">Čeština</option>
+                  <option value="hu">Magyar</option>
+                  <option value="ro">Română</option>
+                  <option value="uk">Українська</option>
                 </select>
               }
             />

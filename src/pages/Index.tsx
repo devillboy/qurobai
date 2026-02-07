@@ -283,8 +283,8 @@ const Index = () => {
             <div className="mt-auto pt-3 md:pt-4 safe-area-bottom">
               <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} />
               
-              {/* Keyboard shortcut hint */}
-              <div className="flex justify-center mt-2">
+              {/* Keyboard shortcut hint - desktop only */}
+              <div className="hidden md:flex justify-center mt-2">
                 <button
                   onClick={() => setCommandPaletteOpen(true)}
                   className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors flex items-center gap-1.5"

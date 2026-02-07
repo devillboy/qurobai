@@ -228,7 +228,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
   }, [message]);
 
   return (
-    <div className="bg-background/95 backdrop-blur-sm p-3 md:p-4 safe-area-bottom border-t border-border/50">
+    <div className="bg-background/95 backdrop-blur-sm p-2 md:p-4 safe-area-bottom border-t border-border/50">
       <div className="max-w-3xl mx-auto">
         {/* Templates Picker */}
         {showTemplates && (
