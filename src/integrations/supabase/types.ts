@@ -577,8 +577,10 @@ export type Database = {
       user_settings: {
         Row: {
           base_tone: string | null
+          chat_density: string | null
           created_at: string
           custom_instructions: string | null
+          font_size: string | null
           gemini_api_key: string | null
           id: string
           language_preference: string | null
@@ -592,8 +594,10 @@ export type Database = {
         }
         Insert: {
           base_tone?: string | null
+          chat_density?: string | null
           created_at?: string
           custom_instructions?: string | null
+          font_size?: string | null
           gemini_api_key?: string | null
           id?: string
           language_preference?: string | null
@@ -607,8 +611,10 @@ export type Database = {
         }
         Update: {
           base_tone?: string | null
+          chat_density?: string | null
           created_at?: string
           custom_instructions?: string | null
+          font_size?: string | null
           gemini_api_key?: string | null
           id?: string
           language_preference?: string | null

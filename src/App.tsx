@@ -16,6 +16,7 @@ import TermsOfService from "@/pages/TermsOfService";
 import Security from "@/pages/Security";
 import NotFound from "@/pages/NotFound";
 import ApiAccess from "@/pages/ApiAccess";
+import DownloadPage from "@/pages/Download";
 import { HelmetProvider } from "react-helmet-async";
  import { SplashScreen } from "@/components/SplashScreen";
 
@@ -73,6 +74,7 @@ const AppRoutes = () => {
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/security" element={<Security />} />
+      <Route path="/download" element={<DownloadPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

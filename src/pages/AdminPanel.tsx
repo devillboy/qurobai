@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send, AlertCircle, Loader2, Bot, UserX } from "lucide-react";
+import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send, AlertCircle, Loader2, Bot, UserX, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -1084,18 +1084,54 @@ export default function AdminPanel() {
             
             <div className="grid gap-2">
               {filteredUsers.slice(0, 50).map((u) => (
-                <Card key={u.id} className="p-4">
+                <Card key={u.id} className="p-3 md:p-4">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{u.display_name || "Unnamed"}</div>
-                      <div className="text-xs text-muted-foreground font-mono truncate">{u.user_id}</div>
+                      <div className="font-medium truncate text-sm">{u.display_name || "Unnamed"}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono truncate">{u.user_id}</div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       {u.subscription ? (
-                        <Badge className="bg-primary">{u.subscription.plan_name}</Badge>
+                        <Badge className="bg-primary text-[10px] px-1.5">{u.subscription.plan_name}</Badge>
                       ) : (
-                        <Badge variant="outline">Free</Badge>
+                        <Badge variant="outline" className="text-[10px] px-1.5">Free</Badge>
                       )}
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Download user data"
+                        onClick={async () => {
+                          try {
+                            const [convRes, msgRes, settRes, profRes, memRes] = await Promise.all([
+                              supabase.from("conversations").select("*").eq("user_id", u.user_id),
+                              supabase.from("messages").select("*, conversations!inner(user_id)").eq("conversations.user_id", u.user_id),
+                              supabase.from("user_settings").select("*").eq("user_id", u.user_id),
+                              supabase.from("profiles").select("*").eq("user_id", u.user_id),
+                              supabase.from("user_memory").select("*").eq("user_id", u.user_id),
+                            ]);
+                            const blob = new Blob([JSON.stringify({
+                              user_id: u.user_id,
+                              display_name: u.display_name,
+                              exported_at: new Date().toISOString(),
+                              profile: profRes.data?.[0],
+                              settings: settRes.data?.[0],
+                              conversations: convRes.data || [],
+                              messages: msgRes.data || [],
+                              memories: memRes.data || [],
+                            }, null, 2)], { type: "application/json" });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `user-${u.user_id.slice(0,8)}-data.json`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                            toast.success("User data downloaded!");
+                          } catch { toast.error("Failed to download user data"); }
+                        }}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="icon"
@@ -1106,7 +1142,7 @@ export default function AdminPanel() {
                       </Button>
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1">
+                  <div className="text-[10px] text-muted-foreground mt-1">
                     Joined {new Date(u.created_at).toLocaleDateString()}
                   </div>
                 </Card>
