@@ -1,114 +1,199 @@
 
 
-# QurobAi Phase 3 Completion - Mega Fix Plan
+# QurobAi Mega Enhancement - Phase 3 Final
 
-## Critical Issues Found
+## Overview
 
-1. **Admin role missing** - `sohamghosh679@gmail.com` (ID: `d43c9914-9e6f-41b8-973c-612ce0a8d1c7`) has NO admin role in `user_roles` table. The `check_and_grant_admin` function exists but no trigger is attached. Need to insert the role directly and attach the trigger.
-
-2. **Settings language/theme dropdowns** - The language dropdown only has 10 options (needs 35+). Theme only has dark/light/system but no actual theme switching implementation.
-
-3. **API system** - API docs tab exists but testing shows the `api-chat` function may have issues. The `verify-payment` config entry is missing from `config.toml`.
-
-4. **Mobile UX** - Chat input area has double padding (ChatInputEnhanced wraps its own padding, then Index.tsx adds more). The "Press CMD+K for commands" hint wastes space on mobile.
-
-5. **Payment gateway** - Still using manual screenshot upload system. No automatic payment integration.
-
-6. **APK download page** - User provided `qurobai.apk` file. Need a new download page.
+This plan addresses every issue raised: broken API, ugly mobile UI, payment bugs, missing features, AI quality, web search, token system, deep search, Qurobs (custom GPTs), and overall polish.
 
 ---
 
-## Implementation Steps
+## 1. API System - Make It Actually Work
 
-### Step 1: Database Fixes (Migration)
+### Problem
+The API documentation looks real but when users test it, the `api-chat` edge function uses direct API calls to DeepInfra/OpenRouter/Gemini which are unreliable. The docs show code examples but the API itself fails silently.
 
+### Fix: `supabase/functions/api-chat/index.ts`
+- 
+- Add proper error handling for 429 (rate limit) and 402 (payment required)
+- Keep existing rate limiting, key validation, and usage tracking logic
+
+### Fix: `src/pages/ApiAccess.tsx`
+- Make the "Test API Key" button show clearer success/failure states
+- Ensure documentation examples use correct base URL
+- No structural changes needed - the UI is already well-built
+
+---
+
+## 2. Chat AI -
+
+### Problem
+The main `chat` edge function uses multiple unreliable third-party APIs (Groq, Fireworks, DeepInfra, OpenRouter, Google Gemini direct). This causes inconsistent responses and failures.
+
+### Fix: 
+- Keep ALL existing features: real-time data detection (weather, crypto, stocks, news, cricket, currency), image generation via Fireworks, vision via OpenRouter, conversation summarization, user memory, personalization
+- Add **Web Search via Serper.dev** (new integration - requires API key)
+- Add **URL checking** - detect URLs in messages, fetch page title/description via fetch()
+- Add **Deep Search** prefix detection: when message starts with `[Deep Search]`, use enhanced web search with multiple sources and longer reasoning
+- Expand `QUROBAI_KNOWLEDGE` with more comprehensive FAQ (50+ entries)
+
+### New: Serper.dev Integration
+- Need to add `SERPER_API_KEY` as a secret
+- Used for `[Web Search]` queries and the new Deep Search button
+- Falls back to existing DuckDuckGo/Google News RSS if Serper is unavailable
+
+---
+
+## 3. Web Search Button + Deep Search in Chat
+
+### Problem
+Users can't search the web through AI. No deep search like Perplexity.
+
+### Fix: `src/components/ChatInputEnhanced.tsx`
+- Add a **Web Search** toggle button (Globe icon) next to the send button
+- When toggled ON, messages are prefixed with `[Web Search]` automatically
+- Add a **Deep Search** button (magnifying glass with sparkle) that triggers `[Deep Search]` prefix for more thorough analysis
+- Both buttons are pill-shaped toggles above the text input area
+
+### Fix: `src/pages/Index.tsx`
+- Pass web search state through to the chat flow
+
+---
+
+## 4. Token System for Chat Usage
+
+### Problem
+Users can chat unlimited. Need daily limits for free users.
+
+### Database Migration
 ```sql
--- 1. Grant admin role to sohamghosh679@gmail.com
-INSERT INTO user_roles (user_id, role)
-VALUES ('d43c9914-9e6f-41b8-973c-612ce0a8d1c7', 'admin')
-ON CONFLICT (user_id, role) DO NOTHING;
-
--- 2. Attach the check_and_grant_admin trigger to auth.users
--- (Cannot modify auth schema, so we ensure the admin role is granted directly)
-
--- 3. Add missing columns to user_settings for theme/font
-ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS font_size text DEFAULT 'medium';
-ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS chat_density text DEFAULT 'comfortable';
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS tokens_used_today integer DEFAULT 0;
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS tokens_reset_date date DEFAULT CURRENT_DATE;
 ```
 
-### Step 2: Fix Admin Panel - Show All Users + Data Download + Delete
+### Implementation
+- **Free users:** 50 messages/day (reset at midnight IST)
+- **Premium users:** 1,000,000 tokens/day (effectively unlimited)
+- Check token count in `supabase/functions/chat/index.ts` before processing
+- Return remaining tokens in response headers
+- Show token usage counter in chat UI
 
-**File: `src/pages/AdminPanel.tsx`**
+---
 
-Changes:
-- Fix back button to use `navigate(-1)` with fallback
-- Add "Download User Data" button next to each user in the list
-- Ensure the "Delete User by ID" feature works (already exists, verify it)
-- Make tabs scrollable on mobile with horizontal scroll
-- Add user email display (query from auth if available, or show user_id)
+## 5. Custom Qurobs (Like Gemini Gems / ChatGPT GPTs)
 
-### Step 3: Settings UI - 35+ Languages + Working Theme
+### Concept (from reference images)
+Users create custom AI assistants with:
+- Name, description, avatar/icon
+- Custom system prompt
+- Preset categories: Storybook, Brainstormer, Career Guide, Coding Partner, Learning Coach, Writing Editor
+- Tabs: All, Your Qurobs, By QurobAi (pre-built ones)
 
-**File: `src/components/SettingsDialog.tsx`**
+### Database Migration
+```sql
+CREATE TABLE qurob_bots (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  name text NOT NULL,
+  description text,
+  icon text DEFAULT 'sparkles',
+  icon_color text DEFAULT '#6366f1',
+  system_prompt text NOT NULL,
+  is_public boolean DEFAULT false,
+  is_official boolean DEFAULT false,
+  category text DEFAULT 'general',
+  uses_count integer DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
 
-Changes:
-- Expand language dropdown to 35+ languages: English, Hindi, Spanish, French, German, Chinese (Simplified), Chinese (Traditional), Japanese, Korean, Portuguese, Arabic, Russian, Italian, Dutch, Turkish, Polish, Vietnamese, Thai, Indonesian, Malay, Filipino/Tagalog, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu, Persian, Hebrew, Greek, Swedish, Norwegian, Danish, Finnish, Czech, Hungarian, Romanian, Ukrainian
-- Make theme selector actually apply themes (dark class toggle on document)
-- Add font size selector (small/medium/large) that adjusts root font size
-- Add chat density option
+ALTER TABLE qurob_bots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can read public bots" ON qurob_bots FOR SELECT USING (is_public OR user_id = auth.uid());
+CREATE POLICY "Users can manage own bots" ON qurob_bots FOR ALL USING (user_id = auth.uid());
+```
 
-### Step 4: Mobile-First Chat Optimization
+### New Files
+- `src/pages/Qurobs.tsx` - Browse/manage page with tabs (All, Your Qurobs, By QurobAi)
+- `src/components/QurobBotBuilder.tsx` - Creation dialog
+- Pre-seed 6 official Qurobs: Storybook, Brainstormer, Career Guide, Coding Partner, Learning Coach, Writing Editor
 
-**File: `src/pages/Index.tsx`**
+### Chat Integration
+- When a Qurob is selected, its system prompt is prepended to the chat messages
+- Show active Qurob indicator in chat header
+- Navigate from Qurobs page to chat with the selected bot
 
-Changes:
-- Remove redundant ChatInputEnhanced wrapper inside the flex layout (it already has its own padding)
-- Hide "Press CMD+K for commands" on mobile (only show on md+)
-- Ensure safe-area-bottom works with the input
+---
 
-**File: `src/components/ChatInputEnhanced.tsx`**
+## 6. Mobile-First UI Overhaul
 
-Changes:
-- Reduce padding on mobile (p-2 instead of p-3)
-- Make the input more compact on small screens
-- Ensure touch targets remain 48px minimum
+### Problem
+The app looks designed for desktop. Chat input too high on mobile, buttons too small, wasted space.
 
-### Step 5: APK Download Page
+### Fix: `src/pages/Index.tsx`
+- Remove the redundant padding wrapper around ChatInputEnhanced
+- Remove the `ModelIndicator` bar on mobile (it wastes vertical space) - show only on md+
+- Make the welcome screen more compact on mobile
+- Sticky bottom input with proper safe-area padding
 
-**New File: `src/pages/Download.tsx`**
+### Fix: `src/components/WelcomeScreen.tsx`
+- Redesign to match Gemini style (from reference images):
+  - "Hi [Username]" greeting with large text
+  - "Where should we start?" subtitle
+  - Pill-shaped quick action buttons with emojis (like Gemini)
+  - Bottom sheet showing model selector and tools (Create Images, Deep Search, Web Search)
+- More compact on mobile with smaller gaps
 
-- Copy `qurobai.apk` to `public/downloads/qurobai.apk`
-- Create a download page with:
-  - Android download button (direct APK link)
-  - iOS "Coming Soon" badge
-  - App features showcase
-  - Installation instructions
-- Add route in `App.tsx`
+### Fix: `src/components/ChatInputEnhanced.tsx`
+- More compact padding on mobile
+- Web Search and Deep Search toggle buttons
+- Ensure safe-area-bottom is properly applied
 
-### Step 6: Enhanced AI Knowledge
+---
 
-**File: `supabase/functions/chat/index.ts`**
+## 7. Payment Gateway Fix
 
-- Expand QUROBAI_KNOWLEDGE with more detailed FAQs
-- Add website URL checking capability (detect URLs, fetch title/description via fetch)
-- Add Deep Search button support (detect `[Deep Search]` prefix)
-- Improve error handling for all real-time data sources
+### Problem
+Manual screenshot system is buggy and slow. Need better UX.
 
-### Step 7: Fix Payment Flow
+### Fix: `src/pages/Subscribe.tsx`
+- Improve the payment flow UX:
+  - Add transaction ID field prominently (not hidden)
+  - Show clearer step indicators (Step 1: Pay, Step 2: Enter Transaction ID or Upload Screenshot)
+  - Better success/error messaging
+  - Add "Check Payment Status" button for users who already paid
+- Note: Full Razorpay/Stripe automatic integration requires API keys and merchant setup. For now, optimize the existing manual flow significantly.
 
-**File: `src/pages/Subscribe.tsx`**
+---
 
-- Improve the payment drawer UX
-- Add clearer step indicators
-- Better error messages
-- Add transaction ID field for UPI payments
-- Show payment status after submission
+## 8. Admin Panel Improvements
 
-### Step 8: Update Config
+### Fix: `src/pages/AdminPanel.tsx`
+- Make tabs horizontally scrollable on mobile (overflow-x-auto)
+- Show user email alongside display name (fetch from profiles or show user_id)
+- Ensure all users are loaded (remove the default 1000 row limit by paginating)
+- Push notifications: verify the `send-push` function is correctly configured in config.toml
+- Add "Download All Users CSV" button
 
-**File: `supabase/config.toml`**
+---
 
-- Add missing function entries (`verify-payment`, `api-chat`)
+## 9. Splash Screen on Every Page
+
+### Fix: `src/App.tsx` + `src/components/SplashScreen.tsx`
+- Show 2-second splash on every route navigation (not just app load)
+- Add a "Skip" button
+- Use `sessionStorage` to track per-route visits so splash only shows once per route per session
+
+---
+
+## 10. APK Download Fix
+
+### Problem
+The provided APK was copied but may not work.
+
+### Fix: `src/pages/Download.tsx`
+- Verify the APK file is properly served from `/downloads/qurobai.apk`
+- Add proper `Content-Type` headers guidance
+- Add installation instructions (Enable "Install from Unknown Sources")
+- Show file size and version info
 
 ---
 
@@ -117,44 +202,47 @@ Changes:
 ### New Files
 | File | Purpose |
 |------|---------|
-| `src/pages/Download.tsx` | App download page with APK link |
-| `public/downloads/qurobai.apk` | Android APK file |
+| `src/pages/Qurobs.tsx` | Browse/manage custom Qurobs (GPTs) |
+| `src/components/QurobBotBuilder.tsx` | Create/edit Qurob dialog |
 
 ### Modified Files
 | File | Changes |
 |------|---------|
-| `src/pages/AdminPanel.tsx` | User data download, back button fix, mobile improvements |
-| `src/components/SettingsDialog.tsx` | 35+ languages, working theme/font, chat density |
-| `src/pages/Index.tsx` | Mobile layout fixes, hide desktop-only hints |
-| `src/components/ChatInputEnhanced.tsx` | Compact mobile design |
-| `src/pages/Subscribe.tsx` | Payment flow improvements |
-| `src/App.tsx` | Add Download route |
-| `supabase/functions/chat/index.ts` | Enhanced knowledge, URL checking |
-| `supabase/config.toml` | Add missing function entries |
+| `supabase/functions/chat/index.ts` | Lovable AI Gateway, web search, deep search, URL checking, tokens |
+| `supabase/functions/api-chat/index.ts` | Switch to Lovable AI Gateway |
+| `src/components/ChatInputEnhanced.tsx` | Web Search + Deep Search buttons, mobile polish |
+| `src/components/WelcomeScreen.tsx` | Gemini-style redesign with greeting + tools |
+| `src/pages/Index.tsx` | Mobile layout fixes, Qurob integration |
+| `src/pages/Subscribe.tsx` | Payment UX improvements |
+| `src/pages/AdminPanel.tsx` | Mobile tabs scroll, user CSV export |
+| `src/pages/Download.tsx` | Better APK instructions |
+| `src/App.tsx` | Add Qurobs route, splash on navigation |
+| `supabase/config.toml` | Ensure all functions listed |
 
 ### Database Migration
-- Insert admin role for `sohamghosh679@gmail.com`
-- Add `font_size` and `chat_density` columns to `user_settings`
+- Add `tokens_used_today`, `tokens_reset_date` to `user_settings`
+- Create `qurob_bots` table with RLS policies
+- Seed 6 official Qurobs
+
+### Secret Required
+- `SERPER_API_KEY` for web search (will prompt for setup)
 
 ---
 
-## Priority Order
+## Implementation Order
 
 ```text
-1. CRITICAL (First)
-   +-- Insert admin role for sohamghosh679@gmail.com
-   +-- Fix Settings language (35+ options) + 35 option in user panel
-   +-- Fix Settings theme switching
-   +-- Mobile chat input optimization
-
-2. HIGH (Second)
-   +-- Admin Panel user data download
-   +-- APK Download page
-   +-- Enhanced AI knowledge and users ke data se trained bhi honge model
-
-3. MEDIUM (Third)
-   +-- Payment flow improvements
-   +-- Config.toml updates
-   +-- Chat input mobile polish
+Step 1: Add SERPER_API_KEY secret
+Step 2: Database migration (tokens + qurob_bots table)
+Step 3: Rewrite chat edge function (Lovable AI + web search + deep search)
+Step 4: Rewrite api-chat edge function (Lovable AI)
+Step 5: Redesign WelcomeScreen (Gemini-style)
+Step 6: Add Web Search + Deep Search buttons to ChatInputEnhanced
+Step 7: Fix Index.tsx mobile layout
+Step 8: Create Qurobs page + builder
+Step 9: Fix Subscribe payment UX
+Step 10: Fix Admin Panel mobile + CSV export
+Step 11: Update App.tsx routes + splash
+Step 12: Deploy and test
 ```
 
