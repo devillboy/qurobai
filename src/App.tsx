@@ -17,8 +17,9 @@ import Security from "@/pages/Security";
 import NotFound from "@/pages/NotFound";
 import ApiAccess from "@/pages/ApiAccess";
 import DownloadPage from "@/pages/Download";
+import Qurobs from "@/pages/Qurobs";
 import { HelmetProvider } from "react-helmet-async";
- import { SplashScreen } from "@/components/SplashScreen";
+import { SplashScreen } from "@/components/SplashScreen";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const AppRoutes = () => {
       <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
       <Route path="/subscription-history" element={<ProtectedRoute><SubscriptionHistory /></ProtectedRoute>} />
       <Route path="/api-access" element={<ProtectedRoute><ApiAccess /></ProtectedRoute>} />
+      <Route path="/qurobs" element={<ProtectedRoute><Qurobs /></ProtectedRoute>} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/security" element={<Security />} />
