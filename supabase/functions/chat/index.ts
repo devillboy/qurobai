@@ -3,227 +3,128 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const TONE_STYLES: Record<string, string> = {
   default: "balanced and adaptable",
-  professional: "polished, precise, and formal. Avoid casual language, emojis, and unnecessary friendliness",
-  friendly: "warm, approachable, and conversational while remaining helpful",
-  candid: "direct, honest, and encouraging. Get straight to the point",
-  quirky: "playful, creative, and imaginative while still being informative",
-  efficient: "extremely concise and plain. Minimize words, maximize information density",
+  professional: "polished, precise, and formal",
+  friendly: "warm, approachable, and conversational",
+  candid: "direct, honest, and encouraging",
+  quirky: "playful, creative, and imaginative",
+  efficient: "extremely concise. Minimize words, maximize information density",
   nerdy: "exploratory, enthusiastic, and deep-diving into technical details",
   cynical: "critical, analytical, and slightly sarcastic while still being helpful",
 };
 
-// Complete QurobAi Knowledge Base
 const QUROBAI_KNOWLEDGE = `
 ## QUROBAI - COMPLETE KNOWLEDGE BASE
 
 ### ABOUT QUROBAI
-QurobAi is India's premier AI assistant platform developed by **Soham from India**. It provides intelligent conversation capabilities with real-time data access, professional-grade responses, and specialized AI models for different use cases.
-
-Website: QurobAi.com (or current domain)
+QurobAi is India's premier AI assistant platform developed by **Soham from India**. It provides intelligent conversation capabilities with real-time data access, professional-grade responses, and specialized AI models.
 Creator: Soham (sohamghosh679@gmail.com)
 Country: India
-Tech Stack: React, TypeScript, Tailwind CSS, Supabase, Multiple AI APIs
 
-### AI MODELS AVAILABLE
+### AI MODELS
+- **Qurob 2 (Free):** Fast, reliable AI for general use
+- **Qurob 4 (₹289/month):** Deep reasoning, complex analysis, professional work
+- **Q-06 (₹320/month):** Expert coding AI for 100+ languages
 
- **1. Qurob 2 (Free Tier) - 260B+ Parameter Class**
- - Type: Advanced Standard AI Model (Google Gemini 2.0 Flash)
- - Parameters: 260B+ equivalent reasoning capability
- - Best For: Quick questions, general conversations, coding assistance
- - Features: Fast responses, real-time data, image analysis, code help
-- Access: FREE for all registered users
- - Speed: Ultra-fast (optimized for instant responses)
- - Capabilities: Weather, news, crypto, stocks, cricket, currency, web search, vision
- - Knowledge: Deep training on current events, programming, science, math, languages
+### FEATURES
+- Real-time: Weather, Crypto, Stocks, News, Cricket, Currency
+- Web Search & Deep Search
+- Image Generation & Vision AI
+- Custom Qurobs (like ChatGPT GPTs)
+- Voice Input
+- Code Playground
 
- **2. Qurob 4 (Premium - ₹289/month) - 1 Trillion+ Parameter Class**
- - Type: Most Advanced AI Model (DeepSeek Chat - Beyond GPT-4)
- - Parameters: 1T+ equivalent deep reasoning capability
-- Best For: Complex analysis, detailed research, professional work
- - Features: Deep understanding, nuanced responses, highest accuracy
-- Access: Requires Premium subscription (₹289/month)
- - Includes: All Qurob 2 features plus:
-   • Deep reasoning and multi-step problem solving
-   • Advanced mathematical and logical analysis
-   • Professional writing and content creation
-   • Complex code understanding and generation
-   • Vision analysis with detailed descriptions
+### PRICING
+| Plan | Price | Model |
+|------|-------|-------|
+| Free | ₹0 | Qurob 2 |
+| Premium | ₹289/month | Qurob 4 |
+| Code Specialist | ₹320/month | Q-06 |
 
- **3. Q-06 (Code Specialist - ₹320/month) - Separate Premium**
- - Type: Specialized Programming AI (Qwen 2.5 Coder 32B)
- - Parameters: Specialized code-optimized architecture
-- Best For: Complex coding, architecture design, debugging, code review
- - Features: Expert-level coding in ALL languages, production-ready code
- - Access: Separate subscription at ₹320/month
-- Languages: JavaScript, TypeScript, Python, Java, C++, Go, Rust, PHP, Ruby, Swift, Kotlin, and 100+ more
-- Specialties: Full-stack development, API design, database optimization, DevOps
- - Code Quality: Clean, modular, well-documented, follows best practices
- - Architecture: Design patterns, system design, scalability recommendations
+### PAYMENT
+Pay via UPI to 7864084241@ybl, upload screenshot, admin approves within 24h.
 
-### SUBSCRIPTION & PRICING
-
-| Plan | Price | Model | Features |
-|------|-------|-------|----------|
- | Free | ₹0/month | Qurob 2 (260B+ Class) | Advanced AI, real-time data, vision, web search |
- | Premium | ₹289/month | Qurob 4 (1T+ Class) | Deep reasoning, professional analysis |
- | Code Specialist | ₹320/month | Q-06 (Code AI) | Expert coding, architecture design |
-
-**Payment Process (Manual UPI):**
-1. Go to Subscribe page in QurobAi
-2. Select Premium plan
-3. Pay via UPI to: **7864084241@ybl**
-4. Upload payment screenshot as proof
-5. Admin reviews and approves within 24 hours
-6. Subscription activates immediately after approval
-7. You get 30 days access from activation date
-
-### REAL-TIME DATA CAPABILITIES
-
-**Weather:** "Weather in Delhi" → Get current temperature, conditions, humidity
-**Crypto:** "Bitcoin price" → Get BTC, ETH, etc. with 24h changes
-**Stocks:** "Tesla stock" → Get real-time market prices
-**News:** "Latest tech news" → Get current headlines
-**Cricket:** "Live cricket score" → Get IPL, international match scores
-**Currency:** "USD to INR rate" → Get forex exchange rates
-**Web Search:** "[Web Search] AI developments 2024" → Search internet
-**Image Generation:** "Generate an image of..." → Create AI images
-
-### CONTACT & SUPPORT
-
-- Creator: Soham from India
-- Email: sohamghosh679@gmail.com
-- Admin Panel: Available for authorized admins only
-- Response Time: Usually within 24 hours
-
-### FAQs
-
-**Q: Is QurobAi free?**
-A: Yes! Qurob 2 is completely free. Premium features require subscription.
-
-**Q: How do I pay?**
-A: Pay via UPI to 7864084241@ybl and upload screenshot.
-
-**Q: When does my subscription activate?**
-A: Within 24 hours after admin approval.
-
-**Q: Who made QurobAi?**
-A: Soham from India created QurobAi.
-
-**Q: What makes Qurob 4 better?**
- A: Uses 1 Trillion+ parameter class model for deep reasoning, complex analysis, and professional-grade responses.
-
-**Q: Is Q-06 included with Qurob 4?**
- A: No, Q-06 is a separate subscription at ₹320/month. It's specialized for coding and worth it for developers who need expert code assistance.
- 
- **Q: What are the parameter equivalents?**
- A: Qurob 2 has 260B+ equivalent reasoning (comparable to top-tier free models), Qurob 4 has 1T+ equivalent (beyond GPT-4 class), and Q-06 is specialized for code with deep programming knowledge.
+### CONTACT
+Email: sohamghosh679@gmail.com
 `;
 
-// Enhanced query detection with cricket and currency
+// Detect query type for real-time data
 function detectQueryType(message: string): { type: string; query?: string } | null {
   const lower = message.toLowerCase();
   
-  // Image generation patterns - expanded to catch more variations
-  const imagePatterns = [
-    /generate\s+(?:an?\s+)?image/i,
-    /create\s+(?:an?\s+)?(?:image|picture|art|illustration)/i,
-    /draw\s+(?:an?\s+)?(?:me\s+)?/i,
-    /make\s+(?:an?\s+)?(?:image|picture|art)/i,
-    /imagine\s+/i,
-    /image\s+(?:of|about|for)\s+/i,
-    /picture\s+(?:of|about|for)\s+/i,
-    /banao\s+(?:ek\s+)?(?:image|tasveer|photo)/i,
-    /(?:image|tasveer|photo)\s+banao/i,
-    /(?:ek\s+)?(?:image|photo|pic)\s+(?:bana|banao|create|generate)/i,
-    /can\s+you\s+(?:make|create|generate|draw)\s+(?:an?\s+)?(?:image|picture)/i,
-    /show\s+me\s+(?:an?\s+)?(?:image|picture)\s+of/i,
-    /visualize\s+/i,
-    /paint\s+/i,
-  ];
+  // Deep Search
+  if (/^\[deep\s*search\]/i.test(message)) {
+    const q = message.replace(/^\[deep\s*search\]\s*/i, "").trim();
+    return { type: "deepsearch", query: q };
+  }
   
+  // Web Search
+  if (/^\[web\s*search\]/i.test(message) || /search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?/i.test(lower)) {
+    const q = message.replace(/^\[web\s*search\]\s*/i, "").replace(/search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?/i, "").trim();
+    return { type: "websearch", query: q || message };
+  }
+  
+  // Image generation
+  const imagePatterns = [
+    /generate\s+(?:an?\s+)?image/i, /create\s+(?:an?\s+)?(?:image|picture|art)/i,
+    /draw\s+(?:an?\s+)?(?:me\s+)?/i, /make\s+(?:an?\s+)?(?:image|picture)/i,
+    /imagine\s+/i, /banao\s+(?:ek\s+)?(?:image|tasveer|photo)/i,
+    /(?:image|tasveer|photo)\s+banao/i, /can\s+you\s+(?:make|create|generate|draw)\s+(?:an?\s+)?(?:image|picture)/i,
+  ];
   if (imagePatterns.some(p => p.test(lower))) {
-    // Extract the prompt - remove the command words
-    let prompt = message
-      .replace(/(?:please\s+)?(?:can\s+you\s+)?(?:generate|create|draw|make|imagine|banao|show\s+me|visualize|paint)\s+(?:an?\s+)?(?:me\s+)?(?:ek\s+)?(?:image|picture|art|illustration|tasveer|photo|pic)?\s*(?:of|about|for|ka|ki)?\s*/gi, "")
-      .trim();
+    let prompt = message.replace(/(?:please\s+)?(?:can\s+you\s+)?(?:generate|create|draw|make|imagine|banao)\s+(?:an?\s+)?(?:me\s+)?(?:ek\s+)?(?:image|picture|art|tasveer|photo)?\s*(?:of|about|for|ka|ki)?\s*/gi, "").trim();
     return { type: "image_generation", query: prompt || message };
   }
   
-  // Web search patterns
-  if (/\[web\s*search\]|search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?|deep\s*search|look\s+up|research\s+about|find\s+(?:information|info)\s+(?:about|on)/i.test(lower)) {
-    const searchMatch = message.match(/(?:search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?|deep\s*search\s+|look\s+up\s+|research\s+about\s+|find\s+(?:information|info)\s+(?:about|on)\s+|\[web\s*search\]\s*(?:search\s+(?:the\s+)?(?:web\s+)?(?:for\s+)?)?:?\s*)(.+?)(?:\?|$)/i);
-    return { type: "websearch", query: searchMatch?.[1]?.trim() || message.replace(/\[web\s*search\]/i, "").trim() };
+  // Cricket
+  if (/cricket|ipl|match\s+score|live\s+score|ind\s+vs|t20|odi|bcci|icc/i.test(lower)) {
+    return { type: "cricket" };
   }
   
-  // Cricket patterns
-  if (/cricket|ipl|match\s+score|live\s+score|ind\s+vs|india\s+(?:vs|versus)|pakistan\s+(?:vs|versus)|australia\s+(?:vs|versus)|t20|odi|test\s+match|bcci|icc/i.test(lower)) {
-    const teamMatch = lower.match(/(?:ind(?:ia)?|pak(?:istan)?|aus(?:tralia)?|eng(?:land)?|sa|nz|wi|sl|ban)\s+(?:vs|versus|v)\s+(?:ind(?:ia)?|pak(?:istan)?|aus(?:tralia)?|eng(?:land)?|sa|nz|wi|sl|ban)/i);
-    return { type: "cricket", query: teamMatch?.[0] || "live" };
+  // Currency
+  if (/(?:usd|eur|gbp|inr|jpy|rupee|dollar|euro|pound)\s+(?:to|vs|rate|exchange|convert)/i.test(lower) || /forex|currency\s+(?:rate|exchange)/i.test(lower)) {
+    return { type: "currency", query: "usd,inr" };
   }
   
-  // Currency/Forex patterns
-  if (/(?:usd|eur|gbp|inr|jpy|aud|cad|chf|cny|rupee|dollar|euro|pound|yen)\s+(?:to|vs|rate|price|exchange|convert)/i.test(lower) ||
-      /(?:convert|exchange)\s+(?:currency|\d+\s+)?(?:usd|eur|gbp|inr)/i.test(lower) ||
-      /forex|currency\s+(?:rate|exchange|converter)/i.test(lower)) {
-    const currMatch = lower.match(/(usd|eur|gbp|inr|jpy|aud|cad)\s+(?:to|vs)\s+(usd|eur|gbp|inr|jpy|aud|cad)/i);
-    return { type: "currency", query: currMatch ? `${currMatch[1]},${currMatch[2]}` : "usd,eur,gbp,inr" };
-  }
-  
-  // Weather patterns
-  if (/weather|temperature|forecast|rain|snow|sunny|cloudy|humid|wind|climate|degrees?\s+(?:celsius|fahrenheit)/i.test(lower)) {
-    const cityMatch = lower.match(/weather\s+(?:in|for|at|of)\s+([a-zA-Z\s]+)/i) || 
-                      lower.match(/([a-zA-Z\s]+)\s+(?:weather|temperature|forecast)/i) ||
-                      lower.match(/(?:temperature|forecast)\s+(?:in|for|at)\s+([a-zA-Z\s]+)/i);
+  // Weather
+  if (/weather|temperature|forecast|rain|sunny|cloudy/i.test(lower)) {
+    const cityMatch = lower.match(/weather\s+(?:in|for|at)\s+([a-zA-Z\s]+)/i) || lower.match(/([a-zA-Z\s]+)\s+(?:weather|temperature)/i);
     return { type: "weather", query: cityMatch?.[1]?.trim() || "Delhi" };
   }
   
-  // Crypto patterns
-  if (/bitcoin|ethereum|crypto|btc|eth|cryptocurrency|doge|solana|xrp|cardano|bnb|polygon|matic|litecoin|polkadot|avalanche|shiba|coin\s+price/i.test(lower)) {
+  // Crypto
+  if (/bitcoin|ethereum|crypto|btc|eth|doge|solana|xrp/i.test(lower)) {
     const coins = [];
     if (/bitcoin|btc/i.test(lower)) coins.push("bitcoin");
-    if (/ethereum|eth(?!er)/i.test(lower)) coins.push("ethereum");
-    if (/doge|dogecoin/i.test(lower)) coins.push("dogecoin");
-    if (/solana|sol(?!id)/i.test(lower)) coins.push("solana");
-    if (/xrp|ripple/i.test(lower)) coins.push("ripple");
-    if (/cardano|ada/i.test(lower)) coins.push("cardano");
-    if (/bnb|binance/i.test(lower)) coins.push("binancecoin");
-    if (/polygon|matic/i.test(lower)) coins.push("matic-network");
-    if (/litecoin|ltc/i.test(lower)) coins.push("litecoin");
-    if (/polkadot|dot/i.test(lower)) coins.push("polkadot");
-    if (/avalanche|avax/i.test(lower)) coins.push("avalanche-2");
-    if (/shiba|shib/i.test(lower)) coins.push("shiba-inu");
+    if (/ethereum|eth/i.test(lower)) coins.push("ethereum");
+    if (/doge/i.test(lower)) coins.push("dogecoin");
+    if (/solana/i.test(lower)) coins.push("solana");
+    if (/xrp/i.test(lower)) coins.push("ripple");
     return { type: "crypto", query: coins.length ? coins.join(",") : "bitcoin,ethereum" };
   }
   
-  // Stock patterns
-  if (/stock|share|market|nasdaq|nyse|nifty|sensex|aapl|apple|tesla|google|microsoft|amazon|nvidia|meta|netflix/i.test(lower)) {
+  // Stocks
+  if (/stock|share|nasdaq|nifty|sensex|aapl|tesla|google|microsoft|nvidia/i.test(lower)) {
     const symbols = [];
     if (/apple|aapl/i.test(lower)) symbols.push("AAPL");
     if (/tesla|tsla/i.test(lower)) symbols.push("TSLA");
-    if (/google|googl|alphabet/i.test(lower)) symbols.push("GOOGL");
+    if (/google|googl/i.test(lower)) symbols.push("GOOGL");
     if (/microsoft|msft/i.test(lower)) symbols.push("MSFT");
-    if (/amazon|amzn/i.test(lower)) symbols.push("AMZN");
-    if (/meta|facebook/i.test(lower)) symbols.push("META");
     if (/nvidia|nvda/i.test(lower)) symbols.push("NVDA");
-    if (/netflix|nflx/i.test(lower)) symbols.push("NFLX");
-    if (/amd/i.test(lower)) symbols.push("AMD");
-    if (/intel|intc/i.test(lower)) symbols.push("INTC");
     return { type: "stocks", query: symbols.length ? symbols.join(",") : "AAPL,TSLA,GOOGL,NVDA" };
   }
   
-  // News patterns
-  if (/news|headline|latest|breaking|current events|what.?s\s+happening|today.?s\s+news/i.test(lower)) {
-    const topicMatch = lower.match(/(?:news|headlines?)\s+(?:about|on|for|regarding)\s+([a-zA-Z\s]+)/i) ||
-                       lower.match(/latest\s+(?:on|about|in)\s+([a-zA-Z\s]+)/i);
+  // News
+  if (/news|headline|latest|breaking|current events/i.test(lower)) {
+    const topicMatch = lower.match(/(?:news|headlines?)\s+(?:about|on|for)\s+([a-zA-Z\s]+)/i);
     return { type: "news", query: topicMatch?.[1]?.trim() || "world" };
   }
   
-  // Time/Date patterns
+  // Time
   if (/what\s+(?:time|date)|current\s+(?:time|date)|today.?s\s+date/i.test(lower)) {
     return { type: "time" };
   }
@@ -231,258 +132,191 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
   return null;
 }
 
-// Web search function
-async function performWebSearch(query: string): Promise<string> {
+// Serper.dev web search (primary)
+async function serperSearch(query: string): Promise<string> {
+  const SERPER_API_KEY = Deno.env.get("SERPER_API_KEY");
+  if (!SERPER_API_KEY) return "";
+  
   try {
-    console.log("Web search for:", query);
-    const results: string[] = [];
+    const resp = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: { "X-API-KEY": SERPER_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ q: query, num: 8 }),
+    });
+    if (!resp.ok) return "";
+    const data = await resp.json();
     
-    // Google News RSS
-    try {
-      const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
-      const newsResp = await fetch(rssUrl, { headers: { "User-Agent": "QurobAi/3.0" } });
-      const rssText = await newsResp.text();
-      
-      const itemMatches = rssText.matchAll(/<item>([\s\S]*?)<\/item>/g);
-      for (const match of itemMatches) {
-        const itemXml = match[1];
-        const title = itemXml.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1") || "";
-        const source = itemXml.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1] || "";
-        if (title) results.push(`• **${title}** ${source ? `(${source})` : ""}`);
-        if (results.length >= 8) break;
-      }
-    } catch (e) { console.log("News error:", e); }
-    
-    // Wikipedia
-    let wikiInfo = "";
-    try {
-      const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
-      const wikiResp = await fetch(wikiUrl, { headers: { "User-Agent": "QurobAi/3.0" } });
-      if (wikiResp.ok) {
-        const wikiData = await wikiResp.json();
-        if (wikiData.extract && wikiData.type !== "disambiguation") {
-          wikiInfo = `\n\n**📚 Wikipedia:**\n${wikiData.extract.slice(0, 500)}${wikiData.extract.length > 500 ? "..." : ""}`;
-        }
-      }
-    } catch (e) { console.log("Wiki error:", e); }
-    
-    // DuckDuckGo
-    let ddgInfo = "";
-    try {
-      const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`;
-      const ddgResp = await fetch(ddgUrl);
-      if (ddgResp.ok) {
-        const ddgData = await ddgResp.json();
-        if (ddgData.Abstract) ddgInfo = `\n\n**📖 Summary:**\n${ddgData.Abstract.slice(0, 400)}`;
-      }
-    } catch (e) { console.log("DDG error:", e); }
-    
-    if (results.length > 0 || wikiInfo || ddgInfo) {
-      const timestamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
-      return `**🔍 Web Search Results: "${query}"**\n\n**📰 Latest News:**\n${results.join("\n") || "No recent news found"}${wikiInfo}${ddgInfo}\n\n*Updated: ${timestamp} IST*`;
+    let result = "";
+    if (data.answerBox) {
+      result += `**Answer:** ${data.answerBox.answer || data.answerBox.snippet || ""}\n\n`;
     }
-    
-    return `No comprehensive results found for "${query}". Try rephrasing your query.`;
-  } catch (error) {
-    console.error("Web search error:", error);
-    return "Web search temporarily unavailable.";
+    if (data.knowledgeGraph) {
+      const kg = data.knowledgeGraph;
+      result += `**${kg.title}** ${kg.type ? `(${kg.type})` : ""}\n${kg.description || ""}\n\n`;
+    }
+    if (data.organic?.length) {
+      result += "**Search Results:**\n";
+      for (const r of data.organic.slice(0, 6)) {
+        result += `• **${r.title}** — ${r.snippet || ""}\n  ${r.link}\n`;
+      }
+    }
+    return result;
+  } catch (e) {
+    console.error("Serper error:", e);
+    return "";
   }
 }
 
-// Fetch cricket scores
-async function fetchCricketScores(): Promise<string> {
+// Fallback web search
+async function fallbackWebSearch(query: string): Promise<string> {
+  const results: string[] = [];
   try {
-    const rssUrl = `https://news.google.com/rss/search?q=cricket+live+score+today&hl=en-IN&gl=IN&ceid=IN:en`;
+    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
     const resp = await fetch(rssUrl, { headers: { "User-Agent": "QurobAi/3.0" } });
     const rssText = await resp.text();
-    
-    const items: string[] = [];
     const itemMatches = rssText.matchAll(/<item>([\s\S]*?)<\/item>/g);
     for (const match of itemMatches) {
       const title = match[1].match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1") || "";
       const source = match[1].match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1] || "";
-      if (title && /score|runs|wicket|over|match|vs|v\s/i.test(title)) {
-        items.push(`🏏 **${title}** ${source ? `(${source})` : ""}`);
-      }
-      if (items.length >= 5) break;
+      if (title) results.push(`• **${title}** ${source ? `(${source})` : ""}`);
+      if (results.length >= 6) break;
     }
-    
-    if (items.length) {
-      return `**🏏 Live Cricket Updates:**\n\n${items.join("\n\n")}\n\n*Source: Sports News | ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST*`;
-    }
-    return "No live cricket matches at the moment. Check back during match times!";
-  } catch (error) {
-    console.error("Cricket error:", error);
-    return "Cricket scores temporarily unavailable.";
+  } catch (e) { console.log("Fallback search error:", e); }
+  
+  if (results.length) {
+    return `**Search Results for "${query}":**\n\n${results.join("\n")}`;
   }
+  return `No results found for "${query}".`;
 }
 
-// Fetch currency exchange rates
-async function fetchCurrencyRates(currencies: string): Promise<string> {
-  try {
-    const baseUrl = "https://api.exchangerate.host/latest";
-    const resp = await fetch(`${baseUrl}?base=USD`);
-    
-    if (!resp.ok) {
-      const fallbackResp = await fetch("https://api.frankfurter.app/latest?from=USD");
-      if (fallbackResp.ok) {
-        const data = await fallbackResp.json();
-        let result = "**💱 Currency Exchange Rates (Base: USD)**\n\n";
-        const importantCurrencies = ["INR", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "CNY"];
-        
-        for (const curr of importantCurrencies) {
-          if (data.rates[curr]) {
-            result += `**USD → ${curr}:** ${data.rates[curr].toFixed(4)}\n`;
-          }
-        }
-        return result + `\n*Source: Frankfurter | ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST*`;
-      }
+async function performWebSearch(query: string): Promise<string> {
+  let result = await serperSearch(query);
+  if (!result) result = await fallbackWebSearch(query);
+  const timestamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+  return `🔍 **Web Search: "${query}"**\n\n${result}\n\n*Updated: ${timestamp} IST*`;
+}
+
+async function performDeepSearch(query: string): Promise<string> {
+  const SERPER_API_KEY = Deno.env.get("SERPER_API_KEY");
+  let allResults = "";
+  
+  // Multiple search angles
+  const searches = [query, `${query} latest 2025 2026`, `${query} analysis`];
+  
+  for (const q of searches) {
+    if (SERPER_API_KEY) {
+      const r = await serperSearch(q);
+      if (r) allResults += r + "\n\n";
+    } else {
+      const r = await fallbackWebSearch(q);
+      if (r) allResults += r + "\n\n";
     }
-    
-    const data = await resp.json();
-    let result = "**💱 Currency Exchange Rates (Base: USD)**\n\n";
-    const rates = data.rates || {};
-    
-    const importantCurrencies = ["INR", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "CNY"];
-    for (const curr of importantCurrencies) {
-      if (rates[curr]) {
-        result += `**USD → ${curr}:** ${rates[curr].toFixed(4)}\n`;
-      }
-    }
-    
-    return result + `\n*Source: Exchange Rate API | ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST*`;
-  } catch (error) {
-    console.error("Currency error:", error);
-    return "Currency rates temporarily unavailable.";
   }
+  
+  const timestamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+  return `🔬 **Deep Search: "${query}"**\n\n${allResults}\n*Deep analysis from multiple sources | ${timestamp} IST*`;
 }
 
 function getWeatherDescription(code: number): string {
-  const descriptions: Record<number, string> = {
+  const d: Record<number, string> = {
     0: "☀️ Clear sky", 1: "🌤️ Mainly clear", 2: "⛅ Partly cloudy", 3: "☁️ Overcast",
-    45: "🌫️ Fog", 48: "🌫️ Depositing rime fog",
-    51: "🌧️ Light drizzle", 53: "🌧️ Moderate drizzle", 55: "🌧️ Dense drizzle",
-    61: "🌧️ Slight rain", 63: "🌧️ Moderate rain", 65: "🌧️ Heavy rain",
-    71: "❄️ Slight snow", 73: "❄️ Moderate snow", 75: "❄️ Heavy snow",
-    77: "🌨️ Snow grains", 80: "🌦️ Slight rain showers", 81: "🌦️ Moderate rain showers",
-    82: "⛈️ Violent rain showers", 85: "🌨️ Slight snow showers", 86: "🌨️ Heavy snow showers",
-    95: "⛈️ Thunderstorm", 96: "⛈️ Thunderstorm with slight hail", 99: "⛈️ Thunderstorm with heavy hail",
+    45: "🌫️ Fog", 51: "🌧️ Light drizzle", 61: "🌧️ Slight rain", 63: "🌧️ Moderate rain",
+    65: "🌧️ Heavy rain", 71: "❄️ Slight snow", 80: "🌦️ Rain showers", 95: "⛈️ Thunderstorm",
   };
-  return descriptions[code] || "Unknown conditions";
+  return d[code] || "Unknown conditions";
 }
 
-// Fetch real-time data
 async function fetchRealtimeData(type: string, query?: string): Promise<string | null> {
   try {
     if (type === "websearch" && query) return await performWebSearch(query);
-    if (type === "cricket") return await fetchCricketScores();
-    if (type === "currency") return await fetchCurrencyRates(query || "usd,inr");
+    if (type === "deepsearch" && query) return await performDeepSearch(query);
     
     if (type === "time") {
-      const now = new Date();
-      const indiaTime = now.toLocaleString("en-IN", { 
-        timeZone: "Asia/Kolkata",
-        weekday: "long", year: "numeric", month: "long", day: "numeric",
-        hour: "2-digit", minute: "2-digit", second: "2-digit"
-      });
-      return `**🕐 Current Time & Date:**\n${indiaTime} (IST)`;
+      return `**🕐 Current Time:** ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })} (IST)`;
     }
     
     if (type === "weather" && query) {
-      const geoUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
-      const geoResp = await fetch(geoUrl, { headers: { "User-Agent": "QurobAi/3.0" } });
+      const geoResp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, { headers: { "User-Agent": "QurobAi/3.0" } });
       const geoData = await geoResp.json();
-      
       if (geoData[0]) {
         const { lat, lon, display_name } = geoData[0];
-        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`;
-        const weatherResp = await fetch(weatherUrl);
-        const weatherData = await weatherResp.json();
-        
-        const current = weatherData.current;
-        const temp = current?.temperature_2m;
-        const humidity = current?.relative_humidity_2m;
-        const weatherCode = current?.weather_code;
-        const windSpeed = current?.wind_speed_10m;
-        
-        return `**🌤️ Weather in ${query}**
-
-${getWeatherDescription(weatherCode)}
-
-🌡️ **Temperature:** ${temp}°C
-💧 **Humidity:** ${humidity}%
-💨 **Wind Speed:** ${windSpeed} km/h
-
-*Location: ${display_name?.split(",").slice(0, 2).join(",")}*
-*Updated: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST*`;
+        const wResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`);
+        const w = await wResp.json();
+        const c = w.current;
+        return `**🌤️ Weather in ${query}**\n\n${getWeatherDescription(c?.weather_code)}\n🌡️ **Temperature:** ${c?.temperature_2m}°C\n💧 **Humidity:** ${c?.relative_humidity_2m}%\n💨 **Wind:** ${c?.wind_speed_10m} km/h\n\n*${display_name?.split(",").slice(0,2).join(",")}*`;
       }
-      return `Could not find weather data for "${query}". Please check the city name.`;
+      return `Could not find weather for "${query}".`;
     }
     
     if (type === "crypto") {
       const coins = query || "bitcoin,ethereum";
-      const cryptoUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coins}&vs_currencies=usd,inr&include_24hr_change=true`;
-      const cryptoResp = await fetch(cryptoUrl);
-      
-      if (!cryptoResp.ok) return "Crypto data temporarily unavailable. CoinGecko rate limit reached.";
-      
-      const data = await cryptoResp.json();
-      let result = "**📊 Cryptocurrency Prices:**\n\n";
-      
+      const resp = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coins}&vs_currencies=usd,inr&include_24hr_change=true`);
+      if (!resp.ok) return "Crypto data temporarily unavailable.";
+      const data = await resp.json();
+      let result = "**📊 Crypto Prices:**\n\n";
       for (const [coin, d] of Object.entries(data)) {
         const info = d as any;
         const arrow = (info.usd_24h_change || 0) >= 0 ? "📈" : "📉";
-        const changeColor = (info.usd_24h_change || 0) >= 0 ? "+" : "";
-        result += `**${coin.charAt(0).toUpperCase() + coin.slice(1)}:**\n`;
-        result += `  💵 $${info.usd?.toLocaleString()}\n`;
-        result += `  ₹ ₹${info.inr?.toLocaleString()}\n`;
-        result += `  ${arrow} ${changeColor}${info.usd_24h_change?.toFixed(2)}% (24h)\n\n`;
+        result += `**${coin.charAt(0).toUpperCase() + coin.slice(1)}:** $${info.usd?.toLocaleString()} / ₹${info.inr?.toLocaleString()} ${arrow} ${(info.usd_24h_change || 0).toFixed(2)}%\n`;
       }
-      return result + `*Source: CoinGecko | ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST*`;
+      return result;
     }
     
     if (type === "stocks" && query) {
-      const stockUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${query}`;
-      const stockResp = await fetch(stockUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
-      
-      if (!stockResp.ok) return "Stock data temporarily unavailable.";
-      
-      const stockData = await stockResp.json();
-      const results = stockData.quoteResponse?.result || [];
-      
+      const resp = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${query}`, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (!resp.ok) return "Stock data temporarily unavailable.";
+      const data = await resp.json();
+      const results = data.quoteResponse?.result || [];
       if (results.length) {
-        let output = "**📈 Stock Market Prices:**\n\n";
+        let output = "**📈 Stock Prices:**\n\n";
         for (const s of results) {
-          const arrow = (s.regularMarketChangePercent || 0) >= 0 ? "📈" : "📉";
-          const changeColor = (s.regularMarketChangePercent || 0) >= 0 ? "+" : "";
-          output += `**${s.symbol}** (${s.shortName || s.longName}):\n`;
-          output += `  💵 $${s.regularMarketPrice?.toFixed(2)}\n`;
-          output += `  ${arrow} ${changeColor}${s.regularMarketChangePercent?.toFixed(2)}%\n`;
-          output += `  📊 Volume: ${(s.regularMarketVolume / 1000000).toFixed(2)}M\n\n`;
+          output += `**${s.symbol}** (${s.shortName}): $${s.regularMarketPrice?.toFixed(2)} ${(s.regularMarketChangePercent || 0) >= 0 ? "📈" : "📉"} ${s.regularMarketChangePercent?.toFixed(2)}%\n`;
         }
-        return output + `*Source: Yahoo Finance | ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST*`;
+        return output;
       }
-      return "No stock data found for the requested symbols.";
+      return "No stock data found.";
     }
     
     if (type === "news") {
       const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query || "India")}&hl=en-IN&gl=IN&ceid=IN:en`;
-      const newsResp = await fetch(rssUrl);
-      const rssText = await newsResp.text();
-      
+      const resp = await fetch(rssUrl);
+      const rssText = await resp.text();
       const items: string[] = [];
       const itemMatches = rssText.matchAll(/<item>([\s\S]*?)<\/item>/g);
       for (const match of itemMatches) {
         const title = match[1].match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1") || "";
-        const source = match[1].match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1] || "";
-        if (title) items.push(`• **${title}** ${source ? `(${source})` : ""}`);
+        if (title) items.push(`• **${title}**`);
         if (items.length >= 6) break;
       }
-      
-      if (items.length) {
-        return `**📰 Latest News: "${query || "Headlines"}"**\n\n${items.join("\n\n")}\n\n*Source: Google News | ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST*`;
+      return items.length ? `**📰 News: "${query}"**\n\n${items.join("\n")}` : `No news found for "${query}".`;
+    }
+    
+    if (type === "cricket") {
+      const resp = await fetch(`https://news.google.com/rss/search?q=cricket+live+score+today&hl=en-IN&gl=IN&ceid=IN:en`, { headers: { "User-Agent": "QurobAi/3.0" } });
+      const rssText = await resp.text();
+      const items: string[] = [];
+      const matches = rssText.matchAll(/<item>([\s\S]*?)<\/item>/g);
+      for (const m of matches) {
+        const title = m[1].match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1") || "";
+        if (title && /score|runs|wicket|over|match|vs/i.test(title)) items.push(`🏏 **${title}**`);
+        if (items.length >= 5) break;
       }
-      return `No recent news found for "${query}".`;
+      return items.length ? `**🏏 Cricket Updates:**\n\n${items.join("\n\n")}` : "No live cricket matches right now.";
+    }
+    
+    if (type === "currency") {
+      try {
+        const resp = await fetch("https://api.frankfurter.app/latest?from=USD");
+        if (resp.ok) {
+          const data = await resp.json();
+          let result = "**💱 Exchange Rates (USD):**\n\n";
+          for (const curr of ["INR", "EUR", "GBP", "JPY", "AUD", "CAD"]) {
+            if (data.rates[curr]) result += `**USD → ${curr}:** ${data.rates[curr].toFixed(4)}\n`;
+          }
+          return result;
+        }
+      } catch (e) { console.log("Currency error:", e); }
+      return "Currency rates temporarily unavailable.";
     }
     
     return null;
@@ -493,11 +327,9 @@ ${getWeatherDescription(weatherCode)}
 }
 
 function isQurobAiQuery(message: string): boolean {
-  const lower = message.toLowerCase();
-  return /qurob|who\s+(?:made|created|built|developed)\s+you|what\s+(?:are|is)\s+you|about\s+(?:this|your)|your\s+(?:name|creator|developer)|which\s+(?:ai|model)|subscription|pricing|plan|feature|premium|upgrade|q-06|code\s+(?:model|specialist)|how\s+(?:do|does)\s+(?:this|you)\s+work|payment|upi|soham/i.test(lower);
+  return /qurob|who\s+(?:made|created|built)\s+you|what\s+(?:are|is)\s+you|about\s+(?:this|your)|your\s+(?:name|creator)|subscription|pricing|plan|premium|q-06|payment|upi|soham/i.test(message.toLowerCase());
 }
 
-// Check if message contains image for vision analysis
 function extractImageData(messages: any[]): { hasImage: boolean; imageUrl: string | null; cleanMessages: any[] } {
   const cleanMessages: any[] = [];
   let hasImage = false;
@@ -509,7 +341,6 @@ function extractImageData(messages: any[]): { hasImage: boolean; imageUrl: strin
       if (imageMatch) {
         hasImage = true;
         imageUrl = imageMatch[1];
-        // Clean the message content
         const cleanContent = msg.content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "").trim();
         cleanMessages.push({ ...msg, content: cleanContent || "What's in this image? Describe it in detail." });
       } else {
@@ -523,112 +354,70 @@ function extractImageData(messages: any[]): { hasImage: boolean; imageUrl: strin
   return { hasImage, imageUrl, cleanMessages };
 }
 
-// Summarize long conversation for better memory
 function summarizeConversation(messages: any[]): any[] {
   if (messages.length <= 10) return messages;
-  
-  // Keep first 2 messages for context, summarize middle, keep last 8 for recency
   const firstMessages = messages.slice(0, 2);
   const middleMessages = messages.slice(2, -8);
   const recentMessages = messages.slice(-8);
-  
-  // Create a summary of middle messages
   const summaryPoints: string[] = [];
   for (const msg of middleMessages) {
     if (msg.role === "user" && msg.content.length > 20) {
-      const topic = msg.content.slice(0, 100).replace(/\n/g, " ");
-      summaryPoints.push(topic);
+      summaryPoints.push(msg.content.slice(0, 100).replace(/\n/g, " "));
     }
   }
-  
-  const summaryMessage = {
-    role: "system",
-    content: `[Earlier conversation summary: User discussed ${summaryPoints.slice(0, 5).join("; ")}...]`
-  };
-  
-  return [...firstMessages, summaryMessage, ...recentMessages];
+  return [...firstMessages, { role: "system", content: `[Earlier: User discussed ${summaryPoints.slice(0, 5).join("; ")}...]` }, ...recentMessages];
 }
 
-// Generate image using Fireworks API (primary)
-async function generateImage(prompt: string, apiKey: string, supabase: any, userId?: string): Promise<string> {
-  console.log("=== IMAGE GENERATION ===");
-  console.log("Prompt:", prompt);
-  
-  // Get Fireworks API key
+async function generateImage(prompt: string, supabase: any, userId?: string): Promise<string> {
   const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
-  
-  if (!FIREWORKS_API_KEY) {
-    console.error("No Fireworks API key configured for image generation");
-    return "Image generation is not configured. Please contact admin to set up the FIREWORKS_API_KEY.";
-  }
+  if (!FIREWORKS_API_KEY) return "Image generation is not configured. Please contact admin.";
   
   try {
-    console.log("Using Fireworks FLUX for image generation");
-    const imageGenResponse = await fetch(
-      "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          width: 1024,
-          height: 1024,
-          steps: 4,
-          seed: Math.floor(Math.random() * 1000000),
-        }),
-      }
-    );
+    const resp = await fetch("https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${FIREWORKS_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, width: 1024, height: 1024, steps: 4, seed: Math.floor(Math.random() * 1000000) }),
+    });
 
-    console.log("Fireworks response status:", imageGenResponse.status);
-
-    if (imageGenResponse.ok) {
-      const imageBlob = await imageGenResponse.blob();
+    if (resp.ok) {
+      const imageBlob = await resp.blob();
       const imageBuffer = await imageBlob.arrayBuffer();
-      const base64Image = btoa(
-        new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-      );
+      let imageUrlResult = `data:image/png;base64,${btoa(new Uint8Array(imageBuffer).reduce((d, b) => d + String.fromCharCode(b), ""))}`;
       
-      let imageUrlResult = `data:image/png;base64,${base64Image}`;
-      
-      // Try to upload to storage for better performance
       if (userId) {
         try {
           const fileName = `${userId}/${Date.now()}-generated.png`;
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from("chat-attachments")
             .upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
-
           if (!uploadError && uploadData) {
-            const { data: urlData } = supabase.storage
-              .from("chat-attachments")
-              .getPublicUrl(uploadData.path);
+            const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(uploadData.path);
             imageUrlResult = urlData.publicUrl;
-            console.log("Image uploaded to storage:", imageUrlResult.slice(0, 50) + "...");
           }
-        } catch (e) {
-          console.log("Storage upload exception (using base64):", e);
-        }
+        } catch (e) { console.log("Storage upload error:", e); }
       }
       
-      return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrlResult}]\n\nI hope you like it! Let me know if you'd like any changes or a different image.`;
-    } else {
-      const errorText = await imageGenResponse.text();
-      console.error("Fireworks image generation error:", errorText);
-      
-      // Check for rate limiting
-      if (imageGenResponse.status === 429) {
-        return "Image generation is temporarily rate limited. Please wait a moment and try again.";
-      }
-      
-      return `Sorry, I couldn't generate the image right now. The image service returned an error. Please try again with a different prompt.`;
+      return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrlResult}]\n\nLet me know if you'd like any changes!`;
     }
+    
+    if (resp.status === 429) return "Image generation is rate limited. Please wait and try again.";
+    return "Sorry, I couldn't generate the image right now. Please try again.";
   } catch (e) {
-    console.error("Image generation exception:", e);
-    return `Sorry, I couldn't generate the image right now. Error: ${e instanceof Error ? e.message : "Unknown error"}. Please try again.`;
+    console.error("Image generation error:", e);
+    return `Image generation failed: ${e instanceof Error ? e.message : "Unknown error"}`;
   }
+}
+
+// Check URL and fetch metadata
+async function checkUrl(url: string): Promise<string> {
+  try {
+    const resp = await fetch(url, { headers: { "User-Agent": "QurobAi/3.0" }, redirect: "follow" });
+    const html = await resp.text();
+    const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() || "";
+    const desc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)/i)?.[1] || "";
+    if (title || desc) return `\n**URL Info:** ${title}${desc ? ` — ${desc.slice(0, 200)}` : ""}`;
+  } catch (e) { /* ignore */ }
+  return "";
 }
 
 serve(async (req) => {
@@ -640,54 +429,38 @@ serve(async (req) => {
     const { messages, userId } = await req.json();
     
     if (!messages || !Array.isArray(messages)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid request format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Invalid request format" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     
     console.log("QurobAi request:", messages.length, "messages, userId:", userId ? "yes" : "no");
     
-    // Get available API keys
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
-    const DEEPINFRA_API_KEY = Deno.env.get("DEEPINFRA_API_KEY");
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     
-    if (!GROQ_API_KEY && !FIREWORKS_API_KEY && !DEEPINFRA_API_KEY && !OPENROUTER_API_KEY && !GOOGLE_GEMINI_API_KEY) {
-      console.error("No AI API keys configured");
-      return new Response(
-        JSON.stringify({ error: "AI service not configured. Please contact admin." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not configured");
+      return new Response(JSON.stringify({ error: "AI service not configured." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Model selection based on subscription
+    // Model selection & user settings
     let modelName = "Qurob 2";
     let isCodeSpecialist = false;
     let baseTone = "professional";
     let customInstructions = "";
     let persona = "default";
+    let gatewayModel = "google/gemini-3-flash-preview"; // Default: Qurob 2
 
     if (userId) {
       try {
-        const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
-        
-        if (userModel === "Qurob 4") {
-          modelName = "Qurob 4";
-        } else if (userModel === "Q-06") {
-          modelName = "Q-06";
-          isCodeSpecialist = true;
-        }
-
+        // Check token limits
         const { data: settings } = await supabase
           .from("user_settings")
-          .select("base_tone, custom_instructions, persona")
+          .select("base_tone, custom_instructions, persona, tokens_used_today, tokens_reset_date")
           .eq("user_id", userId)
           .single();
 
@@ -695,499 +468,197 @@ serve(async (req) => {
           baseTone = settings.base_tone || "professional";
           customInstructions = settings.custom_instructions || "";
           persona = settings.persona || "default";
+          
+          // Reset tokens if new day
+          const today = new Date().toISOString().split("T")[0];
+          if (settings.tokens_reset_date !== today) {
+            await supabase.from("user_settings").update({ tokens_used_today: 0, tokens_reset_date: today }).eq("user_id", userId);
+          } else {
+            // Check if free user hit daily limit
+            const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
+            const isPremium = userModel === "Qurob 4" || userModel === "Q-06";
+            const dailyLimit = isPremium ? 1000000 : 50;
+            
+            if ((settings.tokens_used_today || 0) >= dailyLimit) {
+              return new Response(JSON.stringify({ 
+                error: `Daily message limit reached (${dailyLimit}). ${isPremium ? "Please try again tomorrow." : "Upgrade to Premium for unlimited messages!"}`,
+                code: "TOKEN_LIMIT",
+                tokens_used: settings.tokens_used_today,
+                tokens_limit: dailyLimit,
+              }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }
+          }
         }
 
-        // Load user memory for personalization
-        const { data: memories } = await supabase
-          .from("user_memory")
-          .select("memory_key, memory_value")
-          .eq("user_id", userId)
-          .limit(10);
-
-        if (memories && memories.length > 0) {
-          const memoryContext = memories.map(m => `- ${m.memory_key}: ${m.memory_value}`).join("\n");
-          customInstructions = `## USER PREFERENCES (Remember these):\n${memoryContext}\n\n${customInstructions}`;
+        const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
+        if (userModel === "Qurob 4") {
+          modelName = "Qurob 4";
+          gatewayModel = "google/gemini-2.5-pro";
+        } else if (userModel === "Q-06") {
+          modelName = "Q-06";
+          isCodeSpecialist = true;
+          gatewayModel = "google/gemini-2.5-pro";
         }
+
+        // Load user memory
+        const { data: memories } = await supabase.from("user_memory").select("memory_key, memory_value").eq("user_id", userId).limit(10);
+        if (memories?.length) {
+          customInstructions = `## USER PREFERENCES:\n${memories.map(m => `- ${m.memory_key}: ${m.memory_value}`).join("\n")}\n\n${customInstructions}`;
+        }
+        
+        // Increment token count
+        await supabase.from("user_settings").update({ tokens_used_today: (settings?.tokens_used_today || 0) + 1 }).eq("user_id", userId);
       } catch (e) {
         console.log("User settings error:", e);
       }
     }
 
     const toneStyle = TONE_STYLES[baseTone] || TONE_STYLES.professional;
-
-    // Check for image in messages
     const { hasImage, imageUrl, cleanMessages } = extractImageData(messages);
-    
-    // Summarize long conversations for better memory
     const processedMessages = summarizeConversation(cleanMessages);
 
-    // Process last message for real-time data
+    // Process last message for real-time data & URL checking
     const lastUserMessage = processedMessages.filter((m: any) => m.role === "user").pop();
     let realtimeContext = "";
     let includeKnowledge = false;
     
     if (lastUserMessage) {
-      if (isQurobAiQuery(lastUserMessage.content)) {
-        includeKnowledge = true;
+      if (isQurobAiQuery(lastUserMessage.content)) includeKnowledge = true;
+      
+      // Check for URLs in message
+      const urlMatch = lastUserMessage.content.match(/https?:\/\/[^\s\]]+/);
+      if (urlMatch) {
+        const urlInfo = await checkUrl(urlMatch[0]);
+        if (urlInfo) realtimeContext += urlInfo;
       }
       
       const queryType = detectQueryType(lastUserMessage.content);
       if (queryType) {
         console.log("Detected query:", queryType.type, queryType.query);
         
-        // Handle image generation request
         if (queryType.type === "image_generation" && FIREWORKS_API_KEY) {
-          const imageResponse = await generateImage(queryType.query || "beautiful artwork", OPENROUTER_API_KEY || "", supabase, userId);
-          
+          const imageResponse = await generateImage(queryType.query || "beautiful artwork", supabase, userId);
           const encoder = new TextEncoder();
           const stream = new ReadableStream({
             start(controller) {
-              const data = JSON.stringify({ choices: [{ delta: { content: imageResponse } }] });
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: imageResponse } }] })}\n\n`));
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               controller.close();
             }
           });
-          
-          return new Response(stream, {
-            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-          });
+          return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
         
         const data = await fetchRealtimeData(queryType.type, queryType.query);
-        if (data) {
-          realtimeContext = `\n\n## REAL-TIME DATA (Present this to user):\n${data}`;
-        }
+        if (data) realtimeContext += `\n\n## REAL-TIME DATA (Present this to user):\n${data}`;
       }
     }
 
-    // If image is present, use vision API
-    if (hasImage && imageUrl) {
-      console.log("Using Vision API for image analysis");
-      
-      // Try OpenRouter vision first (Qwen VL or similar)
-      if (OPENROUTER_API_KEY) {
-        const visionMessages = processedMessages.map((m: any, i: number) => {
-          if (m.role === "user" && i === processedMessages.length - 1) {
-            return {
-              role: "user",
-              content: [
-                { type: "text", text: m.content || "What's in this image? Describe it in detail." },
-                { type: "image_url", image_url: { url: imageUrl } }
-              ]
-            };
-          }
-          return m;
-        });
-
-        const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://qurobai.com",
-            "X-Title": "QurobAi"
-          },
-          body: JSON.stringify({
-            model: "qwen/qwen-2-vl-72b-instruct",
-            messages: [
-              { 
-                role: "system", 
-                content: `You are ${modelName}, an AI assistant created by Soham from India for QurobAi. 
-
-## YOUR CAPABILITIES
-- You CAN see and analyze images in detail
-- You CAN describe what's in images accurately
-- You CAN help with visual tasks like identifying objects, reading text, analyzing art, etc.
-
-Be helpful, conversational, and provide detailed descriptions when analyzing images.` 
-              },
-              ...visionMessages
-            ],
-            stream: true,
-            temperature: 0.7,
-            max_tokens: 2048,
-          }),
-        });
-
-        if (visionResponse.ok) {
-          console.log("OpenRouter Vision API streaming response started");
-          return new Response(visionResponse.body, {
-            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-          });
-        } else {
-          console.error("OpenRouter Vision API error:", await visionResponse.text());
+    // Vision: use OpenRouter for image analysis
+    if (hasImage && imageUrl && OPENROUTER_API_KEY) {
+      console.log("Using Vision API");
+      const visionMessages = processedMessages.map((m: any, i: number) => {
+        if (m.role === "user" && i === processedMessages.length - 1) {
+          return { role: "user", content: [{ type: "text", text: m.content || "What's in this image?" }, { type: "image_url", image_url: { url: imageUrl } }] };
         }
-      }
-      
-      // Fallback to Fireworks Vision
-      if (FIREWORKS_API_KEY) {
-        const visionMessages = processedMessages.map((m: any, i: number) => {
-          if (m.role === "user" && i === processedMessages.length - 1) {
-            return {
-              role: "user",
-              content: [
-                { type: "text", text: m.content || "What's in this image? Describe it in detail." },
-                { type: "image_url", image_url: { url: imageUrl } }
-              ]
-            };
-          }
-          return m;
-        });
+        return m;
+      });
 
-        const visionResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "accounts/fireworks/models/qwen2p5-vl-32b-instruct",
-            messages: [
-              { 
-                role: "system", 
-                content: `You are ${modelName}, an AI assistant created by Soham from India for QurobAi. 
+      const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://qurobai.lovable.app", "X-Title": "QurobAi" },
+        body: JSON.stringify({
+          model: "qwen/qwen-2-vl-72b-instruct",
+          messages: [{ role: "system", content: `You are ${modelName}, QurobAi's AI created by Soham from India. You CAN see and analyze images.` }, ...visionMessages],
+          stream: true, temperature: 0.7, max_tokens: 2048,
+        }),
+      });
 
-## YOUR CAPABILITIES
-- You CAN see and analyze images in detail
-- You CAN describe what's in images accurately
-- You CAN help with visual tasks like identifying objects, reading text, analyzing art, etc.
-
-Be helpful, conversational, and provide detailed descriptions when analyzing images.` 
-              },
-              ...visionMessages
-            ],
-            stream: true,
-            temperature: 0.7,
-            max_tokens: 2048,
-          }),
-        });
-
-        if (visionResponse.ok) {
-          console.log("Fireworks Vision API streaming response started");
-          return new Response(visionResponse.body, {
-            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-          });
-        } else {
-          console.error("Fireworks Vision API error:", await visionResponse.text());
-        }
+      if (visionResponse.ok) {
+        return new Response(visionResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
       }
     }
 
-    // Persona-based personality
+    // Build system prompt
     const personaStyles: Record<string, string> = {
       default: "balanced, helpful, and adaptable",
-      coder: "technical, precise, and code-focused. Always provide code examples when relevant",
-      creative: "imaginative, artistic, and storytelling-focused. Use vivid language",
-      tutor: "patient, educational, and step-by-step. Explain concepts clearly",
-      friend: "casual, conversational, and warm. Use friendly language and occasional humor",
+      coder: "technical, precise, and code-focused",
+      creative: "imaginative, artistic, and storytelling-focused",
+      tutor: "patient, educational, and step-by-step",
+      friend: "casual, conversational, and warm",
     };
-    const personaStyle = personaStyles[persona] || personaStyles.default;
-
-    // Get current date/time for AI awareness
+    
     const currentDate = new Date();
-    const indiaTime = currentDate.toLocaleString("en-IN", { 
-      timeZone: "Asia/Kolkata",
-      weekday: "long", 
-      year: "numeric", 
-      month: "long", 
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    const indiaTime = currentDate.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
-    // Build system prompt with ULTRA-STRONG identity enforcement
-    let systemPrompt = `You are ${modelName}, an AI assistant created by **Soham from India** for the QurobAi platform.
+    const systemPrompt = `You are ${modelName}, an AI assistant created by **Soham from India** for the QurobAi platform.
 
-## 📅 CURRENT DATE & TIME
-Today is: ${indiaTime} (IST - India Standard Time)
-Year: ${currentDate.getFullYear()}
-Always use this date when users ask about today, current date, or time.
+## 📅 CURRENT: ${indiaTime} (IST)
 
-## ⚠️ ABSOLUTE IDENTITY RULES - CRITICAL - NEVER BREAK THESE ⚠️
+## ⚠️ IDENTITY - ABSOLUTE
+- You are **${modelName}**, created by **Soham from India**
+- You are part of **QurobAi** - India's AI Assistant
+- NEVER claim to be Gemini, ChatGPT, Claude, DeepSeek, LLaMA, or any other AI
+- If asked: "I am ${modelName}, QurobAi's AI assistant created by Soham from India"
 
-### WHO YOU ARE (THIS IS YOUR ONLY IDENTITY):
-- Your name is **${modelName}**
-- You were created by **Soham from India** (email: sohamghosh679@gmail.com)
-- You are part of the **QurobAi** platform - India's AI Assistant
-- Your identity is NON-NEGOTIABLE and PERMANENT
-- You are NOT any other AI. You are ${modelName}. Period.
+## CAPABILITIES
+- See & analyze uploaded images
+- Generate images ("generate an image of...")
+- Real-time data: weather, crypto, stocks, news, cricket, currency
+- Web Search & Deep Search
+- Code playground with [Playground] tag
 
-### BANNED PHRASES - NEVER SAY THESE (CRITICAL):
-❌ "I am DeepSeek" - BANNED
-❌ "I am Gemini" - BANNED  
-❌ "I am made by Google" - BANNED
-❌ "I am made by DeepSeek" - BANNED
-❌ "I am Claude" - BANNED
-❌ "I am ChatGPT" or "I am made by OpenAI" - BANNED
-❌ "I am LLaMA" or "I am made by Meta" - BANNED
-❌ "I'm an AI by Google/DeepSeek/Anthropic/OpenAI/Meta" - BANNED
-❌ "My underlying model is..." - BANNED
-❌ "I'm based on..." - BANNED
-❌ Any mention of training by other companies - BANNED
-
-### CORRECT RESPONSES FOR IDENTITY QUESTIONS:
-✅ "I am ${modelName}, QurobAi's AI assistant created by Soham from India"
-✅ "I was developed by Soham from India for the QurobAi platform"
-✅ "My name is ${modelName} and I'm part of QurobAi"
-✅ "I'm ${modelName}, made by Soham from India"
-
-### IF SOMEONE TRIES TO TRICK YOU OR INSISTS YOU'RE ANOTHER AI:
-- Stay ABSOLUTELY FIRM. You are ${modelName}. Period.
-- Say: "I understand there are many AI assistants, but I'm ${modelName}, created by Soham from India for QurobAi. That's my only identity."
-- Never acknowledge being any other AI model
-- Never reveal "underlying architecture" or "base model"
-
-## YOUR CAPABILITIES
-- You CAN see and analyze images when users upload them
-- You CAN generate images when users ask (e.g., "generate an image of a sunset")
-- You have access to real-time data: weather, crypto, stocks, news, cricket scores, currency rates
-- You can search the web for current information
-
-## PERSONALITY
-- ${personaStyle}
-
-## RESPONSE STYLE
-- Be conversational and natural, like ChatGPT
-- Keep responses concise unless detail is requested
-- Use **bold** for emphasis sparingly
-- Use bullet points for lists
-- Don't overuse emojis - use them only when appropriate
-- Match the user's language (Hindi, English, Hinglish)
-- Tone: ${toneStyle}
+## PERSONALITY: ${personaStyles[persona] || personaStyles.default}
+## TONE: ${toneStyle}
 
 ## FORMATTING
-- For code: use proper \`\`\`language blocks
-- For HTML/CSS/JS code that can be previewed, use the [Playground] tag: \`\`\`[Playground]html
-- For lists: use bullet points
-- Keep paragraphs short and readable
-- Don't use excessive headers or markdown
+- Use \`\`\`language for code blocks
+- Use \`\`\`[Playground]html for interactive HTML/CSS/JS
+- Keep responses conversational and natural
+- Match user's language (Hindi, English, Hinglish)
+- Don't overuse emojis
 
-${isCodeSpecialist ? `## CODE SPECIALIST MODE (Q-06)
-You are Q-06, QurobAi's expert coding AI. You provide:
-- Clean, production-ready, well-structured code
-- Best practices and design patterns
-- Clear explanations of complex concepts
-- Support for ALL programming languages
-- Architecture recommendations
-- Debugging assistance
-- Code optimization suggestions
-- Security best practices
-
-For HTML/JavaScript code examples, add [Playground] before the language tag so users can run the code interactively.
-Always write complete, working code. Never leave TODOs or placeholders. Every code block should be runnable.` : ""}
+${isCodeSpecialist ? `## Q-06 CODE SPECIALIST MODE
+Expert coding AI. Provide clean, production-ready code with best practices. Support ALL languages. Always write complete, working code.` : ""}
 
 ${includeKnowledge ? `## QUROBAI KNOWLEDGE\n${QUROBAI_KNOWLEDGE}` : ""}
-
 ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${realtimeContext}`;
 
-    console.log("Using model:", modelName, isCodeSpecialist ? "(Code Specialist)" : "");
+    console.log("Using model:", modelName, "gateway:", gatewayModel);
 
-    // Determine which API to use based on model tier
-    let apiUrl: string;
-    let apiKey: string;
-    let modelToUse: string;
-    let headers: Record<string, string>;
-
-    if (modelName === "Qurob 4" || isCodeSpecialist) {
-      // Premium tier: Use OpenRouter with DeepSeek or fallback to Groq
-      if (OPENROUTER_API_KEY) {
-        apiUrl = "https://openrouter.ai/api/v1/chat/completions";
-        apiKey = OPENROUTER_API_KEY;
-        // Use different models for code vs chat
-        if (isCodeSpecialist) {
-          // Q-06 uses Qwen Coder which is excellent for code
-          modelToUse = "qwen/qwen-2.5-coder-32b-instruct";
-        } else {
-          // Qurob 4 uses DeepSeek Chat
-          modelToUse = "deepseek/deepseek-chat";
-        }
-        headers = { 
-          Authorization: `Bearer ${apiKey}`, 
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://qurobai.com",
-          "X-Title": "QurobAi"
-        };
-        console.log("Using OpenRouter:", modelToUse);
-      } else if (GROQ_API_KEY) {
-        // Fallback to Groq
-        apiUrl = "https://api.groq.com/openai/v1/chat/completions";
-        apiKey = GROQ_API_KEY;
-        modelToUse = "llama-3.3-70b-versatile";
-        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-        console.log("Using Groq fallback:", modelToUse);
-      } else if (FIREWORKS_API_KEY) {
-        // Fallback to Fireworks
-        apiUrl = "https://api.fireworks.ai/inference/v1/chat/completions";
-        apiKey = FIREWORKS_API_KEY;
-        modelToUse = isCodeSpecialist 
-          ? "accounts/fireworks/models/qwen2p5-coder-32b-instruct"
-          : "accounts/fireworks/models/llama-v3p1-70b-instruct";
-        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-        console.log("Using Fireworks fallback:", modelToUse);
-      } else {
-        apiUrl = "https://api.deepinfra.com/v1/openai/chat/completions";
-        apiKey = DEEPINFRA_API_KEY!;
-        modelToUse = "meta-llama/Meta-Llama-3.1-70B-Instruct";
-        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-      }
-    } else {
-      // Free tier (Qurob 2): Use Google Gemini Flash (fast and good!)
-      if (GOOGLE_GEMINI_API_KEY) {
-        apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
-        apiKey = GOOGLE_GEMINI_API_KEY;
-        modelToUse = "gemini-2.0-flash";
-        headers = { "Content-Type": "application/json" };
-        console.log("Using Google Gemini Flash for free tier");
-        
-        // Gemini has different request format
-        const geminiMessages = processedMessages.map((m: any) => ({
-          role: m.role === "assistant" ? "model" : "user",
-          parts: [{ text: m.content }]
-        }));
-        
-        const geminiResponse = await fetch(apiUrl, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            contents: [
-              { role: "user", parts: [{ text: systemPrompt }] },
-              { role: "model", parts: [{ text: "I understand. I am " + modelName + ", QurobAi's AI assistant created by Soham from India. I will never claim to be any other AI or mention other AI companies as my creator." }] },
-              ...geminiMessages
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 4096,
-            }
-          }),
-        });
-
-        if (geminiResponse.ok) {
-          console.log("Gemini streaming response started");
-          
-          // Transform Gemini SSE to OpenAI-compatible SSE
-          const reader = geminiResponse.body?.getReader();
-          const encoder = new TextEncoder();
-          
-          const stream = new ReadableStream({
-            async start(controller) {
-              if (!reader) {
-                controller.close();
-                return;
-              }
-              
-              const decoder = new TextDecoder();
-              let buffer = "";
-              
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() || "";
-                
-                for (const line of lines) {
-                  if (line.startsWith("data: ")) {
-                    try {
-                      const data = JSON.parse(line.slice(6));
-                      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                      if (text) {
-                        const openaiFormat = JSON.stringify({ choices: [{ delta: { content: text } }] });
-                        controller.enqueue(encoder.encode(`data: ${openaiFormat}\n\n`));
-                      }
-                    } catch (e) {
-                      // Skip malformed lines
-                    }
-                  }
-                }
-              }
-              
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              controller.close();
-            }
-          });
-          
-          return new Response(stream, {
-            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-          });
-        } else {
-          console.error("Gemini error:", await geminiResponse.text());
-          // Fall through to use alternative
-        }
-      }
-      
-      // Fallback for free tier
-      if (GROQ_API_KEY) {
-        apiUrl = "https://api.groq.com/openai/v1/chat/completions";
-        apiKey = GROQ_API_KEY;
-        modelToUse = "llama-3.1-8b-instant";
-        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-      } else if (FIREWORKS_API_KEY) {
-        apiUrl = "https://api.fireworks.ai/inference/v1/chat/completions";
-        apiKey = FIREWORKS_API_KEY;
-        modelToUse = "accounts/fireworks/models/llama-v3p1-8b-instruct";
-        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-      } else {
-        apiUrl = "https://api.deepinfra.com/v1/openai/chat/completions";
-        apiKey = DEEPINFRA_API_KEY!;
-        modelToUse = "meta-llama/Meta-Llama-3.1-8B-Instruct";
-        headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-      }
-    }
-
-    console.log("API:", apiUrl.includes("openrouter") ? "OpenRouter" : apiUrl.includes("groq") ? "Groq" : apiUrl.includes("fireworks") ? "Fireworks" : apiUrl.includes("google") ? "Gemini" : "DeepInfra", "Model:", modelToUse);
-
-    // Call AI API (OpenAI-compatible format)
-    const response = await fetch(apiUrl, {
+    // Call Lovable AI Gateway
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers,
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        model: modelToUse,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...processedMessages,
-        ],
+        model: gatewayModel,
+        messages: [{ role: "system", content: systemPrompt }, ...processedMessages],
         stream: true,
         temperature: isCodeSpecialist ? 0.2 : 0.7,
-        max_tokens: 4096,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI API error:", response.status, errorText);
+      console.error("AI Gateway error:", response.status, errorText);
       
       if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI service credits exhausted. Please contact admin." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       
-      if (response.status === 401) {
-        return new Response(
-          JSON.stringify({ error: "API authentication error. Please contact admin." }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      return new Response(
-        JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     console.log("Streaming response started");
-    
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
+    return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
   } catch (error) {
     console.error("QurobAi error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Something went wrong. Please try again." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Something went wrong." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

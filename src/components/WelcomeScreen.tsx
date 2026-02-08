@@ -1,135 +1,109 @@
-import { Sparkles, Code, FileText, Lightbulb, MessageSquare, Zap, Image, Globe } from "lucide-react";
+import { Sparkles, Code, FileText, Lightbulb, Globe, Search, Image, Zap } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WelcomeScreenProps {
   onQuickAction: (prompt: string) => void;
 }
 
 const quickActions = [
-  {
-    icon: Code,
-    label: "Write Code",
-    prompt: "Help me write a React component for a responsive navigation menu",
-    color: "from-blue-500/20 to-cyan-500/20",
-    iconColor: "text-blue-400",
-  },
-  {
-    icon: FileText,
-    label: "Explain Concepts",
-    prompt: "Explain how machine learning neural networks work in simple terms",
-    color: "from-purple-500/20 to-pink-500/20",
-    iconColor: "text-purple-400",
-  },
-  {
-    icon: Lightbulb,
-    label: "Brainstorm Ideas",
-    prompt: "Give me 5 creative startup ideas using AI technology",
-    color: "from-amber-500/20 to-orange-500/20",
-    iconColor: "text-amber-400",
-  },
-  {
-    icon: Globe,
-    label: "Real-time Data",
-    prompt: "What's the current weather in Delhi and today's top news?",
-    color: "from-green-500/20 to-emerald-500/20",
-    iconColor: "text-green-400",
-  },
-];
-
-const capabilities = [
-  { icon: Zap, label: "Lightning Fast" },
-  { icon: Code, label: "Code Expert" },
-  { icon: Image, label: "Vision AI" },
-  { icon: Globe, label: "Real-time Data" },
+  { icon: "✍️", label: "Write Code", prompt: "Help me write a React component for a responsive navigation menu" },
+  { icon: "💡", label: "Brainstorm", prompt: "Give me 5 creative startup ideas using AI technology" },
+  { icon: "🔍", label: "Web Search", prompt: "[Web Search] Latest AI developments and breakthroughs" },
+  { icon: "🎨", label: "Create Image", prompt: "Generate an image of a futuristic city with flying cars at sunset" },
+  { icon: "📚", label: "Explain", prompt: "Explain how machine learning neural networks work in simple terms" },
+  { icon: "🔬", label: "Deep Search", prompt: "[Deep Search] Compare React vs Next.js for building modern web apps" },
 ];
 
 export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center py-8 px-4">
-      {/* Logo with glow effect */}
-      <motion.div 
-        className="mb-8"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/30 rounded-3xl blur-2xl animate-pulse" />
-          <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-2xl shadow-primary/30">
-            <Sparkles className="w-10 h-10 text-primary-foreground" />
-          </div>
-        </div>
-      </motion.div>
+  const { user } = useAuth();
+  const [displayName, setDisplayName] = useState("");
 
-      {/* Title */}
+  useEffect(() => {
+    if (user) {
+      supabase.from("profiles").select("display_name").eq("user_id", user.id).single()
+        .then(({ data }) => {
+          setDisplayName(data?.display_name || user.email?.split("@")[0] || "");
+        });
+    }
+  }, [user]);
+
+  const firstName = displayName.split(" ")[0] || "there";
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center py-4 md:py-8 px-3 md:px-4">
+      {/* Greeting */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="text-center mb-8"
+        transition={{ duration: 0.5 }}
+        className="text-center mb-6 md:mb-8"
       >
-        <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
-          <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-            Hello!
+        <h1 className="text-3xl md:text-5xl font-bold mb-2 tracking-tight">
+          <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+            Hi, {firstName}
           </span>
         </h1>
-        <p className="text-lg text-muted-foreground">
-          How can I help you today?
+        <p className="text-base md:text-lg text-muted-foreground">
+          Where should we start?
         </p>
       </motion.div>
 
-      {/* Capabilities pills */}
+      {/* Quick Actions - Pill style like Gemini */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="flex flex-wrap justify-center gap-2 mb-10"
+        transition={{ duration: 0.5, delay: 0.15 }}
+        className="w-full max-w-2xl mb-6 md:mb-8"
       >
-        {capabilities.map((cap, i) => (
-          <div
-            key={cap.label}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50 text-xs text-muted-foreground"
-          >
+        <div className="flex flex-wrap justify-center gap-2 md:gap-3">
+          {quickActions.map((action, index) => (
+            <motion.button
+              key={action.label}
+              onClick={() => onQuickAction(action.prompt)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-border/60 bg-secondary/50 hover:bg-secondary hover:border-primary/40 transition-all text-sm font-medium touch-manipulation"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
+            >
+              <span className="text-base">{action.icon}</span>
+              <span>{action.label}</span>
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Capabilities row */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="flex flex-wrap justify-center gap-3 md:gap-4 text-xs text-muted-foreground/70"
+      >
+        {[
+          { icon: Zap, label: "Lightning Fast" },
+          { icon: Code, label: "Code Expert" },
+          { icon: Image, label: "Vision & Image Gen" },
+          { icon: Globe, label: "Real-time Data" },
+          { icon: Search, label: "Web & Deep Search" },
+        ].map((cap) => (
+          <div key={cap.label} className="flex items-center gap-1">
             <cap.icon className="w-3 h-3" />
             <span>{cap.label}</span>
           </div>
         ))}
       </motion.div>
 
-      {/* Quick Actions - Perplexity style cards */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-        className="w-full max-w-2xl"
-      >
-        <div className="grid sm:grid-cols-2 gap-3">
-          {quickActions.map((action, index) => (
-            <motion.button
-              key={action.label}
-              onClick={() => onQuickAction(action.prompt)}
-              className={`group relative flex items-start gap-4 p-4 rounded-xl border border-border/50 bg-gradient-to-br ${action.color} hover:border-primary/40 transition-all duration-300 text-left overflow-hidden`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className={`shrink-0 w-10 h-10 rounded-xl bg-background/80 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow`}>
-                <action.icon className={`w-5 h-5 ${action.iconColor}`} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="font-medium text-sm block mb-1">{action.label}</span>
-                <span className="text-xs text-muted-foreground line-clamp-2">{action.prompt}</span>
-              </div>
-            </motion.button>
-          ))}
-        </div>
-      </motion.div>
-
       {/* Footer */}
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-        className="text-xs text-muted-foreground/50 mt-10"
+        transition={{ duration: 0.5, delay: 0.6 }}
+        className="text-[11px] text-muted-foreground/40 mt-8 md:mt-12"
       >
         Created by Soham from India 🇮🇳
       </motion.p>

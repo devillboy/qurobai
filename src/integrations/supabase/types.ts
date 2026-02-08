@@ -496,6 +496,51 @@ export type Database = {
         }
         Relationships: []
       }
+      qurob_bots: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          icon_color: string | null
+          id: string
+          is_official: boolean | null
+          is_public: boolean | null
+          name: string
+          system_prompt: string
+          user_id: string
+          uses_count: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          icon_color?: string | null
+          id?: string
+          is_official?: boolean | null
+          is_public?: boolean | null
+          name: string
+          system_prompt: string
+          user_id: string
+          uses_count?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          icon_color?: string | null
+          id?: string
+          is_official?: boolean | null
+          is_public?: boolean | null
+          name?: string
+          system_prompt?: string
+          user_id?: string
+          uses_count?: number | null
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -588,6 +633,8 @@ export type Database = {
           persona: string | null
           preferred_model: string | null
           theme_preference: string | null
+          tokens_reset_date: string | null
+          tokens_used_today: number | null
           updated_at: string
           user_id: string
           voice_output_enabled: boolean | null
@@ -605,6 +652,8 @@ export type Database = {
           persona?: string | null
           preferred_model?: string | null
           theme_preference?: string | null
+          tokens_reset_date?: string | null
+          tokens_used_today?: number | null
           updated_at?: string
           user_id: string
           voice_output_enabled?: boolean | null
@@ -622,6 +671,8 @@ export type Database = {
           persona?: string | null
           preferred_model?: string | null
           theme_preference?: string | null
+          tokens_reset_date?: string | null
+          tokens_used_today?: number | null
           updated_at?: string
           user_id?: string
           voice_output_enabled?: boolean | null
