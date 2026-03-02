@@ -1,8 +1,9 @@
-import { ArrowLeft, Menu } from "lucide-react";
+import { ArrowLeft, Menu, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ThreeDText } from "@/components/ThreeDText";
 import { NotificationBell } from "@/components/NotificationBell";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ChatHeaderProps {
   onBack?: () => void;
@@ -21,16 +22,16 @@ export const ChatHeader = ({
     <motion.header
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50 px-3 py-2 md:hidden"
+      className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50 px-3 py-2 md:py-1.5"
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 max-w-3xl mx-auto">
         <div className="flex items-center gap-2">
           {showBackButton && onBack && (
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={onBack}
-              className="h-9 w-9 rounded-xl shrink-0"
+              className="h-9 w-9 rounded-xl shrink-0 md:hidden"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
@@ -41,17 +42,25 @@ export const ChatHeader = ({
               variant="ghost" 
               size="icon" 
               onClick={onMenuToggle}
-              className="h-9 w-9 rounded-xl shrink-0"
+              className="h-9 w-9 rounded-xl shrink-0 md:hidden"
             >
               <Menu className="w-5 h-5" />
             </Button>
           )}
         </div>
         
-        <h1 className="text-lg font-bold truncate">
-          <ThreeDText as="span" className="text-lg">
+        <h1 className="text-lg md:text-base font-bold truncate flex items-center gap-2">
+          <ThreeDText as="span" className="text-lg md:text-base">
             {title}
           </ThreeDText>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Lock className="w-3 h-3 text-muted-foreground/50" />
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              Messages encrypted in transit (TLS)
+            </TooltipContent>
+          </Tooltip>
         </h1>
         
         <NotificationBell />

@@ -64,11 +64,14 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
+          const isNetworkError = error.message === "Failed to fetch" || error.message?.includes("NetworkError") || error.message?.includes("network");
           toast({
             title: "Login Failed",
-            description: error.message === "Invalid login credentials" 
-              ? "Invalid email or password. Please try again."
-              : error.message,
+            description: isNetworkError
+              ? "Connection error. Please check your internet and try again."
+              : error.message === "Invalid login credentials" 
+                ? "Invalid email or password. Please try again."
+                : error.message,
             variant: "destructive",
           });
         } else {
@@ -80,11 +83,14 @@ const Auth = () => {
       } else {
         const { error } = await signUp(email, password, displayName);
         if (error) {
+          const isNetworkError = error.message === "Failed to fetch" || error.message?.includes("NetworkError") || error.message?.includes("network");
           toast({
             title: "Sign Up Failed",
-            description: error.message.includes("already registered")
-              ? "This email is already registered. Please login instead."
-              : error.message,
+            description: isNetworkError
+              ? "Connection error. Please check your internet and try again."
+              : error.message.includes("already registered")
+                ? "This email is already registered. Please login instead."
+                : error.message,
             variant: "destructive",
           });
         } else {
@@ -94,6 +100,12 @@ const Auth = () => {
           });
         }
       }
+    } catch (err) {
+      toast({
+        title: "Connection Error",
+        description: "Unable to reach the server. Please check your internet connection and try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

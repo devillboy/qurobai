@@ -12,8 +12,6 @@ serve(async (req) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  console.log("API Chat request received");
-
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -25,19 +23,16 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid API key format. Keys must start with 'qai_'", code: "INVALID_KEY" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Hash the API key
     const keyHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(apiKey));
     const hashHex = Array.from(new Uint8Array(keyHash)).map(b => b.toString(16).padStart(2, "0")).join("");
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
     const { data: keyData, error: keyError } = await supabase.from("api_keys").select("*").eq("key_hash", hashHex).eq("is_active", true).single();
 
     if (keyError || !keyData) {
       return new Response(JSON.stringify({ error: "Invalid or inactive API key", code: "INVALID_KEY" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Check premium subscription for Qurob 4
     if (keyData.model === "qurob-4") {
       const { data: activeSub } = await supabase.from("user_subscriptions").select("id").eq("user_id", keyData.user_id).eq("status", "active").gt("expires_at", new Date().toISOString()).limit(1);
       if (!activeSub?.length) {
@@ -45,12 +40,10 @@ serve(async (req) => {
       }
     }
 
-    // Trial expiry check
     if (keyData.is_trial && keyData.trial_expires_at && new Date(keyData.trial_expires_at) < new Date()) {
       return new Response(JSON.stringify({ error: "Trial expired. Please upgrade.", code: "TRIAL_EXPIRED", upgrade_url: "https://qurobai.lovable.app/subscribe" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Rate limiting for trial users
     if (keyData.is_trial && keyData.requests_today >= 1000) {
       return new Response(JSON.stringify({ error: "Daily limit reached (1000 requests). Upgrade for unlimited.", code: "RATE_LIMITED" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -65,48 +58,86 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Messages array is required", code: "INVALID_REQUEST", example: { messages: [{ role: "user", content: "Hello!" }] } }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    
+    if (!GOOGLE_GEMINI_API_KEY && !OPENROUTER_API_KEY) {
       return new Response(JSON.stringify({ error: "AI service not configured", code: "SERVER_ERROR" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const modelName = keyData.model === "qurob-4" ? "Qurob 4" : "Qurob 2";
-    const gatewayModel = keyData.model === "qurob-4" ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview";
-
+    const geminiModel = keyData.model === "qurob-4" ? "gemini-2.5-pro-preview-06-05" : "gemini-2.0-flash";
     const systemPrompt = `You are ${modelName}, QurobAi's AI assistant created by Soham from India. You're being accessed via the QurobAi API. Be helpful, concise, and professional.`;
 
-    console.log(`Using model: ${modelName} (${gatewayModel})`);
+    console.log(`API Chat: Using ${modelName} (${geminiModel})`);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: gatewayModel,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
-        temperature: 0.7,
-        max_tokens: 2048,
-      }),
-    });
+    let aiResponse = "";
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later.", code: "RATE_LIMITED", retryable: true }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // PRIMARY: Google Gemini
+    if (GOOGLE_GEMINI_API_KEY) {
+      try {
+        const systemInstruction = systemPrompt;
+        const contents = messages.map((m: any) => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }],
+        }));
+
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GOOGLE_GEMINI_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+          }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        } else if (resp.status === 429) {
+          console.log("Gemini rate limited, trying fallback...");
+        } else {
+          console.error("Gemini API error:", resp.status);
+        }
+      } catch (e) {
+        console.error("Gemini call failed:", e);
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI service credits exhausted.", code: "PAYMENT_REQUIRED" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      
-      return new Response(JSON.stringify({ error: "AI service temporarily unavailable.", code: "SERVICE_UNAVAILABLE", retryable: true }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || "";
+    // FALLBACK: OpenRouter
+    if (!aiResponse && OPENROUTER_API_KEY) {
+      try {
+        const orModel = keyData.model === "qurob-4" ? "google/gemini-2.5-pro-preview" : "google/gemini-2.0-flash-001";
+        const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://qurobai.lovable.app",
+            "X-Title": "QurobAi API",
+          },
+          body: JSON.stringify({
+            model: orModel,
+            messages: [{ role: "system", content: systemPrompt }, ...messages],
+            temperature: 0.7,
+            max_tokens: 2048,
+          }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          aiResponse = data.choices?.[0]?.message?.content || "";
+        } else {
+          console.error("OpenRouter error:", resp.status);
+        }
+      } catch (e) {
+        console.error("OpenRouter call failed:", e);
+      }
+    }
 
     if (!aiResponse) {
-      return new Response(JSON.stringify({ error: "AI returned empty response.", code: "SERVICE_UNAVAILABLE", retryable: true }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AI service temporarily unavailable.", code: "SERVICE_UNAVAILABLE", retryable: true }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Update usage stats
