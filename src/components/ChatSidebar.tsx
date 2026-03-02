@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight, 
-  LogOut, Sparkles, Settings, Shield, Search, Code
+  LogOut, Sparkles, Settings, Shield, Search, Code, Bot, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -274,6 +274,17 @@ export const ChatSidebar = ({
 
         <Button
           variant="ghost"
+          onClick={() => navigate("/qurobs")}
+          className={`w-full justify-start gap-2 rounded-lg ${
+            collapsed ? "px-3" : ""
+          }`}
+        >
+          <Bot className="w-4 h-4 shrink-0" />
+          {!collapsed && <span>Qurobs</span>}
+        </Button>
+
+        <Button
+          variant="ghost"
           onClick={() => navigate("/api-access")}
           className={`w-full justify-start gap-2 rounded-lg ${
             collapsed ? "px-3" : ""
@@ -281,6 +292,17 @@ export const ChatSidebar = ({
         >
           <Code className="w-4 h-4 shrink-0" />
           {!collapsed && <span>API Access</span>}
+        </Button>
+
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/patch-updates")}
+          className={`w-full justify-start gap-2 rounded-lg ${
+            collapsed ? "px-3" : ""
+          }`}
+        >
+          <FileText className="w-4 h-4 shrink-0" />
+          {!collapsed && <span>What's New</span>}
         </Button>
 
         <Button

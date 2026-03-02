@@ -26,8 +26,8 @@ Creator: Soham (sohamghosh679@gmail.com)
 Country: India
 
 ### AI MODELS
-- **Qurob 2 (Free):** Fast, reliable AI for general use
-- **Qurob 4 (₹289/month):** Deep reasoning, complex analysis, professional work
+- **Qurob 2 (Free):** Fast, reliable AI for general use — powered by Gemini 2.0 Flash
+- **Qurob 4 (₹289/month):** Deep reasoning, complex analysis, professional work — powered by Gemini 2.5 Pro
 - **Q-06 (₹320/month):** Expert coding AI for 100+ languages
 
 ### FEATURES
@@ -35,40 +35,42 @@ Country: India
 - Web Search & Deep Search
 - Image Generation & Vision AI
 - Custom Qurobs (like ChatGPT GPTs)
-- Voice Input
+- Voice Input & Output
 - Code Playground
+- API Access for developers
+- Projects & conversation organization
 
 ### PRICING
 | Plan | Price | Model |
 |------|-------|-------|
-| Free | ₹0 | Qurob 2 |
-| Premium | ₹289/month | Qurob 4 |
-| Code Specialist | ₹320/month | Q-06 |
+| Free | ₹0 | Qurob 2 (50 msgs/day) |
+| Premium | ₹289/month | Qurob 4 (unlimited) |
+| Code Specialist | ₹320/month | Q-06 (unlimited) |
 
 ### PAYMENT
 Pay via UPI to 7864084241@ybl, upload screenshot, admin approves within 24h.
 
 ### CONTACT
 Email: sohamghosh679@gmail.com
+
+### VERSION HISTORY
+- v3.0: Major UI overhaul, Web Search, Deep Search, Qurobs, token system
+- v2.5: Vision AI, Image Generation, Real-time data
+- v2.0: Projects, API Access, Voice input
+- v1.0: Initial release
 `;
 
-// Detect query type for real-time data
 function detectQueryType(message: string): { type: string; query?: string } | null {
   const lower = message.toLowerCase();
   
-  // Deep Search
   if (/^\[deep\s*search\]/i.test(message)) {
-    const q = message.replace(/^\[deep\s*search\]\s*/i, "").trim();
-    return { type: "deepsearch", query: q };
+    return { type: "deepsearch", query: message.replace(/^\[deep\s*search\]\s*/i, "").trim() };
   }
-  
-  // Web Search
   if (/^\[web\s*search\]/i.test(message) || /search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?/i.test(lower)) {
     const q = message.replace(/^\[web\s*search\]\s*/i, "").replace(/search\s+(?:the\s+)?(?:web|internet|online)\s+(?:for\s+)?/i, "").trim();
     return { type: "websearch", query: q || message };
   }
   
-  // Image generation
   const imagePatterns = [
     /generate\s+(?:an?\s+)?image/i, /create\s+(?:an?\s+)?(?:image|picture|art)/i,
     /draw\s+(?:an?\s+)?(?:me\s+)?/i, /make\s+(?:an?\s+)?(?:image|picture)/i,
@@ -80,23 +82,12 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
     return { type: "image_generation", query: prompt || message };
   }
   
-  // Cricket
-  if (/cricket|ipl|match\s+score|live\s+score|ind\s+vs|t20|odi|bcci|icc/i.test(lower)) {
-    return { type: "cricket" };
-  }
-  
-  // Currency
-  if (/(?:usd|eur|gbp|inr|jpy|rupee|dollar|euro|pound)\s+(?:to|vs|rate|exchange|convert)/i.test(lower) || /forex|currency\s+(?:rate|exchange)/i.test(lower)) {
-    return { type: "currency", query: "usd,inr" };
-  }
-  
-  // Weather
+  if (/cricket|ipl|match\s+score|live\s+score|ind\s+vs|t20|odi|bcci|icc/i.test(lower)) return { type: "cricket" };
+  if (/(?:usd|eur|gbp|inr|jpy|rupee|dollar|euro|pound)\s+(?:to|vs|rate|exchange|convert)/i.test(lower) || /forex|currency\s+(?:rate|exchange)/i.test(lower)) return { type: "currency", query: "usd,inr" };
   if (/weather|temperature|forecast|rain|sunny|cloudy/i.test(lower)) {
     const cityMatch = lower.match(/weather\s+(?:in|for|at)\s+([a-zA-Z\s]+)/i) || lower.match(/([a-zA-Z\s]+)\s+(?:weather|temperature)/i);
     return { type: "weather", query: cityMatch?.[1]?.trim() || "Delhi" };
   }
-  
-  // Crypto
   if (/bitcoin|ethereum|crypto|btc|eth|doge|solana|xrp/i.test(lower)) {
     const coins = [];
     if (/bitcoin|btc/i.test(lower)) coins.push("bitcoin");
@@ -106,8 +97,6 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
     if (/xrp/i.test(lower)) coins.push("ripple");
     return { type: "crypto", query: coins.length ? coins.join(",") : "bitcoin,ethereum" };
   }
-  
-  // Stocks
   if (/stock|share|nasdaq|nifty|sensex|aapl|tesla|google|microsoft|nvidia/i.test(lower)) {
     const symbols = [];
     if (/apple|aapl/i.test(lower)) symbols.push("AAPL");
@@ -117,26 +106,18 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
     if (/nvidia|nvda/i.test(lower)) symbols.push("NVDA");
     return { type: "stocks", query: symbols.length ? symbols.join(",") : "AAPL,TSLA,GOOGL,NVDA" };
   }
-  
-  // News
   if (/news|headline|latest|breaking|current events/i.test(lower)) {
     const topicMatch = lower.match(/(?:news|headlines?)\s+(?:about|on|for)\s+([a-zA-Z\s]+)/i);
     return { type: "news", query: topicMatch?.[1]?.trim() || "world" };
   }
-  
-  // Time
-  if (/what\s+(?:time|date)|current\s+(?:time|date)|today.?s\s+date/i.test(lower)) {
-    return { type: "time" };
-  }
+  if (/what\s+(?:time|date)|current\s+(?:time|date)|today.?s\s+date/i.test(lower)) return { type: "time" };
   
   return null;
 }
 
-// Serper.dev web search (primary)
 async function serperSearch(query: string): Promise<string> {
   const SERPER_API_KEY = Deno.env.get("SERPER_API_KEY");
   if (!SERPER_API_KEY) return "";
-  
   try {
     const resp = await fetch("https://google.serper.dev/search", {
       method: "POST",
@@ -145,11 +126,8 @@ async function serperSearch(query: string): Promise<string> {
     });
     if (!resp.ok) return "";
     const data = await resp.json();
-    
     let result = "";
-    if (data.answerBox) {
-      result += `**Answer:** ${data.answerBox.answer || data.answerBox.snippet || ""}\n\n`;
-    }
+    if (data.answerBox) result += `**Answer:** ${data.answerBox.answer || data.answerBox.snippet || ""}\n\n`;
     if (data.knowledgeGraph) {
       const kg = data.knowledgeGraph;
       result += `**${kg.title}** ${kg.type ? `(${kg.type})` : ""}\n${kg.description || ""}\n\n`;
@@ -161,13 +139,9 @@ async function serperSearch(query: string): Promise<string> {
       }
     }
     return result;
-  } catch (e) {
-    console.error("Serper error:", e);
-    return "";
-  }
+  } catch (e) { console.error("Serper error:", e); return ""; }
 }
 
-// Fallback web search
 async function fallbackWebSearch(query: string): Promise<string> {
   const results: string[] = [];
   try {
@@ -182,11 +156,7 @@ async function fallbackWebSearch(query: string): Promise<string> {
       if (results.length >= 6) break;
     }
   } catch (e) { console.log("Fallback search error:", e); }
-  
-  if (results.length) {
-    return `**Search Results for "${query}":**\n\n${results.join("\n")}`;
-  }
-  return `No results found for "${query}".`;
+  return results.length ? `**Search Results for "${query}":**\n\n${results.join("\n")}` : `No results found for "${query}".`;
 }
 
 async function performWebSearch(query: string): Promise<string> {
@@ -199,20 +169,11 @@ async function performWebSearch(query: string): Promise<string> {
 async function performDeepSearch(query: string): Promise<string> {
   const SERPER_API_KEY = Deno.env.get("SERPER_API_KEY");
   let allResults = "";
-  
-  // Multiple search angles
   const searches = [query, `${query} latest 2025 2026`, `${query} analysis`];
-  
   for (const q of searches) {
-    if (SERPER_API_KEY) {
-      const r = await serperSearch(q);
-      if (r) allResults += r + "\n\n";
-    } else {
-      const r = await fallbackWebSearch(q);
-      if (r) allResults += r + "\n\n";
-    }
+    const r = SERPER_API_KEY ? await serperSearch(q) : await fallbackWebSearch(q);
+    if (r) allResults += r + "\n\n";
   }
-  
   const timestamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
   return `🔬 **Deep Search: "${query}"**\n\n${allResults}\n*Deep analysis from multiple sources | ${timestamp} IST*`;
 }
@@ -230,11 +191,9 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
   try {
     if (type === "websearch" && query) return await performWebSearch(query);
     if (type === "deepsearch" && query) return await performDeepSearch(query);
-    
     if (type === "time") {
       return `**🕐 Current Time:** ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })} (IST)`;
     }
-    
     if (type === "weather" && query) {
       const geoResp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, { headers: { "User-Agent": "QurobAi/3.0" } });
       const geoData = await geoResp.json();
@@ -247,7 +206,6 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       }
       return `Could not find weather for "${query}".`;
     }
-    
     if (type === "crypto") {
       const coins = query || "bitcoin,ethereum";
       const resp = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coins}&vs_currencies=usd,inr&include_24hr_change=true`);
@@ -261,7 +219,6 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       }
       return result;
     }
-    
     if (type === "stocks" && query) {
       const resp = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${query}`, { headers: { "User-Agent": "Mozilla/5.0" } });
       if (!resp.ok) return "Stock data temporarily unavailable.";
@@ -276,7 +233,6 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       }
       return "No stock data found.";
     }
-    
     if (type === "news") {
       const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query || "India")}&hl=en-IN&gl=IN&ceid=IN:en`;
       const resp = await fetch(rssUrl);
@@ -290,7 +246,6 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       }
       return items.length ? `**📰 News: "${query}"**\n\n${items.join("\n")}` : `No news found for "${query}".`;
     }
-    
     if (type === "cricket") {
       const resp = await fetch(`https://news.google.com/rss/search?q=cricket+live+score+today&hl=en-IN&gl=IN&ceid=IN:en`, { headers: { "User-Agent": "QurobAi/3.0" } });
       const rssText = await resp.text();
@@ -303,7 +258,6 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       }
       return items.length ? `**🏏 Cricket Updates:**\n\n${items.join("\n\n")}` : "No live cricket matches right now.";
     }
-    
     if (type === "currency") {
       try {
         const resp = await fetch("https://api.frankfurter.app/latest?from=USD");
@@ -318,7 +272,6 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       } catch (e) { console.log("Currency error:", e); }
       return "Currency rates temporarily unavailable.";
     }
-    
     return null;
   } catch (error) {
     console.error("Data fetch error:", error);
@@ -334,7 +287,6 @@ function extractImageData(messages: any[]): { hasImage: boolean; imageUrl: strin
   const cleanMessages: any[] = [];
   let hasImage = false;
   let imageUrl: string | null = null;
-  
   for (const msg of messages) {
     if (msg.role === "user" && msg.content) {
       const imageMatch = msg.content.match(/\[ImageData:(data:image\/[^;]+;base64,[^\]]+)\]/);
@@ -343,14 +295,9 @@ function extractImageData(messages: any[]): { hasImage: boolean; imageUrl: strin
         imageUrl = imageMatch[1];
         const cleanContent = msg.content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "").trim();
         cleanMessages.push({ ...msg, content: cleanContent || "What's in this image? Describe it in detail." });
-      } else {
-        cleanMessages.push(msg);
-      }
-    } else {
-      cleanMessages.push(msg);
-    }
+      } else { cleanMessages.push(msg); }
+    } else { cleanMessages.push(msg); }
   }
-  
   return { hasImage, imageUrl, cleanMessages };
 }
 
@@ -371,35 +318,28 @@ function summarizeConversation(messages: any[]): any[] {
 async function generateImage(prompt: string, supabase: any, userId?: string): Promise<string> {
   const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
   if (!FIREWORKS_API_KEY) return "Image generation is not configured. Please contact admin.";
-  
   try {
     const resp = await fetch("https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image", {
       method: "POST",
       headers: { "Authorization": `Bearer ${FIREWORKS_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, width: 1024, height: 1024, steps: 4, seed: Math.floor(Math.random() * 1000000) }),
     });
-
     if (resp.ok) {
       const imageBlob = await resp.blob();
       const imageBuffer = await imageBlob.arrayBuffer();
       let imageUrlResult = `data:image/png;base64,${btoa(new Uint8Array(imageBuffer).reduce((d, b) => d + String.fromCharCode(b), ""))}`;
-      
       if (userId) {
         try {
           const fileName = `${userId}/${Date.now()}-generated.png`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("chat-attachments")
-            .upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
+          const { data: uploadData, error: uploadError } = await supabase.storage.from("chat-attachments").upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
           if (!uploadError && uploadData) {
             const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(uploadData.path);
             imageUrlResult = urlData.publicUrl;
           }
         } catch (e) { console.log("Storage upload error:", e); }
       }
-      
       return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrlResult}]\n\nLet me know if you'd like any changes!`;
     }
-    
     if (resp.status === 429) return "Image generation is rate limited. Please wait and try again.";
     return "Sorry, I couldn't generate the image right now. Please try again.";
   } catch (e) {
@@ -408,7 +348,6 @@ async function generateImage(prompt: string, supabase: any, userId?: string): Pr
   }
 }
 
-// Check URL and fetch metadata
 async function checkUrl(url: string): Promise<string> {
   try {
     const resp = await fetch(url, { headers: { "User-Agent": "QurobAi/3.0" }, redirect: "follow" });
@@ -420,6 +359,102 @@ async function checkUrl(url: string): Promise<string> {
   return "";
 }
 
+// Call Google Gemini API directly
+async function callGeminiAPI(model: string, messages: any[], temperature: number, stream: boolean): Promise<Response> {
+  const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+  if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
+
+  const geminiModel = model === "gemini-2.5-pro" ? "gemini-2.5-pro-preview-06-05" : "gemini-2.0-flash";
+  
+  // Convert OpenAI-style messages to Gemini format
+  const systemInstruction = messages.find((m: any) => m.role === "system")?.content || "";
+  const contents = messages
+    .filter((m: any) => m.role !== "system")
+    .map((m: any) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
+
+  const endpoint = stream 
+    ? `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`
+    : `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
+
+  const body: any = {
+    contents,
+    generationConfig: { temperature, maxOutputTokens: 8192 },
+  };
+  if (systemInstruction) {
+    body.systemInstruction = { parts: [{ text: systemInstruction }] };
+  }
+
+  return await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+// Convert Gemini SSE stream to OpenAI-compatible SSE stream
+function convertGeminiStreamToOpenAI(geminiStream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const reader = geminiStream.getReader();
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  return new ReadableStream({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr) continue;
+            try {
+              const geminiData = JSON.parse(jsonStr);
+              const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+              if (text) {
+                const openAIChunk = {
+                  choices: [{ delta: { content: text } }],
+                };
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(openAIChunk)}\n\n`));
+              }
+            } catch (e) { /* skip malformed JSON */ }
+          }
+        }
+      } catch (e) {
+        controller.error(e);
+      }
+    },
+  });
+}
+
+// Fallback: call OpenRouter
+async function callOpenRouter(messages: any[], model: string, temperature: number): Promise<Response> {
+  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+  if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
+
+  return await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://qurobai.lovable.app",
+      "X-Title": "QurobAi",
+    },
+    body: JSON.stringify({ model, messages, stream: true, temperature, max_tokens: 4096 }),
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -427,19 +462,18 @@ serve(async (req) => {
 
   try {
     const { messages, userId } = await req.json();
-    
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Invalid request format" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     
     console.log("QurobAi request:", messages.length, "messages, userId:", userId ? "yes" : "no");
-    
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
+
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
     
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
+    if (!GOOGLE_GEMINI_API_KEY && !OPENROUTER_API_KEY) {
+      console.error("No AI API keys configured");
       return new Response(JSON.stringify({ error: "AI service not configured." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -447,17 +481,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Model selection & user settings
     let modelName = "Qurob 2";
     let isCodeSpecialist = false;
     let baseTone = "professional";
     let customInstructions = "";
     let persona = "default";
-    let gatewayModel = "google/gemini-3-flash-preview"; // Default: Qurob 2
+    let geminiModel = "gemini-2.0-flash";
 
     if (userId) {
       try {
-        // Check token limits
         const { data: settings } = await supabase
           .from("user_settings")
           .select("base_tone, custom_instructions, persona, tokens_used_today, tokens_reset_date")
@@ -469,63 +501,45 @@ serve(async (req) => {
           customInstructions = settings.custom_instructions || "";
           persona = settings.persona || "default";
           
-          // Reset tokens if new day
           const today = new Date().toISOString().split("T")[0];
           if (settings.tokens_reset_date !== today) {
             await supabase.from("user_settings").update({ tokens_used_today: 0, tokens_reset_date: today }).eq("user_id", userId);
           } else {
-            // Check if free user hit daily limit
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
             const isPremium = userModel === "Qurob 4" || userModel === "Q-06";
             const dailyLimit = isPremium ? 1000000 : 50;
-            
             if ((settings.tokens_used_today || 0) >= dailyLimit) {
               return new Response(JSON.stringify({ 
                 error: `Daily message limit reached (${dailyLimit}). ${isPremium ? "Please try again tomorrow." : "Upgrade to Premium for unlimited messages!"}`,
-                code: "TOKEN_LIMIT",
-                tokens_used: settings.tokens_used_today,
-                tokens_limit: dailyLimit,
+                code: "TOKEN_LIMIT", tokens_used: settings.tokens_used_today, tokens_limit: dailyLimit,
               }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
             }
           }
         }
 
         const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
-        if (userModel === "Qurob 4") {
-          modelName = "Qurob 4";
-          gatewayModel = "google/gemini-2.5-pro";
-        } else if (userModel === "Q-06") {
-          modelName = "Q-06";
-          isCodeSpecialist = true;
-          gatewayModel = "google/gemini-2.5-pro";
-        }
+        if (userModel === "Qurob 4") { modelName = "Qurob 4"; geminiModel = "gemini-2.5-pro"; }
+        else if (userModel === "Q-06") { modelName = "Q-06"; isCodeSpecialist = true; geminiModel = "gemini-2.5-pro"; }
 
-        // Load user memory
         const { data: memories } = await supabase.from("user_memory").select("memory_key, memory_value").eq("user_id", userId).limit(10);
         if (memories?.length) {
           customInstructions = `## USER PREFERENCES:\n${memories.map(m => `- ${m.memory_key}: ${m.memory_value}`).join("\n")}\n\n${customInstructions}`;
         }
         
-        // Increment token count
         await supabase.from("user_settings").update({ tokens_used_today: (settings?.tokens_used_today || 0) + 1 }).eq("user_id", userId);
-      } catch (e) {
-        console.log("User settings error:", e);
-      }
+      } catch (e) { console.log("User settings error:", e); }
     }
 
     const toneStyle = TONE_STYLES[baseTone] || TONE_STYLES.professional;
     const { hasImage, imageUrl, cleanMessages } = extractImageData(messages);
     const processedMessages = summarizeConversation(cleanMessages);
 
-    // Process last message for real-time data & URL checking
     const lastUserMessage = processedMessages.filter((m: any) => m.role === "user").pop();
     let realtimeContext = "";
     let includeKnowledge = false;
     
     if (lastUserMessage) {
       if (isQurobAiQuery(lastUserMessage.content)) includeKnowledge = true;
-      
-      // Check for URLs in message
       const urlMatch = lastUserMessage.content.match(/https?:\/\/[^\s\]]+/);
       if (urlMatch) {
         const urlInfo = await checkUrl(urlMatch[0]);
@@ -554,7 +568,7 @@ serve(async (req) => {
       }
     }
 
-    // Vision: use OpenRouter for image analysis
+    // Vision via OpenRouter
     if (hasImage && imageUrl && OPENROUTER_API_KEY) {
       console.log("Using Vision API");
       const visionMessages = processedMessages.map((m: any, i: number) => {
@@ -563,7 +577,6 @@ serve(async (req) => {
         }
         return m;
       });
-
       const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: { "Authorization": `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://qurobai.lovable.app", "X-Title": "QurobAi" },
@@ -573,7 +586,6 @@ serve(async (req) => {
           stream: true, temperature: 0.7, max_tokens: 2048,
         }),
       });
-
       if (visionResponse.ok) {
         return new Response(visionResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
       }
@@ -618,45 +630,58 @@ serve(async (req) => {
 - Match user's language (Hindi, English, Hinglish)
 - Don't overuse emojis
 
-${isCodeSpecialist ? `## Q-06 CODE SPECIALIST MODE
-Expert coding AI. Provide clean, production-ready code with best practices. Support ALL languages. Always write complete, working code.` : ""}
+${isCodeSpecialist ? `## Q-06 CODE SPECIALIST MODE\nExpert coding AI. Provide clean, production-ready code with best practices. Support ALL languages. Always write complete, working code.` : ""}
 
 ${includeKnowledge ? `## QUROBAI KNOWLEDGE\n${QUROBAI_KNOWLEDGE}` : ""}
 ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${realtimeContext}`;
 
-    console.log("Using model:", modelName, "gateway:", gatewayModel);
+    const allMessages = [{ role: "system", content: systemPrompt }, ...processedMessages];
+    const temperature = isCodeSpecialist ? 0.2 : 0.7;
 
-    // Call Lovable AI Gateway
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: gatewayModel,
-        messages: [{ role: "system", content: systemPrompt }, ...processedMessages],
-        stream: true,
-        temperature: isCodeSpecialist ? 0.2 : 0.7,
-      }),
-    });
+    console.log("Using model:", modelName, "gemini:", geminiModel);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // PRIMARY: Google Gemini API directly
+    if (GOOGLE_GEMINI_API_KEY) {
+      try {
+        const geminiResponse = await callGeminiAPI(geminiModel, allMessages, temperature, true);
+        
+        if (geminiResponse.ok && geminiResponse.body) {
+          console.log("Gemini streaming started");
+          const convertedStream = convertGeminiStreamToOpenAI(geminiResponse.body);
+          return new Response(convertedStream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+        }
+        
+        console.error("Gemini error:", geminiResponse.status);
+        if (geminiResponse.status === 429) {
+          // Fall through to OpenRouter
+          console.log("Gemini rate limited, trying OpenRouter...");
+        } else {
+          const errorText = await geminiResponse.text();
+          console.error("Gemini error body:", errorText);
+        }
+      } catch (e) {
+        console.error("Gemini call failed:", e);
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI service credits exhausted. Please contact admin." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      
-      return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    console.log("Streaming response started");
-    return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    // FALLBACK: OpenRouter
+    if (OPENROUTER_API_KEY) {
+      try {
+        const orModel = geminiModel === "gemini-2.5-pro" ? "google/gemini-2.5-pro-preview" : "google/gemini-2.0-flash-001";
+        const orResponse = await callOpenRouter(allMessages, orModel, temperature);
+        
+        if (orResponse.ok) {
+          console.log("OpenRouter streaming started");
+          return new Response(orResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+        }
+        
+        console.error("OpenRouter error:", orResponse.status);
+      } catch (e) {
+        console.error("OpenRouter call failed:", e);
+      }
+    }
+
+    return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again in a moment." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("QurobAi error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Something went wrong." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
