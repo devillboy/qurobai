@@ -1,248 +1,164 @@
+# QurobAi Ultimate System Upgrade - Single Phase
 
+## Current Issues Identified
 
-# QurobAi Mega Enhancement - Phase 3 Final
-
-## Overview
-
-This plan addresses every issue raised: broken API, ugly mobile UI, payment bugs, missing features, AI quality, web search, token system, deep search, Qurobs (custom GPTs), and overall polish.
-
----
-
-## 1. API System - Make It Actually Work
-
-### Problem
-The API documentation looks real but when users test it, the `api-chat` edge function uses direct API calls to DeepInfra/OpenRouter/Gemini which are unreliable. The docs show code examples but the API itself fails silently.
-
-### Fix: `supabase/functions/api-chat/index.ts`
-- 
-- Add proper error handling for 429 (rate limit) and 402 (payment required)
-- Keep existing rate limiting, key validation, and usage tracking logic
-
-### Fix: `src/pages/ApiAccess.tsx`
-- Make the "Test API Key" button show clearer success/failure states
-- Ensure documentation examples use correct base URL
-- No structural changes needed - the UI is already well-built
+1. **Build Error**: `usePushNotifications.ts` has TypeScript errors - `pushManager` not recognized on `ServiceWorkerRegistration`
+2. **Login Failing**: Console shows "Failed to fetch" on `signInWithPassword` - likely a network/CORS issue with the Supabase client
+3. **Settings UI**: All options crammed into one long scroll list - no tab structure, no clear sections on first open
+4. **Qurobs Page**: Exists but no access button from the main chat UI (only via URL `/qurobs`)
+5. **No Patch Updates Page**: No changelog or "what's new" feature
+6. **Splash Screen**: Generic particles animation - needs a more polished, professional loader
+7. **Mobile UI**: Chat header only shows on mobile, no desktop header; buttons can be cramped on small screens
+8. **AI Gateway**: Currently using Lovable AI Gateway which user wants to stop using - needs alternative AI backend
+9. **Chat responses**: No end-to-end encryption system
 
 ---
 
-## 2. Chat AI -
+## Implementation Plan
 
-### Problem
-The main `chat` edge function uses multiple unreliable third-party APIs (Groq, Fireworks, DeepInfra, OpenRouter, Google Gemini direct). This causes inconsistent responses and failures.
+### 1. Fix Build Error - `usePushNotifications.ts`
 
-### Fix: 
-- Keep ALL existing features: real-time data detection (weather, crypto, stocks, news, cricket, currency), image generation via Fireworks, vision via OpenRouter, conversation summarization, user memory, personalization
-- Add **Web Search via Serper.dev** (new integration - requires API key)
-- Add **URL checking** - detect URLs in messages, fetch page title/description via fetch()
-- Add **Deep Search** prefix detection: when message starts with `[Deep Search]`, use enhanced web search with multiple sources and longer reasoning
-- Expand `QUROBAI_KNOWLEDGE` with more comprehensive FAQ (50+ entries)
+Add TypeScript type assertion for `pushManager` since the Web Push API types are not included by default. Cast `registration` to `any` at push manager access points to fix the 3 TS errors.
 
-### New: Serper.dev Integration
-- Need to add `SERPER_API_KEY` as a secret
-- Used for `[Web Search]` queries and the new Deep Search button
-- Falls back to existing DuckDuckGo/Google News RSS if Serper is unavailable
+### 2. Fix Login - Auth Page
 
----
+The "Failed to fetch" error on `signInWithPassword` suggests the Supabase URL may be unreachable or the client config has issues. Since `src/integrations/supabase/client.ts` is auto-generated and shouldn't be touched, we'll add better error handling in `Auth.tsx`:
 
-## 3. Web Search Button + Deep Search in Chat
+- Catch network errors specifically and show "Connection error. Check your internet and try again."
+- Add a retry mechanism
+- Add a visible "having trouble?" link
 
-### Problem
-Users can't search the web through AI. No deep search like Perplexity.
+### 3. Settings UI Overhaul - Tab-Based Layout
 
-### Fix: `src/components/ChatInputEnhanced.tsx`
-- Add a **Web Search** toggle button (Globe icon) next to the send button
-- When toggled ON, messages are prefixed with `[Web Search]` automatically
-- Add a **Deep Search** button (magnifying glass with sparkle) that triggers `[Deep Search]` prefix for more thorough analysis
-- Both buttons are pill-shaped toggles above the text input area
+Redesign `SettingsDialog.tsx` with a **tabbed interface** instead of one long scroll:
 
-### Fix: `src/pages/Index.tsx`
-- Pass web search state through to the chat flow
+- **General**: Profile card, Theme, Language, Font Size
+- **AI**: Personalization, Voice Output, Model info
+- **Features**: API Access, Qurobs, Chat Search, Voice Mode, Keyboard Shortcuts
+- **Data**: Export, Download All Data, Subscription History
+- **About**: Legal, Version, Admin (if admin), Support, Sign Out
 
----
+This way on first open, users immediately see the most useful settings.
 
-## 4. Token System for Chat Usage
+### 4. Add Qurobs Access Button
 
-### Problem
-Users can chat unlimited. Need daily limits for free users.
+Add a "Qurobs" navigation button in:
 
-### Database Migration
-```sql
-ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS tokens_used_today integer DEFAULT 0;
-ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS tokens_reset_date date DEFAULT CURRENT_DATE;
-```
+- The **ChatSidebar** (alongside New Chat button)
+- The **WelcomeScreen** as a featured card
+- The **ChatHeader** (mobile) as an icon button
 
-### Implementation
-- **Free users:** 50 messages/day (reset at midnight IST)
-- **Premium users:** 1,000,000 tokens/day (effectively unlimited)
-- Check token count in `supabase/functions/chat/index.ts` before processing
-- Return remaining tokens in response headers
-- Show token usage counter in chat UI
+### 5. Patch Updates / What's New Page
 
----
+Create `src/pages/PatchUpdates.tsx`:
 
-## 5. Custom Qurobs (Like Gemini Gems / ChatGPT GPTs)
+- List of updates with dates, version numbers, and descriptions
+- Each update shows new features, bug fixes, improvements
+- On first visit after a new update, show a **"What's New" popup** (modal) with highlights and screenshots
+- Track last seen version in `localStorage`
 
-### Concept (from reference images)
-Users create custom AI assistants with:
-- Name, description, avatar/icon
-- Custom system prompt
-- Preset categories: Storybook, Brainstormer, Career Guide, Coding Partner, Learning Coach, Writing Editor
-- Tabs: All, Your Qurobs, By QurobAi (pre-built ones)
+### 6. Professional Splash Screen
 
-### Database Migration
-```sql
-CREATE TABLE qurob_bots (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  name text NOT NULL,
-  description text,
-  icon text DEFAULT 'sparkles',
-  icon_color text DEFAULT '#6366f1',
-  system_prompt text NOT NULL,
-  is_public boolean DEFAULT false,
-  is_official boolean DEFAULT false,
-  category text DEFAULT 'general',
-  uses_count integer DEFAULT 0,
-  created_at timestamptz DEFAULT now()
-);
+Replace the particle animation in `SplashScreen.tsx` with:
 
-ALTER TABLE qurob_bots ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can read public bots" ON qurob_bots FOR SELECT USING (is_public OR user_id = auth.uid());
-CREATE POLICY "Users can manage own bots" ON qurob_bots FOR ALL USING (user_id = auth.uid());
-```
+- Clean logo fade-in with a subtle scale animation
+- Smooth gradient progress bar (no particles - they look amateur)
+- "Skip" button in bottom corner
+- Faster: 1.5s instead of 2.5s
 
-### New Files
-- `src/pages/Qurobs.tsx` - Browse/manage page with tabs (All, Your Qurobs, By QurobAi)
-- `src/components/QurobBotBuilder.tsx` - Creation dialog
-- Pre-seed 6 official Qurobs: Storybook, Brainstormer, Career Guide, Coding Partner, Learning Coach, Writing Editor
+### 7. Mobile UI Polish
 
-### Chat Integration
-- When a Qurob is selected, its system prompt is prepended to the chat messages
-- Show active Qurob indicator in chat header
-- Navigate from Qurobs page to chat with the selected bot
+- **ChatHeader**: Show on both mobile and desktop (remove `md:hidden`), make it slimmer on desktop
+- **ChatInputEnhanced**: Ensure all buttons (templates, attach, mic, send) fit on 320px width screens
+- **WelcomeScreen**: Make quick actions 2-column grid on mobile instead of flex-wrap (more consistent)
+- **Index.tsx**: Remove extra padding, ensure the input hugs the bottom
 
----
+### 8. AI Backend - Switch Away from Lovable Gateway
 
-## 6. Mobile-First UI Overhaul
+Since user doesn't want Lovable AI Gateway, switch `chat/index.ts` and `api-chat/index.ts` to use:
 
-### Problem
-The app looks designed for desktop. Chat input too high on mobile, buttons too small, wasted space.
+- **Primary**: Google Gemini API directly via `GOOGLE_GEMINI_API_KEY` (already configured)
+- **Fallback**: OpenRouter via `OPENROUTER_API_KEY` (already configured)
+- **Code model**: DeepInfra via `DEEPINFRA_API_KEY` (already configured)
 
-### Fix: `src/pages/Index.tsx`
-- Remove the redundant padding wrapper around ChatInputEnhanced
-- Remove the `ModelIndicator` bar on mobile (it wastes vertical space) - show only on md+
-- Make the welcome screen more compact on mobile
-- Sticky bottom input with proper safe-area padding
+Model mapping:
 
-### Fix: `src/components/WelcomeScreen.tsx`
-- Redesign to match Gemini style (from reference images):
-  - "Hi [Username]" greeting with large text
-  - "Where should we start?" subtitle
-  - Pill-shaped quick action buttons with emojis (like Gemini)
-  - Bottom sheet showing model selector and tools (Create Images, Deep Search, Web Search)
-- More compact on mobile with smaller gaps
+- Qurob 2 (Free): `gemini-2.0-flash` via Google API
+- Qurob 4 (Premium): `gemini-2.5-pro` via Google API
+- Q-06 (Code): `deepseek-coder` via DeepInfra
 
-### Fix: `src/components/ChatInputEnhanced.tsx`
-- More compact padding on mobile
-- Web Search and Deep Search toggle buttons
-- Ensure safe-area-bottom is properly applied
+### 9. Chat End-to-End Encryption Indicator
 
----
+Full E2E encryption requires client-side key management which is complex. Instead:
 
-## 7. Payment Gateway Fix
+- Add a visual "Messages are encrypted in transit" indicator (TLS) in the chat
+- Show a lock icon in the chat header
+- Add encryption info in Settings > About
 
-### Problem
-Manual screenshot system is buggy and slow. Need better UX.
+### 10. Branding & Theme Refresh
 
-### Fix: `src/pages/Subscribe.tsx`
-- Improve the payment flow UX:
-  - Add transaction ID field prominently (not hidden)
-  - Show clearer step indicators (Step 1: Pay, Step 2: Enter Transaction ID or Upload Screenshot)
-  - Better success/error messaging
-  - Add "Check Payment Status" button for users who already paid
-- Note: Full Razorpay/Stripe automatic integration requires API keys and merchant setup. For now, optimize the existing manual flow significantly.
+Update `src/index.css`:
 
----
+- Slightly modernize the color palette (warmer tones)
+- Update button styles with subtle gradients
+- Add a light theme variant (currently only dark vars defined)
+- Rounded corners more consistent (use `--radius` everywhere)
 
-## 8. Admin Panel Improvements
+### 11. Performance Boost
 
-### Fix: `src/pages/AdminPanel.tsx`
-- Make tabs horizontally scrollable on mobile (overflow-x-auto)
-- Show user email alongside display name (fetch from profiles or show user_id)
-- Ensure all users are loaded (remove the default 1000 row limit by paginating)
-- Push notifications: verify the `send-push` function is correctly configured in config.toml
-- Add "Download All Users CSV" button
-
----
-
-## 9. Splash Screen on Every Page
-
-### Fix: `src/App.tsx` + `src/components/SplashScreen.tsx`
-- Show 2-second splash on every route navigation (not just app load)
-- Add a "Skip" button
-- Use `sessionStorage` to track per-route visits so splash only shows once per route per session
-
----
-
-## 10. APK Download Fix
-
-### Problem
-The provided APK was copied but may not work.
-
-### Fix: `src/pages/Download.tsx`
-- Verify the APK file is properly served from `/downloads/qurobai.apk`
-- Add proper `Content-Type` headers guidance
-- Add installation instructions (Enable "Install from Unknown Sources")
-- Show file size and version info
+- Add `React.memo` to `ChatMessage` component
+- Lazy load heavy pages: `AdminPanel`, `Subscribe`, `ApiAccess`, `Qurobs`, `Download`
+- Add route-based code splitting in `App.tsx` via `React.lazy`
 
 ---
 
 ## Files Summary
 
 ### New Files
-| File | Purpose |
-|------|---------|
-| `src/pages/Qurobs.tsx` | Browse/manage custom Qurobs (GPTs) |
-| `src/components/QurobBotBuilder.tsx` | Create/edit Qurob dialog |
+
+
+| File                               | Purpose                     |
+| ---------------------------------- | --------------------------- |
+| `src/pages/PatchUpdates.tsx`       | Changelog / What's New page |
+| `src/components/WhatsNewPopup.tsx` | Modal popup for new updates |
+
 
 ### Modified Files
-| File | Changes |
-|------|---------|
-| `supabase/functions/chat/index.ts` | Lovable AI Gateway, web search, deep search, URL checking, tokens |
-| `supabase/functions/api-chat/index.ts` | Switch to Lovable AI Gateway |
-| `src/components/ChatInputEnhanced.tsx` | Web Search + Deep Search buttons, mobile polish |
-| `src/components/WelcomeScreen.tsx` | Gemini-style redesign with greeting + tools |
-| `src/pages/Index.tsx` | Mobile layout fixes, Qurob integration |
-| `src/pages/Subscribe.tsx` | Payment UX improvements |
-| `src/pages/AdminPanel.tsx` | Mobile tabs scroll, user CSV export |
-| `src/pages/Download.tsx` | Better APK instructions |
-| `src/App.tsx` | Add Qurobs route, splash on navigation |
-| `supabase/config.toml` | Ensure all functions listed |
 
-### Database Migration
-- Add `tokens_used_today`, `tokens_reset_date` to `user_settings`
-- Create `qurob_bots` table with RLS policies
-- Seed 6 official Qurobs
 
-### Secret Required
-- `SERPER_API_KEY` for web search (will prompt for setup)
+| File                                   | Changes                                          |
+| -------------------------------------- | ------------------------------------------------ |
+| `src/hooks/usePushNotifications.ts`    | Fix TypeScript pushManager errors                |
+| `src/pages/Auth.tsx`                   | Better error handling for network failures       |
+| `src/components/SettingsDialog.tsx`    | Tab-based layout with sections                   |
+| `src/components/ChatSidebar.tsx`       | Add Qurobs navigation button                     |
+| `src/components/WelcomeScreen.tsx`     | Add Qurobs card, mobile grid layout              |
+| `src/components/ChatHeader.tsx`        | Show on desktop too, add lock icon               |
+| `src/components/SplashScreen.tsx`      | Professional animation, skip button, faster      |
+| `src/components/ChatInputEnhanced.tsx` | Mobile button scaling fixes                      |
+| `src/pages/Index.tsx`                  | Remove extra padding, lazy loading prep          |
+| `src/App.tsx`                          | Add PatchUpdates route, lazy load pages          |
+| `supabase/functions/chat/index.ts`     | Switch to Google Gemini + OpenRouter + DeepInfra |
+| `supabase/functions/api-chat/index.ts` | Switch to Google Gemini directly                 |
+| `src/index.css`                        | Theme refresh, light mode, button updates        |
+
+
+### No Database Changes Required
 
 ---
 
-## Implementation Order
+## Execution Order
 
-```text
-Step 1: Add SERPER_API_KEY secret
-Step 2: Database migration (tokens + qurob_bots table)
-Step 3: Rewrite chat edge function (Lovable AI + web search + deep search)
-Step 4: Rewrite api-chat edge function (Lovable AI)
-Step 5: Redesign WelcomeScreen (Gemini-style)
-Step 6: Add Web Search + Deep Search buttons to ChatInputEnhanced
-Step 7: Fix Index.tsx mobile layout
-Step 8: Create Qurobs page + builder
-Step 9: Fix Subscribe payment UX
-Step 10: Fix Admin Panel mobile + CSV export
-Step 11: Update App.tsx routes + splash
-Step 12: Deploy and test
-```
+All changes will be implemented in a single pass:
 
+1. Fix build errors (pushManager TS fix)
+2. Fix login (Auth.tsx error handling)
+3. Switch AI backend (chat + api-chat edge functions)
+4. Settings UI tabs redesign
+5. Splash screen professional redesign
+6. Mobile UI polish (header, input, welcome)
+7. Create Patch Updates page + What's New popup
+8. Add Qurobs access buttons
+9. Theme refresh + performance optimizations
+10. Route updates in App.tsx
+11. Fix Application Download page and download button it's not working and make it accessible 
