@@ -8,12 +8,12 @@ import { useNavigate } from "react-router-dom";
 const CURRENT_VERSION = "3.0.0";
 
 const highlights = [
-  "🚀 AI now powered by Google Gemini directly — faster & smarter",
   "🔍 Web Search & Deep Search in chat",
   "🤖 Custom Qurobs — build your own AI assistants",
   "⚡ Professional new splash screen",
   "📱 Better mobile experience",
   "🔒 Encryption indicators in chat",
+  "🎨 Redesigned Settings with tabs",
 ];
 
 export const WhatsNewPopup = () => {
@@ -23,7 +23,7 @@ export const WhatsNewPopup = () => {
   useEffect(() => {
     const lastSeen = localStorage.getItem("qurobai_last_seen_version");
     if (lastSeen !== CURRENT_VERSION) {
-      const timer = setTimeout(() => setOpen(true), 1500);
+      const timer = setTimeout(() => setOpen(true), 2000);
       return () => clearTimeout(timer);
     }
   }, []);

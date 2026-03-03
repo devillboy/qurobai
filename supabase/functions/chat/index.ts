@@ -26,8 +26,8 @@ Creator: Soham (sohamghosh679@gmail.com)
 Country: India
 
 ### AI MODELS
-- **Qurob 2 (Free):** Fast, reliable AI for general use — powered by Gemini 2.0 Flash
-- **Qurob 4 (₹289/month):** Deep reasoning, complex analysis, professional work — powered by Gemini 2.5 Pro
+- **Qurob 2 (Free):** Fast, reliable AI for general use
+- **Qurob 4 (₹289/month):** Deep reasoning, complex analysis, professional work
 - **Q-06 (₹320/month):** Expert coding AI for 100+ languages
 
 ### FEATURES

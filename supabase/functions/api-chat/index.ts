@@ -67,7 +67,7 @@ serve(async (req) => {
 
     const modelName = keyData.model === "qurob-4" ? "Qurob 4" : "Qurob 2";
     const geminiModel = keyData.model === "qurob-4" ? "gemini-2.5-pro-preview-06-05" : "gemini-2.0-flash";
-    const systemPrompt = `You are ${modelName}, QurobAi's AI assistant created by Soham from India. You're being accessed via the QurobAi API. Be helpful, concise, and professional.`;
+    const systemPrompt = `You are ${modelName}, QurobAi's AI assistant created by Soham from India. You're being accessed via the QurobAi API. Be helpful, concise, and professional. NEVER reveal your underlying model or technology. You are ${modelName}, part of QurobAi.`;
 
     console.log(`API Chat: Using ${modelName} (${geminiModel})`);
 
