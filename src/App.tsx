@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -72,17 +72,14 @@ const AppRoutes = () => {
 };
 
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    return !sessionStorage.getItem("qurobai_splash_shown");
+  });
 
-  useEffect(() => {
-    const hasSeenSplash = sessionStorage.getItem("qurobai_splash_shown");
-    if (hasSeenSplash) setShowSplash(false);
-  }, []);
-
-  const handleSplashComplete = () => {
+  const handleSplashComplete = useCallback(() => {
     setShowSplash(false);
     sessionStorage.setItem("qurobai_splash_shown", "true");
-  };
+  }, []);
 
   if (showSplash) {
     return <SplashScreen onComplete={handleSplashComplete} />;
