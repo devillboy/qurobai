@@ -1,7 +1,6 @@
-import { ArrowLeft, Menu, Lock } from "lucide-react";
+import { Menu, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ThreeDText } from "@/components/ThreeDText";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -26,17 +25,6 @@ export const ChatHeader = ({
     >
       <div className="flex items-center justify-between gap-3 max-w-3xl mx-auto">
         <div className="flex items-center gap-2">
-          {showBackButton && onBack && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={onBack}
-              className="h-9 w-9 rounded-xl shrink-0 md:hidden"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          )}
-          
           {onMenuToggle && (
             <Button 
               variant="ghost" 
@@ -50,12 +38,10 @@ export const ChatHeader = ({
         </div>
         
         <h1 className="text-lg md:text-base font-bold truncate flex items-center gap-2">
-          <ThreeDText as="span" className="text-lg md:text-base">
-            {title}
-          </ThreeDText>
+          <span>{title}</span>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Lock className="w-3 h-3 text-muted-foreground/50" />
+              <Lock className="w-3 h-3 text-muted-foreground/40" />
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
               Messages encrypted in transit (TLS)

@@ -189,14 +189,35 @@ export const useChat = (conversationId: string | null) => {
       console.error("Error saving message:", error);
     }
 
-    // Update conversation title if first user message
-    const currentMessages = messagesRef.current;
-    if (role === "user" && currentMessages.length === 0) {
-      const title = content.slice(0, 50) + (content.length > 50 ? "..." : "");
-      await supabase
+    // Auto-rename: check if conversation title is still "New Chat" and this is a user message
+    if (role === "user") {
+      const { data: conv } = await supabase
         .from("conversations")
-        .update({ title, updated_at: new Date().toISOString() })
-        .eq("id", convId);
+        .select("title")
+        .eq("id", convId)
+        .single();
+      
+      if (conv?.title === "New Chat") {
+        // Clean the content for title (remove prefixes like [Web Search], [Qurob: ...])
+        let cleanContent = content
+          .replace(/^\[Web Search\]\s*/i, "")
+          .replace(/^\[Deep Search\]\s*/i, "")
+          .replace(/^\[Qurob:.*?\]\s*/i, "")
+          .replace(/\[ImageData:.*?\]/g, "")
+          .replace(/\[Attachment:.*?\]\(.*?\)/g, "")
+          .trim();
+        
+        const title = cleanContent.slice(0, 50) + (cleanContent.length > 50 ? "..." : "");
+        await supabase
+          .from("conversations")
+          .update({ title: title || "Chat", updated_at: new Date().toISOString() })
+          .eq("id", convId);
+      } else {
+        await supabase
+          .from("conversations")
+          .update({ updated_at: new Date().toISOString() })
+          .eq("id", convId);
+      }
     } else {
       await supabase
         .from("conversations")
