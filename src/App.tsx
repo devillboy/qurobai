@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useCallback, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,14 +29,18 @@ const queryClient = new QueryClient();
 
 const PageLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
-    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    <div className="relative">
+      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    </div>
   </div>
 );
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
-  if (!user) return <Navigate to="/welcome" replace />;
+  if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 };
 
@@ -51,8 +55,8 @@ const AppRoutes = () => {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        <Route path="/" element={<Navigate to="/welcome" replace />} />
-        <Route path="/welcome" element={<PublicRoute><LandingPage /></PublicRoute>} />
+        <Route path="/" element={<Navigate to="/auth" replace />} />
+        <Route path="/welcome" element={<Navigate to="/auth" replace />} />
         <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Index /></ProtectedRoute>} />
         <Route path="/subscribe" element={<ProtectedRoute><Subscribe /></ProtectedRoute>} />
@@ -65,6 +69,7 @@ const AppRoutes = () => {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/security" element={<Security />} />
         <Route path="/download" element={<DownloadPage />} />
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
