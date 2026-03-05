@@ -1,4 +1,4 @@
-import { Sparkles, Code, FileText, Lightbulb, Globe, Search, Image, Zap } from "lucide-react";
+import { Sparkles, Code, Globe, Search, Image, Zap, Brain, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -9,12 +9,12 @@ interface WelcomeScreenProps {
 }
 
 const quickActions = [
-  { icon: "✍️", label: "Write Code", prompt: "Help me write a React component for a responsive navigation menu" },
-  { icon: "💡", label: "Brainstorm", prompt: "Give me 5 creative startup ideas using AI technology" },
-  { icon: "🔍", label: "Web Search", prompt: "[Web Search] Latest AI developments and breakthroughs" },
-  { icon: "🎨", label: "Create Image", prompt: "Generate an image of a futuristic city with flying cars at sunset" },
-  { icon: "📚", label: "Explain", prompt: "Explain how machine learning neural networks work in simple terms" },
-  { icon: "🔬", label: "Deep Search", prompt: "[Deep Search] Compare React vs Next.js for building modern web apps" },
+  { icon: "✍️", label: "Write Code", prompt: "Help me write a React component for a responsive navigation menu", color: "from-blue-500/10 to-blue-600/5" },
+  { icon: "💡", label: "Brainstorm Ideas", prompt: "Give me 5 creative startup ideas using AI technology", color: "from-amber-500/10 to-amber-600/5" },
+  { icon: "🔍", label: "Web Search", prompt: "[Web Search] Latest AI developments and breakthroughs", color: "from-emerald-500/10 to-emerald-600/5" },
+  { icon: "🎨", label: "Create Image", prompt: "Generate an image of a futuristic city with flying cars at sunset", color: "from-purple-500/10 to-purple-600/5" },
+  { icon: "📚", label: "Explain Topic", prompt: "Explain how machine learning neural networks work in simple terms", color: "from-cyan-500/10 to-cyan-600/5" },
+  { icon: "🔬", label: "Deep Search", prompt: "[Deep Search] Compare React vs Next.js for building modern web apps", color: "from-rose-500/10 to-rose-600/5" },
 ];
 
 export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
@@ -31,65 +31,69 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
   }, [user]);
 
   const firstName = displayName.split(" ")[0] || "there";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center py-4 md:py-8 px-3 md:px-4">
+    <div className="flex-1 flex flex-col items-center justify-center py-6 md:py-10 px-3 md:px-4">
       {/* Greeting */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="text-center mb-6 md:mb-8"
+        className="text-center mb-8 md:mb-10"
       >
-        <h1 className="text-3xl md:text-5xl font-bold mb-2 tracking-tight">
-          <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-            Hi, {firstName}
-          </span>
+        <p className="text-sm text-muted-foreground mb-2">{greeting},</p>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+          <span className="text-gradient">{firstName}</span>
         </h1>
-        <p className="text-base md:text-lg text-muted-foreground">
-          Where should we start?
+        <p className="text-muted-foreground mt-3 text-base">
+          What would you like to explore today?
         </p>
       </motion.div>
 
-      {/* Quick Actions - Pill style like Gemini */}
+      {/* Quick Actions — card grid */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.15 }}
-        className="w-full max-w-2xl mb-6 md:mb-8"
+        transition={{ duration: 0.5, delay: 0.12 }}
+        className="w-full max-w-xl mb-8"
       >
-        <div className="flex flex-wrap justify-center gap-2 md:gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
           {quickActions.map((action, index) => (
             <motion.button
               key={action.label}
               onClick={() => onQuickAction(action.prompt)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-border/60 bg-secondary/50 hover:bg-secondary hover:border-primary/40 transition-all text-sm font-medium touch-manipulation"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              initial={{ opacity: 0, y: 8 }}
+              className={`flex flex-col items-start gap-2 p-3.5 rounded-xl border border-border/40 bg-gradient-to-br ${action.color} hover:border-primary/30 transition-all duration-300 text-left group touch-manipulation`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
+              transition={{ duration: 0.3, delay: 0.08 + index * 0.04 }}
             >
-              <span className="text-base">{action.icon}</span>
-              <span>{action.label}</span>
+              <span className="text-xl">{action.icon}</span>
+              <div>
+                <span className="text-sm font-medium block">{action.label}</span>
+                <ArrowRight className="w-3 h-3 text-muted-foreground/40 group-hover:text-primary/60 transition-colors mt-1" />
+              </div>
             </motion.button>
           ))}
         </div>
       </motion.div>
 
-      {/* Capabilities row */}
+      {/* Capabilities */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.4 }}
-        className="flex flex-wrap justify-center gap-3 md:gap-4 text-xs text-muted-foreground/70"
+        className="flex flex-wrap justify-center gap-4 text-xs text-muted-foreground/60"
       >
         {[
-          { icon: Zap, label: "Lightning Fast" },
-          { icon: Code, label: "Code Expert" },
-          { icon: Image, label: "Vision & Image Gen" },
-          { icon: Globe, label: "Real-time Data" },
-          { icon: Search, label: "Web & Deep Search" },
+          { icon: Zap, label: "Fast" },
+          { icon: Code, label: "Code" },
+          { icon: Image, label: "Vision" },
+          { icon: Globe, label: "Search" },
+          { icon: Brain, label: "Reasoning" },
         ].map((cap) => (
           <div key={cap.label} className="flex items-center gap-1">
             <cap.icon className="w-3 h-3" />
@@ -97,16 +101,6 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
           </div>
         ))}
       </motion.div>
-
-      {/* Footer */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.6 }}
-        className="text-[11px] text-muted-foreground/40 mt-8 md:mt-12"
-      >
-        Created by Soham from India 🇮🇳
-      </motion.p>
     </div>
   );
 };
