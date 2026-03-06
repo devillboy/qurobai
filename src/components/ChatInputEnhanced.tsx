@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Paperclip, Mic, MicOff, X, Loader2, Sparkles, Globe, Search } from "lucide-react";
+import { Send, Paperclip, Mic, MicOff, X, Loader2, Sparkles, Globe, Search, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { TemplatesPicker } from "@/components/TemplatesPicker";
 interface ChatInputEnhancedProps {
   onSend: (message: string) => void;
   isLoading?: boolean;
+  onStop?: () => void;
 }
 
 interface AttachmentFile {
@@ -21,7 +22,7 @@ interface AttachmentFile {
   base64?: string;
 }
 
-export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps) {
+export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhancedProps) {
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -59,14 +60,13 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
   const toggleRecording = () => {
     if (!recognitionRef.current) { toast.error("Speech recognition not supported"); return; }
     if (isRecording) { recognitionRef.current.stop(); setIsRecording(false); }
-    else { try { recognitionRef.current.start(); setIsRecording(true); toast.info("Listening..."); } catch (e) { toast.error("Failed to start voice input"); } }
+    else { try { recognitionRef.current.start(); setIsRecording(true); toast.info("Listening..."); } catch { toast.error("Failed to start voice input"); } }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !user) return;
     setUploading(true);
-
     for (const file of Array.from(files)) {
       if (file.size > 10 * 1024 * 1024) { toast.error(`${file.name} is too large (max 10MB)`); continue; }
       try {
@@ -94,7 +94,7 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
           const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(data.path);
           setAttachments(prev => [...prev, { name: file.name, type: file.type, url: urlData.publicUrl, size: file.size }]);
         }
-      } catch (error) { toast.error(`Failed to upload ${file.name}`); }
+      } catch { toast.error(`Failed to upload ${file.name}`); }
     }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -105,20 +105,13 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
   const handleSubmit = () => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage && attachments.length === 0) return;
-
     let finalMessage = trimmedMessage;
     if (deepSearchOn) finalMessage = `[Deep Search] ${finalMessage}`;
     else if (webSearchOn) finalMessage = `[Web Search] ${finalMessage}`;
-
     const imageAttachments = attachments.filter(a => a.type.startsWith("image/") && a.base64);
-    if (imageAttachments.length > 0) {
-      finalMessage = finalMessage + "\n" + imageAttachments.map(a => `[ImageData:${a.base64}]`).join("");
-    }
+    if (imageAttachments.length > 0) finalMessage = finalMessage + "\n" + imageAttachments.map(a => `[ImageData:${a.base64}]`).join("");
     const otherAttachments = attachments.filter(a => !a.type.startsWith("image/"));
-    if (otherAttachments.length > 0) {
-      finalMessage = finalMessage + "\n" + otherAttachments.map(a => `[Attachment: ${a.name}](${a.url})`).join("\n");
-    }
-
+    if (otherAttachments.length > 0) finalMessage = finalMessage + "\n" + otherAttachments.map(a => `[Attachment: ${a.name}](${a.url})`).join("\n");
     onSend(finalMessage);
     setMessage("");
     setAttachments([]);
@@ -228,17 +221,27 @@ export function ChatInputEnhanced({ onSend, isLoading }: ChatInputEnhancedProps)
             {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </Button>
 
-          <Button size="icon"
-            className={cn("shrink-0 h-9 w-9 rounded-xl touch-manipulation transition-all", message.trim() || attachments.length > 0 ? "bg-primary hover:bg-primary/90 shadow-md shadow-primary/25" : "bg-muted/60 text-muted-foreground")}
-            onClick={handleSubmit}
-            disabled={isLoading || uploading || (!message.trim() && attachments.length === 0)}
-          >
-            <Send className="w-4 h-4" />
-          </Button>
+          {/* Send or Stop button */}
+          {isLoading ? (
+            <Button size="icon"
+              className="shrink-0 h-9 w-9 rounded-xl touch-manipulation bg-destructive hover:bg-destructive/90 shadow-md transition-all"
+              onClick={onStop}
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
+            </Button>
+          ) : (
+            <Button size="icon"
+              className={cn("shrink-0 h-9 w-9 rounded-xl touch-manipulation transition-all", message.trim() || attachments.length > 0 ? "bg-primary hover:bg-primary/90 shadow-md shadow-primary/25" : "bg-muted/60 text-muted-foreground")}
+              onClick={handleSubmit}
+              disabled={uploading || (!message.trim() && attachments.length === 0)}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         <p className="text-[10px] text-muted-foreground/40 text-center mt-1.5">
-          QurobAi • Vision • Search • Create
+          QurobAi • Experience Like Never Before
         </p>
       </div>
     </div>

@@ -366,7 +366,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
               <div className="p-3.5 rounded-xl bg-secondary/30 border border-border">
                 <div className="text-xs text-muted-foreground space-y-1.5">
                   <p className="font-medium text-foreground text-sm">Current Model</p>
-                  <p>{subscription ? subscription.subscription_plans?.name || "Qurob 4" : "Qurob 2 (Free)"}</p>
+                  <p>{subscription ? subscription.subscription_plans?.name || "Qurob 4" : "Qurob 3.2 (Free)"}</p>
                   <p className="text-[11px]">
                     {subscription ? "Advanced reasoning & deep analysis" : "Fast & reliable for everyday use"}
                   </p>
@@ -406,7 +406,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="w-4 h-4 text-primary" />
                   <span className="font-semibold text-sm">QurobAi</span>
-                  <Badge variant="outline" className="text-[10px]">v3.0</Badge>
+                  <Badge variant="outline" className="text-[10px]">v3.2</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   India's AI companion by Soham 🇮🇳<br/>

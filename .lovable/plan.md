@@ -1,113 +1,114 @@
-# QurobAi System Upgrade Plan
+# QurobAi Ultimate System Upgrade - Single Phase
 
-## Issues Identified
+## Current Issues Identified
 
-1. `**[Web Search]` / `[Deep Search]` prefix visible in chat** — when toggled on, these prefixes leak into the displayed message
-2. **No stop/cancel button** during AI streaming
-3. **No Qurob 3.2 free model** — user wants an auto free model with tuned knowledge
-4. **Firebase not configured** for push notifications
-5. **Admin Panel** is 1600 lines, desktop-only, needs mobile redesign
-6. **Chat text styling** — needs more professional, differentiated typography (Claude-like)
-7. **Memory/context** — AI forgets topics; need to send more history + better memory retrieval
-8. **Theme** needs minimalist polish matching "Experience Like Never Before"
-9. **Chat animations** — need fade-in/out transitions, smoother streaming
+1. **Build Error**: `usePushNotifications.ts` has TypeScript errors - `pushManager` not recognized on `ServiceWorkerRegistration`
+2. **Login Failing**: Console shows "Failed to fetch" on `signInWithPassword` - likely a network/CORS issue with the Supabase client
+3. **Settings UI**: All options crammed into one long scroll list - no tab structure, no clear sections on first open
+4. **Qurobs Page**: Exists but no access button from the main chat UI (only via URL `/qurobs`)
+5. **No Patch Updates Page**: No changelog or "what's new" feature
+6. **Splash Screen**: Generic particles animation - needs a more polished, professional loader
+7. **Mobile UI**: Chat header only shows on mobile, no desktop header; buttons can be cramped on small screens
+8. **AI Gateway**: Currently using Lovable AI Gateway which user wants to stop using - needs alternative AI backend
+9. **Chat responses**: No end-to-end encryption system
 
 ---
 
 ## Implementation Plan
 
-### 1. Fix `[Web Search]` Display Bug
+### 1. Fix Build Error - `usePushNotifications.ts`
 
-**File: `src/components/ChatMessage.tsx**`
-In `renderContent()`, strip `[Web Search]` and `[Deep Search]` prefixes from displayed user messages so they don't show in the chat bubble. The prefix is only needed for the edge function.
+Add TypeScript type assertion for `pushManager` since the Web Push API types are not included by default. Cast `registration` to `any` at push manager access points to fix the 3 TS errors.
 
-### 2. Add Stop Button During Streaming
+### 2. Fix Login - Auth Page
 
-**Files: `src/hooks/useChat.ts`, `src/pages/Index.tsx`, `src/components/ChatInputEnhanced.tsx**`
+The "Failed to fetch" error on `signInWithPassword` suggests the Supabase URL may be unreachable or the client config has issues. Since `src/integrations/supabase/client.ts` is auto-generated and shouldn't be touched, we'll add better error handling in `Auth.tsx`:
 
-- Add an `AbortController` to `streamChat()` and expose a `stopGeneration()` function from `useChat`
-- In `ChatInputEnhanced`, when `isLoading` is true, replace the Send button with a Stop (Square) button that calls `stopGeneration()`
-- Save partial response on abort
+- Catch network errors specifically and show "Connection error. Check your internet and try again."
+- Add a retry mechanism
+- Add a visible "having trouble?" link
 
-### 3. Launch New Qurob 3.2 Free Model
+### 3. Settings UI Overhaul - Tab-Based Layout
 
-**File: `supabase/functions/chat/index.ts**`
+Redesign `SettingsDialog.tsx` with a **tabbed interface** instead of one long scroll:
 
-- Update model capabilities text: better knowledge, privacy-focused, trained on 600B+ parameters (branding)
-- Tune the system prompt with richer instructions: better formatting, memory awareness, never reveal underlying model
-- Update `QUROBAI_KNOWLEDGE` block with Qurob 3.2 details
+- **General**: Profile card, Theme, Language, Font Size
+- **AI**: Personalization, Voice Output, Model info
+- **Features**: API Access, Qurobs, Chat Search, Voice Mode, Keyboard Shortcuts
+- **Data**: Export, Download All Data, Subscription History
+- **About**: Legal, Version, Admin (if admin), Support, Sign Out
 
-**File: `supabase/functions/api-chat/index.ts**` — same rename
+This way on first open, users immediately see the most useful settings.
 
-**Files: `src/components/ModelIndicator.tsx`, `src/components/SettingsDialog.tsx`, `src/components/WelcomeScreen.tsx**` — update all "Qurob 2" references to "Qurob 3.2"
+### 4. Add Qurobs Access Button
 
-### 4. Configure Firebase for Push Notifications
+Add a "Qurobs" navigation button in:
 
-**File: `src/lib/firebase.ts**` (new) — Initialize Firebase with provided config
-**File: `src/hooks/usePushNotifications.ts**` — Add Firebase Cloud Messaging as primary push method alongside existing VAPID
-**File: `supabase/functions/send-push/index.ts**` — Add Firebase Admin SDK sending via FCM as fallback
+- The **ChatSidebar** (alongside New Chat button)
+- The **WelcomeScreen** as a featured card
+- The **ChatHeader** (mobile) as an icon button
 
-- Store FCM token in `push_subscriptions` table alongside existing VAPID data
-- Need `FIREBASE_SERVICE_ACCOUNT` secret for server-side sending
+### 5. Patch Updates / What's New Page
 
-### 5. Redesign Admin Panel for Mobile
+Create `src/pages/PatchUpdates.tsx`:
 
-**File: `src/pages/AdminPanel.tsx**`
+- List of updates with dates, version numbers, and descriptions
+- Each update shows new features, bug fixes, improvements
+- On first visit after a new update, show a **"What's New" popup** (modal) with highlights and screenshots
+- Track last seen version in `localStorage`
 
-- Make the tab navigation scrollable horizontally on mobile
-- Convert stats grid to 2-column on mobile
-- Make all cards stack vertically with proper padding
-- Add bottom navigation bar for mobile with key tabs
-- Reduce font sizes and padding for mobile viewport
+### 6. Professional Splash Screen
 
-### 6. Professional Chat Typography
+Replace the particle animation in `SplashScreen.tsx` with:
 
-**File: `src/components/ChatMessage.tsx**`
+- Clean logo fade-in with a subtle scale animation
+- Smooth gradient progress bar (no particles - they look amateur)
+- "Skip" button in bottom corner
+- Faster: 1.5s instead of 2.5s
 
-- User messages: slightly lighter weight, right-aligned bubble style
-- Assistant messages: use `prose prose-sm` with custom line-height (1.7), letter-spacing
-- Add subtle fade-in animation on each message (not just entry, but text appearing)
-- Differentiate code text vs prose text with font-size differences
-- Add a thin left-border accent on assistant messages
+### 7. Mobile UI Polish
 
-### 7. Improve AI Memory & Context
+- **ChatHeader**: Show on both mobile and desktop (remove `md:hidden`), make it slimmer on desktop
+- **ChatInputEnhanced**: Ensure all buttons (templates, attach, mic, send) fit on 320px width screens
+- **WelcomeScreen**: Make quick actions 2-column grid on mobile instead of flex-wrap (more consistent)
+- **Index.tsx**: Remove extra padding, ensure the input hugs the bottom
 
-**File: `supabase/functions/chat/index.ts**`
+### 8. AI Backend - Switch Away from Lovable Gateway
 
-- Increase memory retrieval from `limit(10)` to `limit(25)`
-- In `summarizeConversation()`, increase recent messages window from 8 to 12
-- Add conversation topic detection: extract key topics from messages and include as context
-- Add instruction in system prompt: "Remember and reference earlier topics in this conversation"
+Since user doesn't want Lovable AI Gateway, switch `chat/index.ts` and `api-chat/index.ts` to use:
 
-### 8. Theme & Minimalist Polish
+- **Primary**: Google Gemini API directly via `GOOGLE_GEMINI_API_KEY` (already configured)
+- **Fallback**: OpenRouter via `OPENROUTER_API_KEY` (already configured)
+- **Code model**: DeepInfra via `DEEPINFRA_API_KEY` (already configured)
 
-**File: `src/index.css**`
+Model mapping:
 
-- Refine spacing: tighter card padding, more breathing room between sections
-- Update gradient-primary to be more subtle
-- Add light mode CSS variables (currently missing)
-- Soften border colors slightly
-- Update `glass` class with more refined backdrop-blur
+- Qurob 2 (Free): `gemini-2.0-flash` via Google API
+- Qurob 4 (Premium): `gemini-2.5-pro` via Google API
+- Q-06 (Code): `deepseek-coder` via DeepInfra
 
-### 9. Chat Animations
+### 9. Chat End-to-End Encryption Indicator
 
-**File: `src/components/ChatMessage.tsx**`
+Full E2E encryption requires client-side key management which is complex. Instead:
 
-- Add fade-in animation on message appear (already exists via framer-motion in Index.tsx, but improve timing)
-- Add fade-out on streaming cursor removal
-- Smoother streaming text appearance
+- Add a visual "Messages are encrypted in transit" indicator (TLS) in the chat
+- Show a lock icon in the chat header
+- Add encryption info in Settings > About
 
-**File: `src/pages/Index.tsx**`
+### 10. Branding & Theme Refresh
 
-- Improve `messageTransition` timing for more natural feel
+Update `src/index.css`:
 
-### 10. Remove All Third-Party AI References
+- Slightly modernize the color palette (warmer tones)
+- Update button styles with subtle gradients
+- Add a light theme variant (currently only dark vars defined)
+- Rounded corners more consistent (use `--radius` everywhere)
 
-**Files: `supabase/functions/chat/index.ts`, `supabase/functions/api-chat/index.ts**`
+### 11. Performance Boost
 
-- Audit and remove any remaining mentions of Gemini, OpenRouter, DeepInfra, DeepSeek in user-facing strings
-- Only keep them in internal code comments and API calls
-- System prompt already says "never claim to be Gemini" — reinforce this
+- Add `React.memo` to `ChatMessage` component
+- Lazy load heavy pages: `AdminPanel`, `Subscribe`, `ApiAccess`, `Qurobs`, `Download`
+- Add route-based code splitting in `App.tsx` via `React.lazy`
 
 ---
 
@@ -116,31 +117,48 @@ In `renderContent()`, strip `[Web Search]` and `[Deep Search]` prefixes from dis
 ### New Files
 
 
-| File                  | Purpose                                      |
-| --------------------- | -------------------------------------------- |
-| `src/lib/firebase.ts` | Firebase initialization with provided config |
+| File                               | Purpose                     |
+| ---------------------------------- | --------------------------- |
+| `src/pages/PatchUpdates.tsx`       | Changelog / What's New page |
+| `src/components/WhatsNewPopup.tsx` | Modal popup for new updates |
 
 
 ### Modified Files
 
 
-| File                                   | Changes                                             |
-| -------------------------------------- | --------------------------------------------------- |
-| `src/hooks/useChat.ts`                 | AbortController for stop, expose `stopGeneration()` |
-| `src/components/ChatInputEnhanced.tsx` | Stop button when streaming                          |
-| `src/components/ChatMessage.tsx`       | Strip prefixes, typography upgrade, animations      |
-| `src/pages/Index.tsx`                  | Pass stopGeneration, animation timing               |
-| `src/pages/AdminPanel.tsx`             | Mobile-responsive redesign                          |
-| `src/components/SettingsDialog.tsx`    | Qurob 3.2 naming                                    |
-| `src/components/ModelIndicator.tsx`    | Qurob 3.2 naming                                    |
-| `src/components/WelcomeScreen.tsx`     | Qurob 3.2 branding                                  |
-| `supabase/functions/chat/index.ts`     | Qurob 3.2, memory boost, remove AI refs             |
-| `supabase/functions/api-chat/index.ts` | Qurob 3.2, remove AI refs                           |
-| `src/hooks/usePushNotifications.ts`    | Firebase FCM integration                            |
-| `src/index.css`                        | Theme polish, light mode varieties                  |
+| File                                   | Changes                                          |
+| -------------------------------------- | ------------------------------------------------ |
+| `src/hooks/usePushNotifications.ts`    | Fix TypeScript pushManager errors                |
+| `src/pages/Auth.tsx`                   | Better error handling for network failures       |
+| `src/components/SettingsDialog.tsx`    | Tab-based layout with sections                   |
+| `src/components/ChatSidebar.tsx`       | Add Qurobs navigation button                     |
+| `src/components/WelcomeScreen.tsx`     | Add Qurobs card, mobile grid layout              |
+| `src/components/ChatHeader.tsx`        | Show on desktop too, add lock icon               |
+| `src/components/SplashScreen.tsx`      | Professional animation, skip button, faster      |
+| `src/components/ChatInputEnhanced.tsx` | Mobile button scaling fixes                      |
+| `src/pages/Index.tsx`                  | Remove extra padding, lazy loading prep          |
+| `src/App.tsx`                          | Add PatchUpdates route, lazy load pages          |
+| `supabase/functions/chat/index.ts`     | Switch to Google Gemini + OpenRouter + DeepInfra |
+| `supabase/functions/api-chat/index.ts` | Switch to Google Gemini directly                 |
+| `src/index.css`                        | Theme refresh, light mode, button updates        |
 
 
+### No Database Changes Required
 
-| &nbsp; | &nbsp; |
-| ------ | ------ |
-| &nbsp; | &nbsp; |
+---
+
+## Execution Order
+
+All changes will be implemented in a single pass:
+
+1. Fix build errors (pushManager TS fix)
+2. Fix login (Auth.tsx error handling)
+3. Switch AI backend (chat + api-chat edge functions)
+4. Settings UI tabs redesign
+5. Splash screen professional redesign
+6. Mobile UI polish (header, input, welcome)
+7. Create Patch Updates page + What's New popup
+8. Add Qurobs access buttons
+9. Theme refresh + performance optimizations
+10. Route updates in App.tsx
+11. Fix Application Download page and download button it's not working and make it accessible 

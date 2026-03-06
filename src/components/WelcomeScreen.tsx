@@ -48,7 +48,7 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
           <span className="text-gradient">{firstName}</span>
         </h1>
         <p className="text-muted-foreground mt-3 text-base">
-          What would you like to explore today?
+          Experience Like Never Before
         </p>
       </motion.div>
 

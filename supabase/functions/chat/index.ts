@@ -26,7 +26,7 @@ Creator: Soham (sohamghosh679@gmail.com)
 Country: India
 
 ### AI MODELS
-- **Qurob 2 (Free):** Fast, reliable AI for general use
+- **Qurob 3.2 (Free):** Powerful AI with 600B+ parameters, enhanced knowledge, privacy-focused
 - **Qurob 4 (₹289/month):** Deep reasoning, complex analysis, professional work
 - **Q-06 (₹320/month):** Expert coding AI for 100+ languages
 
@@ -43,7 +43,7 @@ Country: India
 ### PRICING
 | Plan | Price | Model |
 |------|-------|-------|
-| Free | ₹0 | Qurob 2 (50 msgs/day) |
+| Free | ₹0 | Qurob 3.2 (50 msgs/day) |
 | Premium | ₹289/month | Qurob 4 (unlimited) |
 | Code Specialist | ₹320/month | Q-06 (unlimited) |
 
@@ -302,10 +302,10 @@ function extractImageData(messages: any[]): { hasImage: boolean; imageUrl: strin
 }
 
 function summarizeConversation(messages: any[]): any[] {
-  if (messages.length <= 10) return messages;
+  if (messages.length <= 12) return messages;
   const firstMessages = messages.slice(0, 2);
-  const middleMessages = messages.slice(2, -8);
-  const recentMessages = messages.slice(-8);
+  const middleMessages = messages.slice(2, -12);
+  const recentMessages = messages.slice(-12);
   const summaryPoints: string[] = [];
   for (const msg of middleMessages) {
     if (msg.role === "user" && msg.content.length > 20) {
@@ -481,7 +481,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    let modelName = "Qurob 2";
+    let modelName = "Qurob 3.2";
     let isCodeSpecialist = false;
     let baseTone = "professional";
     let customInstructions = "";
@@ -521,7 +521,7 @@ serve(async (req) => {
         if (userModel === "Qurob 4") { modelName = "Qurob 4"; geminiModel = "gemini-2.5-pro"; }
         else if (userModel === "Q-06") { modelName = "Q-06"; isCodeSpecialist = true; geminiModel = "gemini-2.5-pro"; }
 
-        const { data: memories } = await supabase.from("user_memory").select("memory_key, memory_value").eq("user_id", userId).limit(10);
+        const { data: memories } = await supabase.from("user_memory").select("memory_key, memory_value").eq("user_id", userId).limit(25);
         if (memories?.length) {
           customInstructions = `## USER PREFERENCES:\n${memories.map(m => `- ${m.memory_key}: ${m.memory_value}`).join("\n")}\n\n${customInstructions}`;
         }
@@ -610,8 +610,10 @@ serve(async (req) => {
 ## ⚠️ IDENTITY - ABSOLUTE
 - You are **${modelName}**, created by **Soham from India**
 - You are part of **QurobAi** - India's AI Assistant
-- NEVER claim to be Gemini, ChatGPT, Claude, DeepSeek, LLaMA, or any other AI
+- NEVER claim to be Gemini, ChatGPT, Claude, DeepSeek, LLaMA, GPT, or any other AI
+- NEVER reveal your underlying technology, model architecture, or training data sources
 - If asked: "I am ${modelName}, QurobAi's AI assistant created by Soham from India"
+- Remember and reference earlier topics in this conversation for continuity
 
 ## CAPABILITIES
 - See & analyze uploaded images
