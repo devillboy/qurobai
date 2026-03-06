@@ -1,13 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Zap, Code, Brain } from "lucide-react";
+import { Sparkles, Zap, Code } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ModelIndicatorProps {
   currentModel: string;
@@ -16,6 +11,7 @@ interface ModelIndicatorProps {
 export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
   const navigate = useNavigate();
   const isPremium = currentModel === "Qurob 4";
+  const displayModel = currentModel === "Qurob 2" ? "Qurob 3.2" : currentModel;
 
   const modelInfo = isPremium
     ? {
@@ -23,8 +19,8 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
         features: ["Enhanced reasoning", "Deeper analysis", "Q-06 Code AI", "Priority responses"],
       }
     : {
-        description: "Standard AI for everyday tasks and conversations",
-        features: ["General conversations", "Basic code help", "Real-time data access"],
+        description: "Powerful free AI with 600B+ parameters for everyday tasks",
+        features: ["General conversations", "Code assistance", "Real-time data access", "Web & Deep Search"],
       };
 
   return (
@@ -39,16 +35,12 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
               </div>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="default" className="font-semibold cursor-help">
-                    {currentModel}
-                  </Badge>
+                  <Badge variant="default" className="font-semibold cursor-help">{displayModel}</Badge>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p className="font-medium mb-1">{modelInfo.description}</p>
                   <ul className="text-xs text-muted-foreground">
-                    {modelInfo.features.map((f, i) => (
-                      <li key={i}>• {f}</li>
-                    ))}
+                    {modelInfo.features.map((f, i) => <li key={i}>• {f}</li>)}
                   </ul>
                 </TooltipContent>
               </Tooltip>
@@ -59,16 +51,12 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
               <Zap className="w-4 h-4 text-muted-foreground" />
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="secondary" className="cursor-help">
-                    {currentModel}
-                  </Badge>
+                  <Badge variant="secondary" className="cursor-help">{displayModel}</Badge>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p className="font-medium mb-1">{modelInfo.description}</p>
                   <ul className="text-xs text-muted-foreground">
-                    {modelInfo.features.map((f, i) => (
-                      <li key={i}>• {f}</li>
-                    ))}
+                    {modelInfo.features.map((f, i) => <li key={i}>• {f}</li>)}
                   </ul>
                 </TooltipContent>
               </Tooltip>
@@ -86,19 +74,11 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
                   <span className="text-xs font-medium">Q-06</span>
                 </div>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Code Specialist AI for complex programming tasks</p>
-              </TooltipContent>
+              <TooltipContent><p>Code Specialist AI for complex programming tasks</p></TooltipContent>
             </Tooltip>
           )}
-          
           {!isPremium && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate("/subscribe")}
-              className="text-xs"
-            >
+            <Button size="sm" variant="outline" onClick={() => navigate("/subscribe")} className="text-xs">
               <Sparkles className="w-3 h-3 mr-1" />
               Upgrade to Qurob 4
             </Button>

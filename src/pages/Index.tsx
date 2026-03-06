@@ -20,7 +20,7 @@ import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 const messageTransition = {
-  duration: 0.35,
+  duration: 0.4,
   ease: [0.22, 1, 0.36, 1] as const
 };
 
@@ -30,29 +30,20 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [activeQurob, setActiveQurob] = useState<any>(null);
-  const { messages, isLoading, sendMessage, clearMessages, currentModel, regenerateLastMessage, togglePinMessage } = useChat(currentConversationId);
+  const { messages, isLoading, sendMessage, clearMessages, currentModel, regenerateLastMessage, togglePinMessage, stopGeneration } = useChat(currentConversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Check for active Qurob from session
   useEffect(() => {
     const stored = sessionStorage.getItem("active_qurob");
-    if (stored) {
-      try {
-        setActiveQurob(JSON.parse(stored));
-      } catch (e) { /* ignore */ }
-    }
+    if (stored) { try { setActiveQurob(JSON.parse(stored)); } catch { /* ignore */ } }
   }, []);
 
-  useEffect(() => {
-    if (!authLoading && !user) navigate("/auth");
-  }, [user, authLoading, navigate]);
+  useEffect(() => { if (!authLoading && !user) navigate("/auth"); }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-    }
+    if (scrollRef.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
   const handleNewChat = useCallback(async () => {
@@ -76,14 +67,8 @@ const Index = () => {
       convId = data.id;
       setCurrentConversationId(convId);
     }
-
-    // Prepend Qurob system prompt context if active
     let finalMessage = message;
-    if (activeQurob && messages.length === 0) {
-      // First message with a Qurob - add context
-      finalMessage = `[Qurob: ${activeQurob.name}] ${message}`;
-    }
-
+    if (activeQurob && messages.length === 0) finalMessage = `[Qurob: ${activeQurob.name}] ${message}`;
     sendMessage(finalMessage, convId);
   }, [user, currentConversationId, sendMessage, activeQurob, messages.length]);
 
@@ -100,16 +85,13 @@ const Index = () => {
 
   const showThinking = isLoading && (messages.length === 0 || messages[messages.length - 1]?.role === "user" || messages[messages.length - 1]?.content === "");
 
-  if (authLoading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  }
+  if (authLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!user) return null;
 
   return (
     <>
       <SEOHead title="Chat" />
       <div className="h-screen h-[100dvh] flex bg-background overflow-hidden">
-        {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {sidebarOpen && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -117,7 +99,6 @@ const Index = () => {
           )}
         </AnimatePresence>
         
-        {/* Sidebar */}
         <div className={`fixed md:relative inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-[0.22,1,0.36,1] ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
           <ChatSidebar
             currentConversationId={currentConversationId}
@@ -127,17 +108,14 @@ const Index = () => {
           />
         </div>
 
-        {/* Main Content */}
         <main className="flex-1 flex flex-col min-w-0 w-full">
           <ChatHeader onMenuToggle={() => setSidebarOpen(true)} showBackButton={false} title={messages.length > 0 ? "Chat" : "QurobAi"} />
           <SubscriptionExpiryBanner />
           
-          {/* Model Indicator - desktop only */}
           <div className="hidden md:block px-4 py-3 border-b border-border/50 max-w-3xl w-full mx-auto">
             <ModelIndicator currentModel={currentModel} />
           </div>
 
-          {/* Active Qurob indicator */}
           {activeQurob && (
             <div className="px-3 md:px-4 py-2 border-b border-border/50 max-w-3xl w-full mx-auto">
               <div className="flex items-center gap-2 text-xs">
@@ -179,9 +157,8 @@ const Index = () => {
               </div>
             )}
 
-            {/* Input area */}
             <div className="mt-auto pt-2 md:pt-3 safe-area-bottom">
-              <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} />
+              <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} onStop={stopGeneration} />
               <div className="hidden md:flex justify-center mt-1.5">
                 <button onClick={() => setCommandPaletteOpen(true)} className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors flex items-center gap-1.5">
                   Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">⌘K</kbd> for commands
