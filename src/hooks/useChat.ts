@@ -16,6 +16,7 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 async function streamChat({
   messages,
   userId,
+  model,
   onDelta,
   onDone,
   onError,
@@ -23,6 +24,7 @@ async function streamChat({
 }: {
   messages: Array<{ role: string; content: string }>;
   userId?: string;
+  model?: string;
   onDelta: (deltaText: string) => void;
   onDone: () => void;
   onError: (error: Error) => void;
@@ -35,7 +37,7 @@ async function streamChat({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages, userId }),
+      body: JSON.stringify({ messages, userId, model }),
       signal,
     });
 
@@ -44,6 +46,7 @@ async function streamChat({
       const errorMessage = errorData.error || `Request failed with status ${resp.status}`;
       if (resp.status === 429) throw new Error("Rate limit exceeded. Please wait a moment and try again.");
       if (resp.status === 402) throw new Error("Usage limit reached. Please add credits to your account.");
+      if (resp.status === 403) throw new Error(errorData.error || "This model requires a premium subscription.");
       throw new Error(errorMessage);
     }
 
@@ -98,7 +101,7 @@ async function streamChat({
     onDone();
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      onDone(); // Save partial on abort
+      onDone();
       return;
     }
     onError(error instanceof Error ? error : new Error("Unknown error"));
@@ -109,14 +112,17 @@ export const useChat = (conversationId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentModel, setCurrentModel] = useState<string>("Qurob 3.2");
+  const [selectedModel, setSelectedModel] = useState<string>("Qurob 3.2");
   const { user } = useAuth();
   
   const messagesRef = useRef<Message[]>([]);
   const isLoadingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const selectedModelRef = useRef(selectedModel);
   
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { isLoadingRef.current = isLoading; }, [isLoading]);
+  useEffect(() => { selectedModelRef.current = selectedModel; }, [selectedModel]);
 
   useEffect(() => { if (user) loadUserModel(); }, [user]);
 
@@ -124,9 +130,12 @@ export const useChat = (conversationId: string | null) => {
     if (!user) return;
     const { data } = await supabase.rpc("get_user_model", { user_id: user.id });
     if (data) {
-      // Map old model names to new
       const model = data === "Qurob 2" ? "Qurob 3.2" : data;
       setCurrentModel(model);
+      // Only set selected model if user hasn't manually chosen one
+      if (selectedModelRef.current === "Qurob 3.2" || selectedModelRef.current === "Qurob 2") {
+        setSelectedModel(model);
+      }
     }
   }, [user]);
 
@@ -175,6 +184,10 @@ export const useChat = (conversationId: string | null) => {
     }
   }, []);
 
+  const changeModel = useCallback((model: string) => {
+    setSelectedModel(model);
+  }, []);
+
   const sendMessage = useCallback(async (content: string, convId: string) => {
     if (!content.trim() || isLoadingRef.current || !user || !convId) return;
 
@@ -192,7 +205,6 @@ export const useChat = (conversationId: string | null) => {
     const recentMessages = [...currentMessages, userMessage].slice(-20);
     const messageHistory = recentMessages.map((m) => ({ role: m.role, content: m.content }));
 
-    // Create abort controller for this request
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
@@ -203,6 +215,7 @@ export const useChat = (conversationId: string | null) => {
     await streamChat({
       messages: messageHistory,
       userId: user?.id,
+      model: selectedModelRef.current,
       signal: abortController.signal,
       onDelta: (delta) => {
         assistantContent += delta;
@@ -273,6 +286,7 @@ export const useChat = (conversationId: string | null) => {
     await streamChat({
       messages: messageHistory,
       userId: user?.id,
+      model: selectedModelRef.current,
       signal: abortController.signal,
       onDelta: (delta) => {
         assistantContent += delta;
@@ -326,6 +340,6 @@ export const useChat = (conversationId: string | null) => {
   const clearMessages = useCallback(() => { setMessages([]); }, []);
 
   return useMemo(() => ({
-    messages, isLoading, sendMessage, clearMessages, currentModel, regenerateLastMessage, togglePinMessage, stopGeneration,
-  }), [messages, isLoading, sendMessage, clearMessages, currentModel, regenerateLastMessage, togglePinMessage, stopGeneration]);
+    messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration,
+  }), [messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration]);
 };

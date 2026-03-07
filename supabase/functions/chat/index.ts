@@ -48,12 +48,13 @@ Country: India
 | Code Specialist | ₹320/month | Q-06 (unlimited) |
 
 ### PAYMENT
-Pay via UPI to 7864084241@ybl, upload screenshot, admin approves within 24h.
+Pay via UPI to 9153109561@ybl, upload screenshot or provide UTR/Transaction ID for instant verification.
 
 ### CONTACT
 Email: sohamghosh679@gmail.com
 
 ### VERSION HISTORY
+- v3.2: Model selector, auto-payment verification, mobile admin panel
 - v3.0: Major UI overhaul, Web Search, Deep Search, Qurobs, token system
 - v2.5: Vision AI, Image Generation, Real-time data
 - v2.0: Projects, API Access, Voice input
@@ -146,7 +147,7 @@ async function fallbackWebSearch(query: string): Promise<string> {
   const results: string[] = [];
   try {
     const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
-    const resp = await fetch(rssUrl, { headers: { "User-Agent": "QurobAi/3.0" } });
+    const resp = await fetch(rssUrl, { headers: { "User-Agent": "QurobAi/3.2" } });
     const rssText = await resp.text();
     const itemMatches = rssText.matchAll(/<item>([\s\S]*?)<\/item>/g);
     for (const match of itemMatches) {
@@ -195,7 +196,7 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       return `**🕐 Current Time:** ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })} (IST)`;
     }
     if (type === "weather" && query) {
-      const geoResp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, { headers: { "User-Agent": "QurobAi/3.0" } });
+      const geoResp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, { headers: { "User-Agent": "QurobAi/3.2" } });
       const geoData = await geoResp.json();
       if (geoData[0]) {
         const { lat, lon, display_name } = geoData[0];
@@ -247,7 +248,7 @@ async function fetchRealtimeData(type: string, query?: string): Promise<string |
       return items.length ? `**📰 News: "${query}"**\n\n${items.join("\n")}` : `No news found for "${query}".`;
     }
     if (type === "cricket") {
-      const resp = await fetch(`https://news.google.com/rss/search?q=cricket+live+score+today&hl=en-IN&gl=IN&ceid=IN:en`, { headers: { "User-Agent": "QurobAi/3.0" } });
+      const resp = await fetch(`https://news.google.com/rss/search?q=cricket+live+score+today&hl=en-IN&gl=IN&ceid=IN:en`, { headers: { "User-Agent": "QurobAi/3.2" } });
       const rssText = await resp.text();
       const items: string[] = [];
       const matches = rssText.matchAll(/<item>([\s\S]*?)<\/item>/g);
@@ -350,7 +351,7 @@ async function generateImage(prompt: string, supabase: any, userId?: string): Pr
 
 async function checkUrl(url: string): Promise<string> {
   try {
-    const resp = await fetch(url, { headers: { "User-Agent": "QurobAi/3.0" }, redirect: "follow" });
+    const resp = await fetch(url, { headers: { "User-Agent": "QurobAi/3.2" }, redirect: "follow" });
     const html = await resp.text();
     const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() || "";
     const desc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)/i)?.[1] || "";
@@ -359,101 +360,12 @@ async function checkUrl(url: string): Promise<string> {
   return "";
 }
 
-// Call Google Gemini API directly
-async function callGeminiAPI(model: string, messages: any[], temperature: number, stream: boolean): Promise<Response> {
-  const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-  if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
-
-  const geminiModel = model === "gemini-2.5-pro" ? "gemini-2.5-pro-preview-06-05" : "gemini-2.0-flash";
-  
-  // Convert OpenAI-style messages to Gemini format
-  const systemInstruction = messages.find((m: any) => m.role === "system")?.content || "";
-  const contents = messages
-    .filter((m: any) => m.role !== "system")
-    .map((m: any) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
-
-  const endpoint = stream 
-    ? `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`
-    : `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
-
-  const body: any = {
-    contents,
-    generationConfig: { temperature, maxOutputTokens: 8192 },
-  };
-  if (systemInstruction) {
-    body.systemInstruction = { parts: [{ text: systemInstruction }] };
-  }
-
-  return await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-// Convert Gemini SSE stream to OpenAI-compatible SSE stream
-function convertGeminiStreamToOpenAI(geminiStream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
-  const reader = geminiStream.getReader();
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  return new ReadableStream({
-    async pull(controller) {
-      try {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
-          return;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr) continue;
-            try {
-              const geminiData = JSON.parse(jsonStr);
-              const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-              if (text) {
-                const openAIChunk = {
-                  choices: [{ delta: { content: text } }],
-                };
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(openAIChunk)}\n\n`));
-              }
-            } catch (e) { /* skip malformed JSON */ }
-          }
-        }
-      } catch (e) {
-        controller.error(e);
-      }
-    },
-  });
-}
-
-// Fallback: call OpenRouter
-async function callOpenRouter(messages: any[], model: string, temperature: number): Promise<Response> {
-  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-  if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
-
-  return await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://qurobai.lovable.app",
-      "X-Title": "QurobAi",
-    },
-    body: JSON.stringify({ model, messages, stream: true, temperature, max_tokens: 4096 }),
-  });
-}
+// Model mapping: QurobAi model name -> Lovable AI Gateway model
+const MODEL_MAP: Record<string, string> = {
+  "Qurob 3.2": "google/gemini-3-flash-preview",
+  "Qurob 4": "google/gemini-2.5-pro",
+  "Q-06": "google/gemini-2.5-pro",
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -461,18 +373,19 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, userId } = await req.json();
+    const { messages, userId, model: requestedModel } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Invalid request format" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     
-    console.log("QurobAi request:", messages.length, "messages, userId:", userId ? "yes" : "no");
+    console.log("QurobAi request:", messages.length, "messages, userId:", userId ? "yes" : "no", "requestedModel:", requestedModel);
 
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
     
-    if (!GOOGLE_GEMINI_API_KEY && !OPENROUTER_API_KEY) {
+    if (!LOVABLE_API_KEY && !GOOGLE_GEMINI_API_KEY && !OPENROUTER_API_KEY) {
       console.error("No AI API keys configured");
       return new Response(JSON.stringify({ error: "AI service not configured." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -481,12 +394,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    let modelName = "Qurob 3.2";
+    let modelName = requestedModel || "Qurob 3.2";
     let isCodeSpecialist = false;
     let baseTone = "professional";
     let customInstructions = "";
     let persona = "default";
-    let geminiModel = "gemini-2.0-flash";
 
     if (userId) {
       try {
@@ -517,9 +429,26 @@ serve(async (req) => {
           }
         }
 
-        const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
-        if (userModel === "Qurob 4") { modelName = "Qurob 4"; geminiModel = "gemini-2.5-pro"; }
-        else if (userModel === "Q-06") { modelName = "Q-06"; isCodeSpecialist = true; geminiModel = "gemini-2.5-pro"; }
+        // If no model was explicitly requested, use subscription-based model
+        if (!requestedModel) {
+          const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
+          if (userModel === "Qurob 4") modelName = "Qurob 4";
+          else if (userModel === "Q-06") { modelName = "Q-06"; isCodeSpecialist = true; }
+          else modelName = "Qurob 3.2";
+        } else {
+          // Validate requested model against subscription
+          if (requestedModel === "Qurob 4" || requestedModel === "Q-06") {
+            const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
+            const isPremium = userModel === "Qurob 4" || userModel === "Q-06";
+            if (!isPremium) {
+              return new Response(JSON.stringify({ 
+                error: "This model requires a premium subscription. Please upgrade to use it.",
+                code: "PAYMENT_REQUIRED",
+              }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }
+          }
+          if (requestedModel === "Q-06") isCodeSpecialist = true;
+        }
 
         const { data: memories } = await supabase.from("user_memory").select("memory_key, memory_value").eq("user_id", userId).limit(25);
         if (memories?.length) {
@@ -568,26 +497,48 @@ serve(async (req) => {
       }
     }
 
-    // Vision via OpenRouter
-    if (hasImage && imageUrl && OPENROUTER_API_KEY) {
-      console.log("Using Vision API");
+    // Vision handling via Lovable AI Gateway (supports multimodal)
+    if (hasImage && imageUrl) {
+      console.log("Using Vision API via gateway");
       const visionMessages = processedMessages.map((m: any, i: number) => {
         if (m.role === "user" && i === processedMessages.length - 1) {
           return { role: "user", content: [{ type: "text", text: m.content || "What's in this image?" }, { type: "image_url", image_url: { url: imageUrl } }] };
         }
         return m;
       });
-      const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://qurobai.lovable.app", "X-Title": "QurobAi" },
-        body: JSON.stringify({
-          model: "qwen/qwen-2-vl-72b-instruct",
-          messages: [{ role: "system", content: `You are ${modelName}, QurobAi's AI created by Soham from India. You CAN see and analyze images.` }, ...visionMessages],
-          stream: true, temperature: 0.7, max_tokens: 2048,
-        }),
-      });
-      if (visionResponse.ok) {
-        return new Response(visionResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+      
+      // Try Lovable AI Gateway for vision
+      if (LOVABLE_API_KEY) {
+        try {
+          const visionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [{ role: "system", content: `You are ${modelName}, QurobAi's AI created by Soham from India. You CAN see and analyze images.` }, ...visionMessages],
+              stream: true, temperature: 0.7, max_tokens: 2048,
+            }),
+          });
+          if (visionResponse.ok) {
+            return new Response(visionResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          }
+        } catch (e) { console.error("Vision gateway error:", e); }
+      }
+      
+      // Fallback to OpenRouter for vision
+      if (OPENROUTER_API_KEY) {
+        const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://qurobai.lovable.app", "X-Title": "QurobAi" },
+          body: JSON.stringify({
+            model: "qwen/qwen-2-vl-72b-instruct",
+            messages: [{ role: "system", content: `You are ${modelName}, QurobAi's AI created by Soham from India. You CAN see and analyze images.` }, ...visionMessages],
+            stream: true, temperature: 0.7, max_tokens: 2048,
+          }),
+        });
+        if (visionResponse.ok) {
+          return new Response(visionResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+        }
       }
     }
 
@@ -639,47 +590,135 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
 
     const allMessages = [{ role: "system", content: systemPrompt }, ...processedMessages];
     const temperature = isCodeSpecialist ? 0.2 : 0.7;
+    const gatewayModel = MODEL_MAP[modelName] || "google/gemini-3-flash-preview";
 
-    console.log("Using model:", modelName, "gemini:", geminiModel);
+    console.log("Using model:", modelName, "gateway:", gatewayModel);
 
-    // PRIMARY: Google Gemini API directly
-    if (GOOGLE_GEMINI_API_KEY) {
+    // PRIMARY: Lovable AI Gateway
+    if (LOVABLE_API_KEY) {
       try {
-        const geminiResponse = await callGeminiAPI(geminiModel, allMessages, temperature, true);
-        
-        if (geminiResponse.ok && geminiResponse.body) {
-          console.log("Gemini streaming started");
-          const convertedStream = convertGeminiStreamToOpenAI(geminiResponse.body);
-          return new Response(convertedStream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: gatewayModel,
+            messages: allMessages,
+            stream: true,
+            temperature,
+            max_tokens: 8192,
+          }),
+        });
+
+        if (response.ok && response.body) {
+          console.log("Lovable AI Gateway streaming started");
+          return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
-        
-        console.error("Gemini error:", geminiResponse.status);
-        if (geminiResponse.status === 429) {
-          // Fall through to OpenRouter
-          console.log("Gemini rate limited, trying OpenRouter...");
+
+        if (response.status === 429) {
+          console.log("Gateway rate limited, trying fallback...");
+        } else if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "AI usage limit reached. Please try again later." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         } else {
-          const errorText = await geminiResponse.text();
-          console.error("Gemini error body:", errorText);
+          const errorText = await response.text();
+          console.error("Gateway error:", response.status, errorText);
         }
       } catch (e) {
-        console.error("Gemini call failed:", e);
+        console.error("Gateway call failed:", e);
       }
     }
 
-    // FALLBACK: OpenRouter
+    // FALLBACK: Google Gemini API directly
+    if (GOOGLE_GEMINI_API_KEY) {
+      try {
+        const geminiModel = modelName === "Qurob 4" || modelName === "Q-06" ? "gemini-2.5-pro-preview-06-05" : "gemini-2.0-flash";
+        const systemInstruction = allMessages.find((m: any) => m.role === "system")?.content || "";
+        const contents = allMessages
+          .filter((m: any) => m.role !== "system")
+          .map((m: any) => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content }],
+          }));
+
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
+        const body: any = { contents, generationConfig: { temperature, maxOutputTokens: 8192 } };
+        if (systemInstruction) body.systemInstruction = { parts: [{ text: systemInstruction }] };
+
+        const geminiResponse = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        
+        if (geminiResponse.ok && geminiResponse.body) {
+          console.log("Gemini fallback streaming started");
+          // Convert Gemini SSE to OpenAI-compatible SSE
+          const reader = geminiResponse.body.getReader();
+          const encoder = new TextEncoder();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          const convertedStream = new ReadableStream({
+            async pull(controller) {
+              try {
+                const { done, value } = await reader.read();
+                if (done) {
+                  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                  controller.close();
+                  return;
+                }
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                for (const line of lines) {
+                  if (line.startsWith("data: ")) {
+                    const jsonStr = line.slice(6).trim();
+                    if (!jsonStr) continue;
+                    try {
+                      const geminiData = JSON.parse(jsonStr);
+                      const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                      if (text) {
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`));
+                      }
+                    } catch { /* skip */ }
+                  }
+                }
+              } catch (e) { controller.error(e); }
+            },
+          });
+          return new Response(convertedStream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+        }
+        console.error("Gemini fallback error:", geminiResponse.status);
+      } catch (e) {
+        console.error("Gemini fallback failed:", e);
+      }
+    }
+
+    // FALLBACK 2: OpenRouter
     if (OPENROUTER_API_KEY) {
       try {
-        const orModel = geminiModel === "gemini-2.5-pro" ? "google/gemini-2.5-pro-preview" : "google/gemini-2.0-flash-001";
-        const orResponse = await callOpenRouter(allMessages, orModel, temperature);
+        const orModel = modelName === "Qurob 4" || modelName === "Q-06" ? "google/gemini-2.5-pro-preview" : "google/gemini-2.0-flash-001";
+        const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://qurobai.lovable.app",
+            "X-Title": "QurobAi",
+          },
+          body: JSON.stringify({ model: orModel, messages: allMessages, stream: true, temperature, max_tokens: 4096 }),
+        });
         
         if (orResponse.ok) {
-          console.log("OpenRouter streaming started");
+          console.log("OpenRouter fallback streaming started");
           return new Response(orResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
-        
         console.error("OpenRouter error:", orResponse.status);
       } catch (e) {
-        console.error("OpenRouter call failed:", e);
+        console.error("OpenRouter failed:", e);
       }
     }
 
