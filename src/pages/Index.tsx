@@ -7,7 +7,7 @@ import { ThinkingIndicator } from "@/components/ThinkingIndicator";
 import { ChatInputEnhanced } from "@/components/ChatInputEnhanced";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import ModelIndicator from "@/components/ModelIndicator";
+import { ModelSelector } from "@/components/ModelSelector";
 import { SubscriptionExpiryBanner } from "@/components/SubscriptionExpiryBanner";
 import { ChatHeader } from "@/components/ChatHeader";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -30,7 +30,7 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [activeQurob, setActiveQurob] = useState<any>(null);
-  const { messages, isLoading, sendMessage, clearMessages, currentModel, regenerateLastMessage, togglePinMessage, stopGeneration } = useChat(currentConversationId);
+  const { messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration } = useChat(currentConversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -111,10 +111,6 @@ const Index = () => {
         <main className="flex-1 flex flex-col min-w-0 w-full">
           <ChatHeader onMenuToggle={() => setSidebarOpen(true)} showBackButton={false} title={messages.length > 0 ? "Chat" : "QurobAi"} />
           <SubscriptionExpiryBanner />
-          
-          <div className="hidden md:block px-4 py-3 border-b border-border/50 max-w-3xl w-full mx-auto">
-            <ModelIndicator currentModel={currentModel} />
-          </div>
 
           {activeQurob && (
             <div className="px-3 md:px-4 py-2 border-b border-border/50 max-w-3xl w-full mx-auto">
@@ -158,6 +154,10 @@ const Index = () => {
             )}
 
             <div className="mt-auto pt-2 md:pt-3 safe-area-bottom">
+              {/* Model selector above input */}
+              <div className="flex items-center gap-2 mb-2">
+                <ModelSelector currentModel={selectedModel} onModelChange={changeModel} />
+              </div>
               <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} onStop={stopGeneration} />
               <div className="hidden md:flex justify-center mt-1.5">
                 <button onClick={() => setCommandPaletteOpen(true)} className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors flex items-center gap-1.5">

@@ -45,7 +45,7 @@ export default function Subscribe() {
   const [drawerStep, setDrawerStep] = useState<DrawerStep>("pay");
 
   // Payment config (kept on backend; fallback to hardcoded for safety)
-  const [upiId, setUpiId] = useState<string>("7864084241@ybl");
+  const [upiId, setUpiId] = useState<string>("9153109561@ybl");
 
   // Bank details are optional for now (can be moved to backend later)
   const bankDetails = useMemo(
