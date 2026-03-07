@@ -589,6 +589,17 @@ export default function Subscribe() {
                           <Smartphone className="w-4 h-4 mr-2" />
                           Open UPI App
                         </Button>
+
+                        <div className="pt-2 border-t border-border/50">
+                          <Label className="text-sm font-medium">UTR / Transaction ID</Label>
+                          <p className="text-[11px] text-muted-foreground mb-1.5">Enter UTR for instant auto-approval ⚡</p>
+                          <Input
+                            value={transactionId}
+                            onChange={(e) => setTransactionId(e.target.value)}
+                            placeholder="Enter UTR or Transaction ID"
+                            className="mt-1 bg-input/50 font-mono"
+                          />
+                        </div>
                       </div>
                     </TabsContent>
 
