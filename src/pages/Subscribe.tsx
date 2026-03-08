@@ -198,7 +198,6 @@ export default function Subscribe() {
         plan_id: selectedPlan.id,
         amount_paid: Math.round(finalPrice),
         coupon_code: couponCode || null,
-        payment_method: paymentMethod,
       };
 
       if (screenshotUrl) {
@@ -324,7 +323,7 @@ export default function Subscribe() {
                 <div className="p-2 rounded-lg bg-muted">
                   <Zap className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <CardTitle className="text-lg">Qurob 2</CardTitle>
+                <CardTitle className="text-lg">Qurob 3.2</CardTitle>
               </div>
               <CardDescription className="text-2xl font-bold text-foreground mt-2">
                 Free<span className="text-sm font-normal text-muted-foreground ml-1">forever</span>

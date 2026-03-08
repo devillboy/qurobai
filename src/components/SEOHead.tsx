@@ -16,7 +16,7 @@ const defaultMeta = {
     "Your intelligent AI companion for coding, creating, and solving problems. Real-time data, code expertise, and natural conversations. Built in India, for the world.",
   keywords:
     "AI chatbot, AI assistant, coding helper, India AI, QurobAi, Qurob, artificial intelligence, GPT alternative, free AI, programming help",
-  image: "/og-image.png",
+  image: "https://storage.googleapis.com/gpt-engineer-file-uploads/nf0rJgeFApObnBDhiHzUfnqh7vt1/social-images/social-1766720652333-IMG_20251225_125701.jpg",
   url: "https://qurobai.lovable.app",
 };
 
