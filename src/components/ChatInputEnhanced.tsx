@@ -196,7 +196,7 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhanc
         {/* Input bar */}
         <div className="relative flex items-end gap-1 bg-card/60 rounded-xl border border-border p-1.5 shadow-md hover:border-border/80 transition-colors">
           {/* File input - accept all file types */}
-          <input ref={fileInputRef} type="file" multiple onChange={handleFileUpload} className="hidden" />
+          <input ref={fileInputRef} type="file" multiple accept="*/*" onChange={handleFileUpload} className="hidden" />
 
           <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-xl touch-manipulation" onClick={() => setShowTemplates(!showTemplates)}>
             <Sparkles className="w-4 h-4" />

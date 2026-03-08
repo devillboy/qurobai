@@ -880,6 +880,9 @@ export default function AdminPanel() {
               <TabsTrigger value="coupons">Coupons</TabsTrigger>
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>
+              <TabsTrigger value="bots">Bots</TabsTrigger>
+              <TabsTrigger value="apikeys">API Keys</TabsTrigger>
+              <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
               <TabsTrigger value="gift">Gift Sub</TabsTrigger>
             </TabsList>
