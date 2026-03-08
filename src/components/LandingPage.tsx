@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { 
   Sparkles, Code, Zap, Shield, Globe, 
   Brain, ArrowRight, MessageSquare, Check, 
-  Search, Image, Mic, ChevronRight, Star
+  Search, Image, Mic, ChevronRight, Star,
+  Users, TrendingUp, Award, Heart, Quote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -270,79 +271,150 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* Pricing Section - Claude style */}
+      {/* How It Works */}
+      <section className="py-24 px-4 border-t border-border/50 bg-card/20">
+        <div className="max-w-4xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Get started in 3 steps</h2>
+            <p className="text-muted-foreground">No setup, no API keys, no hassle</p>
+          </motion.div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { step: "01", title: "Create Account", desc: "Sign up free with email. No credit card needed.", icon: Users },
+              { step: "02", title: "Ask Anything", desc: "Type your question — code, search, images, anything.", icon: MessageSquare },
+              { step: "03", title: "Get AI Answers", desc: "Instant, accurate responses powered by latest AI models.", icon: Zap },
+            ].map((item, i) => (
+              <motion.div key={item.step} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: i * 0.1 }} viewport={{ once: true }} className="text-center">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl font-bold text-primary">{item.step}</span>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-24 px-4">
+        <div className="max-w-5xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Loved by thousands</h2>
+            <p className="text-muted-foreground">See what our users are saying</p>
+          </motion.div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {[
+              { name: "Arjun S.", role: "Developer, Bangalore", text: "QurobAi writes better code than most AI tools I've tried. The free tier is insanely generous!", rating: 5 },
+              { name: "Priya M.", role: "Student, Delhi", text: "I use QurobAi for my college assignments daily. Web search + AI = perfect combo. Love it! 🇮🇳", rating: 5 },
+              { name: "Rahul K.", role: "Freelancer, Mumbai", text: "The real-time data feature is a game changer. Cricket scores, weather, stocks — all in one chat.", rating: 5 },
+            ].map((t, i) => (
+              <motion.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: i * 0.1 }} viewport={{ once: true }} className="p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm">
+                <div className="flex gap-0.5 mb-3">
+                  {Array.from({ length: t.rating }).map((_, j) => (
+                    <Star key={j} className="w-4 h-4 fill-primary text-primary" />
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground mb-4 leading-relaxed italic">"{t.text}"</p>
+                <div>
+                  <p className="text-sm font-semibold">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison Badge */}
+      <section className="py-12 px-4 border-y border-border/50 bg-card/30">
+        <div className="max-w-4xl mx-auto">
+          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="flex flex-wrap justify-center gap-6 md:gap-12">
+            {[
+              { label: "vs ChatGPT", detail: "Free & faster" },
+              { label: "vs Gemini", detail: "Real-time data" },
+              { label: "vs Claude", detail: "Made in India 🇮🇳" },
+              { label: "vs Perplexity", detail: "Code + Search" },
+            ].map((item) => (
+              <div key={item.label} className="text-center">
+                <p className="text-sm font-semibold">{item.label}</p>
+                <p className="text-xs text-primary">{item.detail}</p>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
       <section className="py-24 px-4 bg-gradient-to-b from-background to-card/30">
         <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, transparent pricing</h2>
             <p className="text-muted-foreground">Start free, upgrade when you need more</p>
           </motion.div>
           
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            {/* Free Plan */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
-              className="p-8 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm"
-            >
-              <h3 className="font-semibold text-xl mb-2">Qurob 2</h3>
+            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="p-8 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm">
+              <h3 className="font-semibold text-xl mb-2">Qurob 3.2</h3>
               <div className="text-4xl font-bold mb-1">₹0<span className="text-base font-normal text-muted-foreground">/month</span></div>
               <p className="text-sm text-muted-foreground mb-8">Perfect for getting started</p>
               <ul className="space-y-4 text-sm mb-8">
                 {["Fast AI responses", "Real-time data access", "Web search", "Image analysis", "Unlimited chats"].map((feature) => (
                   <li key={feature} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Check className="w-3 h-3 text-primary" />
-                    </div>
+                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center"><Check className="w-3 h-3 text-primary" /></div>
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
               <Link to="/auth" className="block">
-                <Button variant="outline" className="w-full rounded-xl h-12">
-                  Get Started Free
-                </Button>
+                <Button variant="outline" className="w-full rounded-xl h-12">Get Started Free</Button>
               </Link>
             </motion.div>
             
-            {/* Premium Plan */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
-              className="relative p-8 rounded-2xl border-2 border-primary bg-gradient-to-br from-card to-primary/5 shadow-xl shadow-primary/10"
-            >
-              <div className="absolute -top-3 left-6 px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-full">
-                MOST POPULAR
-              </div>
+            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="relative p-8 rounded-2xl border-2 border-primary bg-gradient-to-br from-card to-primary/5 shadow-xl shadow-primary/10">
+              <div className="absolute -top-3 left-6 px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-full">MOST POPULAR</div>
               <h3 className="font-semibold text-xl mb-2 mt-2">Qurob 4</h3>
               <div className="text-4xl font-bold mb-1">₹289<span className="text-base font-normal text-muted-foreground">/month</span></div>
               <p className="text-sm text-muted-foreground mb-8">For power users</p>
               <ul className="space-y-4 text-sm mb-8">
-                {["Advanced 70B AI Model", "Q-06 Code Specialist", "Image generation", "Priority support", "All Qurob 2 features"].map((feature) => (
+                {["Advanced 70B AI Model", "Q-06 Code Specialist", "Image generation", "Priority support", "All Qurob 3.2 features"].map((feature) => (
                   <li key={feature} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="w-3 h-3 text-primary-foreground" />
-                    </div>
+                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center"><Check className="w-3 h-3 text-primary-foreground" /></div>
                     <span className={feature.includes("Q-06") ? "font-medium text-primary" : ""}>{feature}</span>
                   </li>
                 ))}
               </ul>
               <Link to="/auth" className="block">
-                <Button className="w-full rounded-xl h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
-                  Upgrade to Premium <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
+                <Button className="w-full rounded-xl h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">Upgrade to Premium <ChevronRight className="w-4 h-4 ml-1" /></Button>
               </Link>
             </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section — great for SEO */}
+      <section className="py-24 px-4">
+        <div className="max-w-3xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
+            <p className="text-muted-foreground">Everything you need to know</p>
+          </motion.div>
+          <div className="space-y-4">
+            {[
+              { q: "Is QurobAi free to use?", a: "Yes! Qurob 3.2 is completely free with unlimited chats, web search, image analysis, and real-time data. No credit card required." },
+              { q: "What can QurobAi do?", a: "Write & debug code in 100+ languages, search the web, analyze images, generate images, get weather/stocks/cricket updates, and have natural conversations on any topic." },
+              { q: "Is QurobAi better than ChatGPT?", a: "QurobAi is designed for Indian users — real-time data, cricket scores, local weather, UPI payments, and it's free. Built by an Indian developer, for everyone." },
+              { q: "How do I get started?", a: "Visit qurobai.lovable.app, sign up with email, and start chatting. Takes less than 30 seconds!" },
+              { q: "Is my data safe?", a: "Absolutely. All conversations are encrypted and we never share your data with third parties. Your privacy is our top priority." },
+            ].map((faq, i) => (
+              <motion.details key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }} viewport={{ once: true }} className="group p-5 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm cursor-pointer">
+                <summary className="font-medium text-sm flex items-center justify-between list-none">
+                  {faq.q}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-open:rotate-90 transition-transform" />
+                </summary>
+                <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{faq.a}</p>
+              </motion.details>
+            ))}
           </div>
         </div>
       </section>
@@ -350,24 +422,13 @@ export const LandingPage = () => {
       {/* CTA Section */}
       <section className="py-24 px-4 relative overflow-hidden">
         <MeshGradient />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="max-w-2xl mx-auto text-center relative z-10"
-        >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to experience the future?
-          </h2>
-          <p className="text-muted-foreground mb-8">
-            Join thousands of users who trust QurobAi every day.
-          </p>
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="max-w-2xl mx-auto text-center relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to experience the future?</h2>
+          <p className="text-muted-foreground mb-8">Join thousands of users who trust QurobAi every day.</p>
           <Link to="/auth">
-            <Button size="lg" className="px-8 bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20">
-              Start Chatting <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            <Button size="lg" className="px-8 bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20">Start Chatting Free <ArrowRight className="w-4 h-4 ml-2" /></Button>
           </Link>
+          <p className="text-xs text-muted-foreground mt-4">No credit card • Free forever • Made with ❤️ in India</p>
         </motion.div>
       </section>
 
@@ -384,10 +445,10 @@ export const LandingPage = () => {
             <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             <Link to="/security" className="hover:text-foreground transition-colors">Security</Link>
+            <Link to="/download" className="hover:text-foreground transition-colors">Download APK</Link>
+            <Link to="/patch-updates" className="hover:text-foreground transition-colors">Updates</Link>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © 2026 QurobAi. Created by Soham 🇮🇳
-          </p>
+          <p className="text-sm text-muted-foreground">© 2026 QurobAi. Created by Soham 🇮🇳</p>
         </div>
       </footer>
     </div>

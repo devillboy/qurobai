@@ -55,8 +55,8 @@ const AppRoutes = () => {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        <Route path="/" element={<Navigate to="/auth" replace />} />
-        <Route path="/welcome" element={<Navigate to="/auth" replace />} />
+        <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+        <Route path="/welcome" element={<PublicRoute><LandingPage /></PublicRoute>} />
         <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Index /></ProtectedRoute>} />
         <Route path="/subscribe" element={<ProtectedRoute><Subscribe /></ProtectedRoute>} />
