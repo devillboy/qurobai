@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   Sparkles, Mail, Calendar, Shield, CreditCard, History, ChevronRight, Crown, LogOut,
   Sliders, Download, FileText, Scale, Lock, MessageCircle, HardDrive, Palette, Search,
-  Mic, Key, Sun, Moon, Monitor, User, Volume2, Languages, Keyboard, Bot, Settings2, Database, Info
+  Mic, Key, Sun, Moon, Monitor, User, Volume2, Languages, Keyboard, Bot, Settings2, Database, Info, Copy, Hash
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PersonalizationDialog } from "./PersonalizationDialog";
@@ -31,7 +31,7 @@ interface SettingsDialogProps {
 export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<{ display_name: string | null; created_at: string } | null>(null);
+  const [profile, setProfile] = useState<{ display_name: string | null; created_at: string; qurob_id: string | null } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [personalizationOpen, setPersonalizationOpen] = useState(false);
@@ -79,7 +79,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
 
   const fetchProfile = async () => {
     if (!user) return;
-    const { data, error } = await supabase.from("profiles").select("display_name, created_at").eq("user_id", user.id).single();
+    const { data, error } = await supabase.from("profiles").select("display_name, created_at, qurob_id").eq("user_id", user.id).single();
     if (!error && data) setProfile(data);
   };
 
@@ -256,8 +256,22 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                     {subscription ? "Premium" : "Free"}
                   </Badge>
                 </div>
+                {profile?.qurob_id && (
+                  <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border/50">
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Hash className="w-3 h-3" />
+                      <span className="font-mono font-medium text-foreground">{profile.qurob_id}</span>
+                    </div>
+                    <button 
+                      onClick={() => { navigator.clipboard.writeText(profile.qurob_id!); toast.success("Qurob ID copied!"); }}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
                 {profile?.created_at && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-3 pt-2.5 border-t border-border/50">
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-2 pt-2 border-t border-border/50">
                     <Calendar className="w-3 h-3" />
                     Member since {formatDate(profile.created_at)}
                   </div>

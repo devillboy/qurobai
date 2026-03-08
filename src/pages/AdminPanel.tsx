@@ -30,6 +30,7 @@ interface UserData {
   id: string;
   user_id: string;
   display_name: string | null;
+  qurob_id: string | null;
   created_at: string;
   subscription?: {
     plan_name: string;
@@ -481,6 +482,7 @@ export default function AdminPanel() {
       id: p.id,
       user_id: p.user_id,
       display_name: p.display_name,
+      qurob_id: (p as any).qurob_id || null,
       created_at: p.created_at,
       subscription: subMap.get(p.user_id) || null,
     }));
@@ -852,13 +854,15 @@ export default function AdminPanel() {
   const filteredUsers = users.filter(u => 
     !userSearch || 
     u.display_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.user_id.toLowerCase().includes(userSearch.toLowerCase())
+    u.user_id.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.qurob_id?.toLowerCase().includes(userSearch.toLowerCase())
   );
 
   const giftUserResults = users.filter(u =>
     giftUserSearch && (
       u.display_name?.toLowerCase().includes(giftUserSearch.toLowerCase()) ||
-      u.user_id.toLowerCase().includes(giftUserSearch.toLowerCase())
+      u.user_id.toLowerCase().includes(giftUserSearch.toLowerCase()) ||
+      u.qurob_id?.toLowerCase().includes(giftUserSearch.toLowerCase())
     )
   ).slice(0, 5);
 
