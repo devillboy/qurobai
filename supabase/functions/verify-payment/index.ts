@@ -57,46 +57,80 @@ serve(async (req) => {
 
     const expectedAmount = payment.subscription_plans?.price_inr || payment.amount_paid;
 
-    // ===== AUTO-APPROVAL: UTR/Transaction ID + Amount Match =====
+    // ===== UTR VALIDATION (strict - no auto-approve on UTR alone) =====
     const adminNotes = payment.admin_notes || "";
     const transactionIdMatch = adminNotes.match(/Transaction ID:\s*(\S+)/i);
+    let validatedUtr: string | null = null;
     
     if (transactionIdMatch && transactionIdMatch[1]) {
       const transactionId = transactionIdMatch[1].trim();
-      const amountMatches = Math.abs(payment.amount_paid - expectedAmount) <= 10; // ₹10 tolerance
       
-      if (transactionId.length >= 6 && amountMatches) {
-        console.log("Auto-approving via UTR/Transaction ID:", transactionId);
-        
-        // Auto-approve
+      // 1. UTR Format Validation — UPI UTRs are 12-22 digit numeric
+      const utrRegex = /^\d{12,22}$/;
+      if (!utrRegex.test(transactionId)) {
+        console.warn("Invalid UTR format:", transactionId);
         await supabase.from("payment_screenshots").update({
-          status: "approved",
-          admin_notes: `Auto-Approved via UTR: ${transactionId} | Amount: ₹${payment.amount_paid} (expected ₹${expectedAmount})`,
+          admin_notes: `❌ REJECTED: Invalid UTR format "${transactionId}" — must be 12-22 digits numeric. Original notes: ${adminNotes}`,
+          status: "rejected",
           reviewed_at: new Date().toISOString(),
         }).eq("id", paymentId);
-
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 30);
-
-        await supabase.from("user_subscriptions").insert({
-          user_id: payment.user_id,
-          plan_id: payment.plan_id,
-          status: "active",
-          expires_at: expiresAt.toISOString(),
-        });
-
         await supabase.from("notifications").insert({
           user_id: payment.user_id,
-          title: "✅ Payment Approved!",
-          message: "Your subscription has been activated. Enjoy premium features!",
-          type: "success",
+          title: "❌ Payment Rejected",
+          message: "Invalid Transaction/UTR ID format. Please provide a valid 12-22 digit UPI transaction reference number.",
+          type: "error",
         });
-
         return new Response(JSON.stringify({ 
-          success: true, action: "approved",
-          verification: { recommendation: "approve", confidence: "high", reason: `Auto-approved via UTR: ${transactionId}` }
+          success: false, action: "rejected",
+          verification: { recommendation: "reject", confidence: "high", reason: "Invalid UTR format" }
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      
+      // 2. Duplicate UTR Check — same UTR already used = fraud
+      const { data: existingPayment } = await supabase
+        .from("payment_screenshots")
+        .select("id, user_id, status")
+        .eq("utr_number", transactionId)
+        .eq("status", "approved")
+        .maybeSingle();
+      
+      if (existingPayment && existingPayment.id !== paymentId) {
+        console.warn("Duplicate UTR detected:", transactionId, "already used in payment:", existingPayment.id);
+        await supabase.from("payment_screenshots").update({
+          admin_notes: `🚨 FRAUD ALERT: Duplicate UTR "${transactionId}" — already used in payment ${existingPayment.id}`,
+          status: "rejected",
+          reviewed_at: new Date().toISOString(),
+        }).eq("id", paymentId);
+        await supabase.from("notifications").insert({
+          user_id: payment.user_id,
+          title: "❌ Payment Rejected",
+          message: "This Transaction/UTR ID has already been used. Duplicate payments are not allowed.",
+          type: "error",
+        });
+        return new Response(JSON.stringify({ 
+          success: false, action: "rejected",
+          verification: { recommendation: "reject", confidence: "high", reason: "Duplicate UTR — already used" }
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      
+      // 3. Amount check
+      const amountMatches = Math.abs(payment.amount_paid - expectedAmount) <= 10;
+      if (!amountMatches) {
+        console.warn("Amount mismatch for UTR:", transactionId);
+        await supabase.from("payment_screenshots").update({
+          admin_notes: `❌ Amount mismatch: Paid ₹${payment.amount_paid}, Expected ₹${expectedAmount}. UTR: ${transactionId}`,
+        }).eq("id", paymentId);
+        // Don't auto-reject, let screenshot AI verify
+      }
+      
+      // UTR passed format + duplicate checks — store it but DON'T auto-approve
+      // Require screenshot AI verification as well
+      validatedUtr = transactionId;
+      await supabase.from("payment_screenshots").update({
+        utr_number: transactionId,
+      }).eq("id", paymentId);
+      
+      console.log("UTR validated (format + duplicate check passed):", transactionId, "— proceeding to screenshot verification");
     }
 
     // ===== SCREENSHOT-BASED AI VERIFICATION =====
@@ -207,10 +241,15 @@ Respond in this exact JSON format ONLY, no other text:
 
     console.log("Verification result:", verification);
 
-    // Auto-approve if high confidence
+    // Auto-approve ONLY if high confidence AI + valid UTR (both required)
     if (verification.recommendation === "approve" && verification.confidence === "high") {
+      // If UTR was provided, it must have passed validation; if no UTR, AI alone with high confidence is enough for screenshot-only flow
+      const utrInfo = validatedUtr ? ` | UTR: ${validatedUtr}` : " | No UTR provided (screenshot-only)";
       await supabase.from("payment_screenshots").update({
-        status: "approved", admin_notes: `AI Auto-Verified: ${verification.reason}`, reviewed_at: new Date().toISOString(),
+        status: "approved", 
+        admin_notes: `AI Auto-Verified: ${verification.reason}${utrInfo}`,
+        utr_number: validatedUtr || null,
+        reviewed_at: new Date().toISOString(),
       }).eq("id", paymentId);
 
       const expiresAt = new Date();

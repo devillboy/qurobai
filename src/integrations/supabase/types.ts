@@ -372,6 +372,7 @@ export type Database = {
           screenshot_url: string | null
           status: string
           user_id: string
+          utr_number: string | null
         }
         Insert: {
           admin_notes?: string | null
@@ -385,6 +386,7 @@ export type Database = {
           screenshot_url?: string | null
           status?: string
           user_id: string
+          utr_number?: string | null
         }
         Update: {
           admin_notes?: string | null
@@ -398,6 +400,7 @@ export type Database = {
           screenshot_url?: string | null
           status?: string
           user_id?: string
+          utr_number?: string | null
         }
         Relationships: [
           {
