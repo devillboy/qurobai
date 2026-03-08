@@ -1,7 +1,8 @@
 import { memo, useState, useCallback, useMemo } from "react";
-import { Bot, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2, Maximize2 } from "lucide-react";
+import { Bot, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2, Maximize2, Pencil, ThumbsUp, ThumbsDown, Heart, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { VoiceOutput } from "@/components/VoiceOutput";
 import { CodePlayground } from "@/components/CodePlayground";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,6 +18,7 @@ interface ChatMessageProps {
   isPinned?: boolean;
   onRegenerate?: () => void;
   onPin?: () => void;
+  onEdit?: (newContent: string) => void;
   messageId?: string;
 }
 
@@ -174,15 +176,9 @@ const formatText = (text: string): string => {
 };
 
 const renderContent = (content: string, isUser: boolean) => {
-  // Remove image data from display
   let cleanContent = content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "");
+  if (isUser) cleanContent = stripSearchPrefixes(cleanContent);
   
-  // Strip search prefixes from user messages
-  if (isUser) {
-    cleanContent = stripSearchPrefixes(cleanContent);
-  }
-  
-  // Check for generated images
   const generatedImageRegex = /\[GeneratedImage:((?:https?:\/\/[^\]]+|data:image\/[^\]]+))\]/g;
   const parts: React.ReactNode[] = [];
   let match;
@@ -282,9 +278,29 @@ const ActionButton = memo(({ icon: Icon, label, onClick, active = false, variant
 
 ActionButton.displayName = "ActionButton";
 
-export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, onRegenerate, onPin, messageId }: ChatMessageProps) => {
+// Emoji reaction button
+const ReactionButton = memo(({ emoji, count, active, onClick }: { emoji: string; count: number; active: boolean; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all border",
+      active 
+        ? "bg-primary/15 border-primary/30 text-primary" 
+        : "bg-muted/40 border-border/30 text-muted-foreground hover:bg-muted/60"
+    )}
+  >
+    <span>{emoji}</span>
+    {count > 0 && <span className="text-[10px]">{count}</span>}
+  </button>
+));
+ReactionButton.displayName = "ReactionButton";
+
+export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, onRegenerate, onPin, onEdit, messageId }: ChatMessageProps) => {
   const [copied, setCopied] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(content);
+  const [reactions, setReactions] = useState<Record<string, boolean>>({});
 
   const copyMessage = useCallback(async () => {
     const cleanContent = content
@@ -316,9 +332,25 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
     if (onPin) { onPin(); toast.success(isPinned ? "Unpinned" : "Pinned!"); }
   }, [onPin, isPinned]);
 
+  const handleEditSave = useCallback(() => {
+    if (onEdit && editContent.trim() && editContent !== content) {
+      onEdit(editContent.trim());
+      toast.success("Message edited, regenerating...");
+    }
+    setIsEditing(false);
+  }, [onEdit, editContent, content]);
+
+  const handleEditCancel = useCallback(() => {
+    setEditContent(content);
+    setIsEditing(false);
+  }, [content]);
+
+  const toggleReaction = useCallback((emoji: string) => {
+    setReactions(prev => ({ ...prev, [emoji]: !prev[emoji] }));
+  }, []);
+
   const isUser = role === "user";
 
-  // Memoize rendered content - pass isUser to strip prefixes
   const renderedContent = useMemo(() => renderContent(content, isUser), [content, isUser]);
 
   return (
@@ -356,25 +388,42 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
             {isPinned && <Pin className="w-3 h-3 text-amber-500 animate-fade-in" />}
           </div>
           
-          {/* Content — Claude-inspired typography */}
-          <div className={cn(
-            "max-w-none",
-            isUser 
-              ? "text-foreground/85 text-[14.5px] leading-relaxed" 
-              : "text-foreground/80 text-[14.5px] leading-[1.8] tracking-[0.01em]"
-          )}>
-            {renderedContent}
-            {isStreaming && (
-              <span className="inline-flex items-center gap-1 ml-1.5 align-middle">
-                <span className="w-[3px] h-5 bg-primary rounded-sm animate-pulse" />
-              </span>
-            )}
-          </div>
+          {/* Content or Edit mode */}
+          {isUser && isEditing ? (
+            <div className="space-y-2">
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="min-h-[60px] text-[14.5px] bg-muted/30 border-border/50"
+                autoFocus
+              />
+              <div className="flex items-center gap-2">
+                <Button size="sm" className="h-7 text-xs btn-3d" onClick={handleEditSave}>Save & Resend</Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={handleEditCancel}>
+                  <X className="w-3 h-3 mr-1" /> Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className={cn(
+              "max-w-none",
+              isUser 
+                ? "text-foreground/85 text-[14.5px] leading-relaxed" 
+                : "text-foreground/80 text-[14.5px] leading-[1.8] tracking-[0.01em]"
+            )}>
+              {renderedContent}
+              {isStreaming && (
+                <span className="inline-flex items-center gap-1 ml-1.5 align-middle">
+                  <span className="w-[3px] h-5 bg-primary rounded-sm animate-pulse" />
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Action bar — assistant */}
           {!isUser && !isStreaming && (
             <div className={cn(
-              "mt-4 flex items-center gap-1 transition-all duration-300",
+              "mt-4 flex items-center gap-1 transition-all duration-300 flex-wrap",
               showActions ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1 pointer-events-none sm:group-hover:pointer-events-auto sm:group-hover:opacity-100 sm:group-hover:translate-y-0"
             )}>
               <ActionButton icon={copied ? Check : Copy} label={copied ? "Copied!" : "Copy"} onClick={copyMessage} variant={copied ? "success" : "default"} />
@@ -394,16 +443,25 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {/* Emoji reactions */}
+              <div className="flex items-center gap-1 ml-2">
+                <ReactionButton emoji="👍" count={reactions["👍"] ? 1 : 0} active={!!reactions["👍"]} onClick={() => toggleReaction("👍")} />
+                <ReactionButton emoji="👎" count={reactions["👎"] ? 1 : 0} active={!!reactions["👎"]} onClick={() => toggleReaction("👎")} />
+                <ReactionButton emoji="❤️" count={reactions["❤️"] ? 1 : 0} active={!!reactions["❤️"]} onClick={() => toggleReaction("❤️")} />
+              </div>
             </div>
           )}
 
-          {/* User message actions */}
-          {isUser && !isStreaming && (
+          {/* User message actions — with Edit */}
+          {isUser && !isStreaming && !isEditing && (
             <div className={cn(
               "mt-3 flex items-center gap-1 transition-all duration-300",
               showActions ? "opacity-100" : "opacity-0 sm:group-hover:opacity-100"
             )}>
               <ActionButton icon={copied ? Check : Copy} label={copied ? "Copied!" : "Copy"} onClick={copyMessage} variant={copied ? "success" : "default"} />
+              {onEdit && (
+                <ActionButton icon={Pencil} label="Edit" onClick={() => { setEditContent(content); setIsEditing(true); }} />
+              )}
             </div>
           )}
         </div>
@@ -416,16 +474,17 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
     prevProps.isStreaming === nextProps.isStreaming &&
     prevProps.isPinned === nextProps.isPinned &&
     prevProps.role === nextProps.role &&
-    prevProps.messageId === nextProps.messageId
+    prevProps.messageId === nextProps.messageId &&
+    prevProps.onEdit === nextProps.onEdit
   );
 });
 
 ChatMessage.displayName = "ChatMessage";
 
 export const TypingIndicator = memo(() => (
-  <div className="py-5 px-4 md:px-6 rounded-2xl bg-gradient-to-br from-card/60 to-card/40 backdrop-blur-sm border border-border/20 animate-fade-in">
+  <div className="py-5 px-4 md:px-6 rounded-2xl bg-card/40 border border-border/10 animate-fade-in">
     <div className="max-w-3xl mx-auto flex gap-4">
-      <div className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-accent shadow-md shadow-primary/20">
+      <div className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 border border-primary/15">
         <Bot className="w-4 h-4 text-primary-foreground" />
       </div>
       <div className="flex items-center gap-1.5 pt-2">

@@ -1,102 +1,164 @@
+# QurobAi Ultimate System Upgrade - Single Phase
 
+## Current Issues Identified
 
-# Major Feature Update: Blog, Qurob 2, Message Edit, Tokens, Thinking Animation, File Fix, 3D Buttons, Model Selector Repositioning
+1. **Build Error**: `usePushNotifications.ts` has TypeScript errors - `pushManager` not recognized on `ServiceWorkerRegistration`
+2. **Login Failing**: Console shows "Failed to fetch" on `signInWithPassword` - likely a network/CORS issue with the Supabase client
+3. **Settings UI**: All options crammed into one long scroll list - no tab structure, no clear sections on first open
+4. **Qurobs Page**: Exists but no access button from the main chat UI (only via URL `/qurobs`)
+5. **No Patch Updates Page**: No changelog or "what's new" feature
+6. **Splash Screen**: Generic particles animation - needs a more polished, professional loader
+7. **Mobile UI**: Chat header only shows on mobile, no desktop header; buttons can be cramped on small screens
+8. **AI Gateway**: Currently using Lovable AI Gateway which user wants to stop using - needs alternative AI backend
+9. **Chat responses**: No end-to-end encryption system
 
-## Changes Overview
+---
 
-### 1. Add Blog/Articles Section to Landing Page (SEO)
-**File: `src/components/LandingPage.tsx`**
-- Add a new "Blog" section before the FAQ with 4-5 SEO-rich articles targeting Indian AI searches
-- Articles like: "Best Free AI Chatbot in India 2026", "How AI is Changing Education in India", "ChatGPT vs QurobAi", "AI Coding Tools for Indian Developers", "Is AI Safe? Privacy Guide for Indian Users"
-- Each article is a `<article>` tag with proper `<h3>` headings for SEO crawling
-- Cards link to `/blog/:slug` (or scroll to expanded content)
+## Implementation Plan
 
-### 2. Bring Back Qurob 2 as a Free Model Option
-**File: `src/components/ModelSelector.tsx`**
-- Add "Qurob 2" as a second free model option (id: "Qurob 2", badge: "LEGACY", free: true)
-- Description: "Classic • 300B+ params"
+### 1. Fix Build Error - `usePushNotifications.ts`
 
-**File: `supabase/functions/chat/index.ts`**
-- Add `"Qurob 2": "google/gemini-2.5-flash-lite"` to MODEL_MAP (lighter/faster model for legacy)
+Add TypeScript type assertion for `pushManager` since the Web Push API types are not included by default. Cast `registration` to `any` at push manager access points to fix the 3 TS errors.
 
-### 3. Message Editing After Sending
-**File: `src/components/ChatMessage.tsx`**
-- Add "Edit" button to user message action bar (pencil icon)
-- When clicked, replace message content with an inline textarea pre-filled with current text
-- On save: update the message content in state, re-send to AI, remove all messages after the edited one
+### 2. Fix Login - Auth Page
 
-**File: `src/hooks/useChat.ts`**
-- Add `editMessage(messageId: string, newContent: string, convId: string)` function
-- Truncates messages after the edited one, sends new content to AI
-- Add UPDATE RLS policy for messages table (user can edit own messages via conversation ownership)
+The "Failed to fetch" error on `signInWithPassword` suggests the Supabase URL may be unreachable or the client config has issues. Since `src/integrations/supabase/client.ts` is auto-generated and shouldn't be touched, we'll add better error handling in `Auth.tsx`:
 
-**Database migration:**
-- Add UPDATE policy on `messages` table: `EXISTS (SELECT 1 FROM conversations WHERE conversations.id = messages.conversation_id AND conversations.user_id = auth.uid())`
+- Catch network errors specifically and show "Connection error. Check your internet and try again."
+- Add a retry mechanism
+- Add a visible "having trouble?" link
 
-### 4. Token Limits Update
-**File: `supabase/functions/chat/index.ts`**
-- Free users: change daily limit from `50` to calculate as ~11,667/day (350k/30 days ≈ 11,667 tokens/day) OR simply track monthly tokens capped at 350,000
-- Paid users: change from `1,000,000` to maximum gateway capacity (keep at 1M or increase)
-- Update the limit check logic to reflect monthly 350k for free users
+### 3. Settings UI Overhaul - Tab-Based Layout
 
-### 5. Better Thinking Animation (Not Fake)
-**File: `src/components/ThinkingIndicator.tsx`**
-- Replace bouncing dots + static "Thinking" with a more sophisticated animation:
-  - Animated gradient shimmer bar (like Claude's thinking)
-  - Rotating thoughts text: "Analyzing...", "Processing...", "Formulating response..."
-  - Subtle pulsing brain icon instead of sparkles
-  - Remove the fake "Thought for Xs" counter — replace with a subtle progress shimmer
+Redesign `SettingsDialog.tsx` with a **tabbed interface** instead of one long scroll:
 
-### 6. Fix File Attachment (Accept All Files, Not Just Images)
-**File: `src/components/ChatInputEnhanced.tsx`**
-- Change `accept="image/*,.pdf,.txt,.doc,.docx"` to `accept="*/*"` or remove the accept attribute entirely
-- This was restricting mobile file picker to only show albums/images
-- On mobile, removing `accept` allows the OS to show all file types
+- **General**: Profile card, Theme, Language, Font Size
+- **AI**: Personalization, Voice Output, Model info
+- **Features**: API Access, Qurobs, Chat Search, Voice Mode, Keyboard Shortcuts
+- **Data**: Export, Download All Data, Subscription History
+- **About**: Legal, Version, Admin (if admin), Support, Sign Out
 
-### 7. Unique Features for Better UX
-- **Message reactions**: Add emoji reactions (👍 👎 ❤️) to assistant messages
-- **Character count**: Show live character/word count in input area
-- **Scroll to bottom button**: Floating button when scrolled up in long chats
+This way on first open, users immediately see the most useful settings.
 
-**File: `src/pages/Index.tsx`** — Add scroll-to-bottom FAB
-**File: `src/components/ChatMessage.tsx`** — Add reaction buttons
-**File: `src/components/ChatInputEnhanced.tsx`** — Add character count
+### 4. Add Qurobs Access Button
 
-### 8. Move Model Selector to Bottom-Right
-**File: `src/pages/Index.tsx`**
-- Move `<ModelSelector>` from above the input to inside the input bar area, right side
-- Position it next to the search toggles (Web/Deep) or as part of the input bar row
+Add a "Qurobs" navigation button in:
 
-### 9. 3D-Style Buttons Everywhere
-**File: `src/index.css`**
-- Add a `.btn-3d` utility class with box-shadow layers creating depth effect:
-  ```css
-  .btn-3d {
-    box-shadow: 0 2px 0 hsl(220 10% 8%), 0 4px 8px rgba(0,0,0,0.3);
-    transform: translateY(-1px);
-    transition: all 0.15s;
-  }
-  .btn-3d:active {
-    transform: translateY(1px);
-    box-shadow: 0 0 0 hsl(220 10% 8%), 0 1px 2px rgba(0,0,0,0.2);
-  }
-  ```
-- Apply to buttons in `ChatInputEnhanced`, `WelcomeScreen`, `ModelSelector`, `LandingPage`
+- The **ChatSidebar** (alongside New Chat button)
+- The **WelcomeScreen** as a featured card
+- The **ChatHeader** (mobile) as an icon button
+
+### 5. Patch Updates / What's New Page
+
+Create `src/pages/PatchUpdates.tsx`:
+
+- List of updates with dates, version numbers, and descriptions
+- Each update shows new features, bug fixes, improvements
+- On first visit after a new update, show a **"What's New" popup** (modal) with highlights and screenshots
+- Track last seen version in `localStorage`
+
+### 6. Professional Splash Screen
+
+Replace the particle animation in `SplashScreen.tsx` with:
+
+- Clean logo fade-in with a subtle scale animation
+- Smooth gradient progress bar (no particles - they look amateur)
+- "Skip" button in bottom corner
+- Faster: 1.5s instead of 2.5s
+
+### 7. Mobile UI Polish
+
+- **ChatHeader**: Show on both mobile and desktop (remove `md:hidden`), make it slimmer on desktop
+- **ChatInputEnhanced**: Ensure all buttons (templates, attach, mic, send) fit on 320px width screens
+- **WelcomeScreen**: Make quick actions 2-column grid on mobile instead of flex-wrap (more consistent)
+- **Index.tsx**: Remove extra padding, ensure the input hugs the bottom
+
+### 8. AI Backend - Switch Away from Lovable Gateway
+
+Since user doesn't want Lovable AI Gateway, switch `chat/index.ts` and `api-chat/index.ts` to use:
+
+- **Primary**: Google Gemini API directly via `GOOGLE_GEMINI_API_KEY` (already configured)
+- **Fallback**: OpenRouter via `OPENROUTER_API_KEY` (already configured)
+- **Code model**: DeepInfra via `DEEPINFRA_API_KEY` (already configured)
+
+Model mapping:
+
+- Qurob 2 (Free): `gemini-2.0-flash` via Google API
+- Qurob 4 (Premium): `gemini-2.5-pro` via Google API
+- Q-06 (Code): `deepseek-coder` via DeepInfra
+
+### 9. Chat End-to-End Encryption Indicator
+
+Full E2E encryption requires client-side key management which is complex. Instead:
+
+- Add a visual "Messages are encrypted in transit" indicator (TLS) in the chat
+- Show a lock icon in the chat header
+- Add encryption info in Settings > About
+
+### 10. Branding & Theme Refresh
+
+Update `src/index.css`:
+
+- Slightly modernize the color palette (warmer tones)
+- Update button styles with subtle gradients
+- Add a light theme variant (currently only dark vars defined)
+- Rounded corners more consistent (use `--radius` everywhere)
+
+### 11. Performance Boost
+
+- Add `React.memo` to `ChatMessage` component
+- Lazy load heavy pages: `AdminPanel`, `Subscribe`, `ApiAccess`, `Qurobs`, `Download`
+- Add route-based code splitting in `App.tsx` via `React.lazy`
 
 ---
 
 ## Files Summary
 
-| File | Change |
-|------|--------|
-| `src/components/LandingPage.tsx` | Add blog/articles SEO section |
-| `src/components/ModelSelector.tsx` | Add Qurob 2 legacy model |
-| `src/components/ChatMessage.tsx` | Add edit button + emoji reactions |
-| `src/hooks/useChat.ts` | Add editMessage function |
-| `src/components/ThinkingIndicator.tsx` | Professional shimmer animation |
-| `src/components/ChatInputEnhanced.tsx` | Fix file accept, add char count |
-| `src/pages/Index.tsx` | Move model selector, add scroll-to-bottom |
-| `src/index.css` | Add btn-3d class |
-| `supabase/functions/chat/index.ts` | Add Qurob 2 model map, update token limits |
-| DB migration | Add UPDATE policy on messages table |
+### New Files
 
+
+| File                               | Purpose                     |
+| ---------------------------------- | --------------------------- |
+| `src/pages/PatchUpdates.tsx`       | Changelog / What's New page |
+| `src/components/WhatsNewPopup.tsx` | Modal popup for new updates |
+
+
+### Modified Files
+
+
+| File                                   | Changes                                          |
+| -------------------------------------- | ------------------------------------------------ |
+| `src/hooks/usePushNotifications.ts`    | Fix TypeScript pushManager errors                |
+| `src/pages/Auth.tsx`                   | Better error handling for network failures       |
+| `src/components/SettingsDialog.tsx`    | Tab-based layout with sections                   |
+| `src/components/ChatSidebar.tsx`       | Add Qurobs navigation button                     |
+| `src/components/WelcomeScreen.tsx`     | Add Qurobs card, mobile grid layout              |
+| `src/components/ChatHeader.tsx`        | Show on desktop too, add lock icon               |
+| `src/components/SplashScreen.tsx`      | Professional animation, skip button, faster      |
+| `src/components/ChatInputEnhanced.tsx` | Mobile button scaling fixes                      |
+| `src/pages/Index.tsx`                  | Remove extra padding, lazy loading prep          |
+| `src/App.tsx`                          | Add PatchUpdates route, lazy load pages          |
+| `supabase/functions/chat/index.ts`     | Switch to Google Gemini + OpenRouter + DeepInfra |
+| `supabase/functions/api-chat/index.ts` | Switch to Google Gemini directly                 |
+| `src/index.css`                        | Theme refresh, light mode, button updates        |
+
+
+### No Database Changes Required
+
+---
+
+## Execution Order
+
+All changes will be implemented in a single pass:
+
+1. Fix build errors (pushManager TS fix)
+2. Fix login (Auth.tsx error handling)
+3. Switch AI backend (chat + api-chat edge functions)
+4. Settings UI tabs redesign
+5. Splash screen professional redesign
+6. Mobile UI polish (header, input, welcome)
+7. Create Patch Updates page + What's New popup
+8. Add Qurobs access buttons
+9. Theme refresh + performance optimizations
+10. Route updates in App.tsx
+11. Fix Application Download page and download button it's not working and make it accessible 

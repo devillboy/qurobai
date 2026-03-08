@@ -16,13 +16,10 @@ import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 
-const messageTransition = {
-  duration: 0.4,
-  ease: [0.22, 1, 0.36, 1] as const
-};
+const messageTransition = { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const };
 
 const Index = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -30,7 +27,8 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [activeQurob, setActiveQurob] = useState<any>(null);
-  const { messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration } = useChat(currentConversationId);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const { messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage } = useChat(currentConversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -45,6 +43,22 @@ const Index = () => {
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  // Scroll-to-bottom detection
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+      setShowScrollBtn(!atBottom && messages.length > 3);
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [messages.length]);
+
+  const scrollToBottom = useCallback(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, []);
 
   const handleNewChat = useCallback(async () => {
     if (!user) return;
@@ -71,6 +85,11 @@ const Index = () => {
     if (activeQurob && messages.length === 0) finalMessage = `[Qurob: ${activeQurob.name}] ${message}`;
     sendMessage(finalMessage, convId);
   }, [user, currentConversationId, sendMessage, activeQurob, messages.length]);
+
+  const handleEditMessage = useCallback((messageId: string, newContent: string) => {
+    if (!currentConversationId) return;
+    editMessage(messageId, newContent, currentConversationId);
+  }, [editMessage, currentConversationId]);
 
   const handleQuickAction = useCallback((prompt: string) => handleSendMessage(prompt), [handleSendMessage]);
   const toggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), []);
@@ -124,7 +143,7 @@ const Index = () => {
             </div>
           )}
           
-          <div className="flex-1 max-w-3xl w-full mx-auto px-3 md:px-4 py-2 md:py-4 flex flex-col overflow-hidden">
+          <div className="flex-1 max-w-3xl w-full mx-auto px-3 md:px-4 py-2 md:py-4 flex flex-col overflow-hidden relative">
             {messages.length === 0 ? (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="flex-1 overflow-y-auto">
                 <WelcomeScreen onQuickAction={handleQuickAction} />
@@ -139,6 +158,7 @@ const Index = () => {
                         isStreaming={isLoading && message.role === "assistant" && message.id === messages[messages.length - 1]?.id}
                         onRegenerate={message.role === "assistant" && index === messages.length - 1 && currentConversationId ? () => regenerateLastMessage(currentConversationId) : undefined}
                         onPin={() => togglePinMessage(message.id)}
+                        onEdit={message.role === "user" ? (newContent) => handleEditMessage(message.id, newContent) : undefined}
                       />
                     </motion.div>
                   ))}
@@ -153,16 +173,31 @@ const Index = () => {
               </div>
             )}
 
+            {/* Scroll to bottom FAB */}
+            <AnimatePresence>
+              {showScrollBtn && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  onClick={scrollToBottom}
+                  className="absolute bottom-20 right-4 w-9 h-9 rounded-full bg-card border border-border/60 shadow-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors btn-3d z-10"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+
             <div className="mt-auto pt-2 md:pt-3 safe-area-bottom">
-              {/* Model selector above input */}
-              <div className="flex items-center gap-2 mb-2">
-                <ModelSelector currentModel={selectedModel} onModelChange={changeModel} />
-              </div>
               <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} onStop={stopGeneration} />
-              <div className="hidden md:flex justify-center mt-1.5">
-                <button onClick={() => setCommandPaletteOpen(true)} className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors flex items-center gap-1.5">
-                  Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">⌘K</kbd> for commands
-                </button>
+              <div className="flex items-center justify-between mt-1.5">
+                {/* Model selector bottom-right */}
+                <div className="hidden md:flex">
+                  <button onClick={() => setCommandPaletteOpen(true)} className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors flex items-center gap-1.5">
+                    Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">⌘K</kbd> for commands
+                  </button>
+                </div>
+                <ModelSelector currentModel={selectedModel} onModelChange={changeModel} />
               </div>
             </div>
           </div>

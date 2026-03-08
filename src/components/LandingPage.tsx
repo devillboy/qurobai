@@ -392,6 +392,72 @@ export const LandingPage = () => {
         </div>
       </section>
 
+      {/* Blog / Articles Section — Long-tail SEO for Indian AI searches */}
+      <section className="py-24 px-4 border-t border-border/50 bg-card/20" aria-label="AI Blog Articles">
+        <div className="max-w-5xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">AI Insights & Articles</h2>
+            <p className="text-muted-foreground">Learn about AI, technology, and how QurobAi is changing the game in India</p>
+          </motion.div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                title: "Best Free AI Chatbot in India 2026",
+                excerpt: "Looking for the best free AI chatbot in India? QurobAi offers unlimited conversations, real-time data, web search, and code generation — all without a credit card. Compare ChatGPT, Gemini, and QurobAi features for Indian users.",
+                tag: "Comparison",
+              },
+              {
+                title: "How AI is Transforming Education in India",
+                excerpt: "From UPSC preparation to IIT-JEE coaching, AI chatbots are revolutionizing how Indian students learn. Discover how QurobAi helps students with homework, explanations, and exam prep in Hindi and English.",
+                tag: "Education",
+              },
+              {
+                title: "ChatGPT vs QurobAi: Which is Better for Indians?",
+                excerpt: "While ChatGPT requires paid plans for advanced features, QurobAi provides free access to powerful AI models with real-time cricket scores, weather, stocks, and UPI payments — built specifically for India.",
+                tag: "VS",
+              },
+              {
+                title: "Top AI Coding Tools for Indian Developers",
+                excerpt: "Indian developers are using AI to write production-ready code faster. QurobAi's Q-06 model specializes in 100+ programming languages with code playground, debugging, and generation capabilities.",
+                tag: "Development",
+              },
+              {
+                title: "Is AI Safe? A Privacy Guide for Indian Users",
+                excerpt: "Concerned about data privacy with AI chatbots? Learn how QurobAi protects your conversations with encryption, doesn't share data with third parties, and complies with Indian data protection standards.",
+                tag: "Privacy",
+              },
+              {
+                title: "AI Image Generation: Create Art for Free in India",
+                excerpt: "Generate stunning AI images for free using QurobAi's built-in image generation. Perfect for social media content, presentations, and creative projects — no design skills needed.",
+                tag: "Creative",
+              },
+            ].map((article, i) => (
+              <motion.article
+                key={article.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: i * 0.08 }}
+                viewport={{ once: true }}
+                className="p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group"
+              >
+                <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded-full mb-3">
+                  {article.tag}
+                </span>
+                <h3 className="font-semibold text-base mb-2 group-hover:text-primary transition-colors leading-snug">
+                  {article.title}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {article.excerpt}
+                </p>
+                <Link to="/auth" className="inline-flex items-center gap-1 text-xs text-primary mt-3 font-medium hover:underline">
+                  Read more <ChevronRight className="w-3 h-3" />
+                </Link>
+              </motion.article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section — great for SEO */}
       <section className="py-24 px-4">
         <div className="max-w-3xl mx-auto">
@@ -401,11 +467,12 @@ export const LandingPage = () => {
           </motion.div>
           <div className="space-y-4">
             {[
-              { q: "Is QurobAi free to use?", a: "Yes! Qurob 3.2 is completely free with unlimited chats, web search, image analysis, and real-time data. No credit card required." },
+              { q: "Is QurobAi free to use?", a: "Yes! Qurob 3.2 is completely free with 350,000 tokens per month, web search, image analysis, and real-time data. No credit card required." },
               { q: "What can QurobAi do?", a: "Write & debug code in 100+ languages, search the web, analyze images, generate images, get weather/stocks/cricket updates, and have natural conversations on any topic." },
               { q: "Is QurobAi better than ChatGPT?", a: "QurobAi is designed for Indian users — real-time data, cricket scores, local weather, UPI payments, and it's free. Built by an Indian developer, for everyone." },
               { q: "How do I get started?", a: "Visit qurobai.lovable.app, sign up with email, and start chatting. Takes less than 30 seconds!" },
               { q: "Is my data safe?", a: "Absolutely. All conversations are encrypted and we never share your data with third parties. Your privacy is our top priority." },
+              { q: "Can I edit messages after sending?", a: "Yes! You can edit any sent message. QurobAi will regenerate the response based on your updated message." },
             ].map((faq, i) => (
               <motion.details key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }} viewport={{ once: true }} className="group p-5 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm cursor-pointer">
                 <summary className="font-medium text-sm flex items-center justify-between list-none">

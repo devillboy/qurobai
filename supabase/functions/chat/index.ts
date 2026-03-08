@@ -429,6 +429,7 @@ async function checkUrl(url: string): Promise<string> {
 
 // Model mapping: QurobAi model name -> Lovable AI Gateway model
 const MODEL_MAP: Record<string, string> = {
+  "Qurob 2": "google/gemini-2.5-flash-lite",
   "Qurob 3.2": "google/gemini-3-flash-preview",
   "Qurob 4": "google/gemini-2.5-pro",
   "Q-06": "google/gemini-2.5-pro",
@@ -485,7 +486,8 @@ serve(async (req) => {
           } else {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
             const isPremium = userModel === "Qurob 4" || userModel === "Q-06";
-            const dailyLimit = isPremium ? 1000000 : 50;
+            // Free: 350k tokens/month ≈ ~11,667/day; Paid: 1M/day
+            const dailyLimit = isPremium ? 1000000 : 11667;
             if ((settings.tokens_used_today || 0) >= dailyLimit) {
               return new Response(JSON.stringify({ 
                 error: `Daily message limit reached (${dailyLimit}). ${isPremium ? "Please try again tomorrow." : "Upgrade to Premium for unlimited messages!"}`,
