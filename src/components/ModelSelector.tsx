@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, Sparkles, Zap, Code, Lock, Check } from "lucide-react";
+import { ChevronDown, Sparkles, Zap, Code, Lock, Check, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +22,15 @@ interface ModelOption {
 }
 
 const models: ModelOption[] = [
+  {
+    id: "Qurob 2",
+    name: "Qurob 2",
+    description: "Classic • 300B+ params",
+    icon: Clock,
+    free: true,
+    badge: "LEGACY",
+    color: "text-muted-foreground",
+  },
   {
     id: "Qurob 3.2",
     name: "Qurob 3.2",
@@ -65,13 +74,11 @@ export function ModelSelector({ currentModel, onModelChange }: ModelSelectorProp
     }
   }, [user]);
 
-  const current = models.find(m => m.id === currentModel) || models[0];
+  const current = models.find(m => m.id === currentModel) || models[1];
   const CurrentIcon = current.icon;
 
-  // Per-model gating: user can only use free model + their specific subscribed model
   const canUseModel = (model: ModelOption): boolean => {
     if (model.free) return true;
-    // User must have the exact model subscription
     return subscribedModel === model.id;
   };
 
@@ -88,13 +95,13 @@ export function ModelSelector({ currentModel, onModelChange }: ModelSelectorProp
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary/60 hover:bg-secondary border border-border/40 hover:border-border/60 transition-all text-sm touch-manipulation">
+        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary/60 hover:bg-secondary border border-border/40 hover:border-border/60 transition-all text-sm btn-3d touch-manipulation">
           <CurrentIcon className={cn("w-3.5 h-3.5", current.color)} />
           <span className="font-medium text-xs">{current.name}</span>
           <ChevronDown className="w-3 h-3 text-muted-foreground" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-1.5" align="start" sideOffset={8}>
+      <PopoverContent className="w-64 p-1.5" align="end" side="top" sideOffset={8}>
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold px-2.5 py-1.5">
           Select Model
         </div>

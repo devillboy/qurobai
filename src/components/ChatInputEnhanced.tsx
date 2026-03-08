@@ -134,6 +134,8 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhanc
     }
   }, [message]);
 
+  const charCount = message.length;
+
   return (
     <div className="bg-background/95 backdrop-blur-md px-1 md:px-3 pb-1 safe-area-bottom">
       <div className="max-w-3xl mx-auto">
@@ -144,7 +146,7 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhanc
           <button
             onClick={() => { setWebSearchOn(!webSearchOn); if (deepSearchOn) setDeepSearchOn(false); }}
             className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all touch-manipulation border",
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all touch-manipulation border btn-3d",
               webSearchOn ? "bg-primary/15 text-primary border-primary/40" : "bg-secondary/50 text-muted-foreground border-border/40 hover:border-primary/30"
             )}
           >
@@ -154,7 +156,7 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhanc
           <button
             onClick={() => { setDeepSearchOn(!deepSearchOn); if (webSearchOn) setWebSearchOn(false); }}
             className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all touch-manipulation border",
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all touch-manipulation border btn-3d",
               deepSearchOn ? "bg-accent/15 text-accent-foreground border-accent/40" : "bg-secondary/50 text-muted-foreground border-border/40 hover:border-accent/30"
             )}
           >
@@ -193,7 +195,8 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhanc
 
         {/* Input bar */}
         <div className="relative flex items-end gap-1 bg-card/60 rounded-xl border border-border p-1.5 shadow-md hover:border-border/80 transition-colors">
-          <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx" onChange={handleFileUpload} className="hidden" />
+          {/* File input - accept all file types */}
+          <input ref={fileInputRef} type="file" multiple onChange={handleFileUpload} className="hidden" />
 
           <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-xl touch-manipulation" onClick={() => setShowTemplates(!showTemplates)}>
             <Sparkles className="w-4 h-4" />
@@ -224,14 +227,14 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhanc
           {/* Send or Stop button */}
           {isLoading ? (
             <Button size="icon"
-              className="shrink-0 h-9 w-9 rounded-xl touch-manipulation bg-destructive hover:bg-destructive/90 shadow-md transition-all"
+              className="shrink-0 h-9 w-9 rounded-xl touch-manipulation bg-destructive hover:bg-destructive/90 shadow-md transition-all btn-3d"
               onClick={onStop}
             >
               <Square className="w-3.5 h-3.5 fill-current" />
             </Button>
           ) : (
             <Button size="icon"
-              className={cn("shrink-0 h-9 w-9 rounded-xl touch-manipulation transition-all", message.trim() || attachments.length > 0 ? "bg-primary hover:bg-primary/90 shadow-md shadow-primary/25" : "bg-muted/60 text-muted-foreground")}
+              className={cn("shrink-0 h-9 w-9 rounded-xl touch-manipulation transition-all btn-3d", message.trim() || attachments.length > 0 ? "bg-primary hover:bg-primary/90 shadow-md shadow-primary/25" : "bg-muted/60 text-muted-foreground")}
               onClick={handleSubmit}
               disabled={uploading || (!message.trim() && attachments.length === 0)}
             >
@@ -240,9 +243,14 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhanc
           )}
         </div>
 
-        <p className="text-[10px] text-muted-foreground/40 text-center mt-1.5">
-          QurobAi • Experience Like Never Before
-        </p>
+        <div className="flex items-center justify-between mt-1.5 px-1">
+          <p className="text-[10px] text-muted-foreground/40">
+            QurobAi • Experience Like Never Before
+          </p>
+          {charCount > 0 && (
+            <span className="text-[10px] text-muted-foreground/40">{charCount} chars</span>
+          )}
+        </div>
       </div>
     </div>
   );
