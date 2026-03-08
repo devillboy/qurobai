@@ -241,10 +241,15 @@ Respond in this exact JSON format ONLY, no other text:
 
     console.log("Verification result:", verification);
 
-    // Auto-approve if high confidence
+    // Auto-approve ONLY if high confidence AI + valid UTR (both required)
     if (verification.recommendation === "approve" && verification.confidence === "high") {
+      // If UTR was provided, it must have passed validation; if no UTR, AI alone with high confidence is enough for screenshot-only flow
+      const utrInfo = validatedUtr ? ` | UTR: ${validatedUtr}` : " | No UTR provided (screenshot-only)";
       await supabase.from("payment_screenshots").update({
-        status: "approved", admin_notes: `AI Auto-Verified: ${verification.reason}`, reviewed_at: new Date().toISOString(),
+        status: "approved", 
+        admin_notes: `AI Auto-Verified: ${verification.reason}${utrInfo}`,
+        utr_number: validatedUtr || null,
+        reviewed_at: new Date().toISOString(),
       }).eq("id", paymentId);
 
       const expiresAt = new Date();
