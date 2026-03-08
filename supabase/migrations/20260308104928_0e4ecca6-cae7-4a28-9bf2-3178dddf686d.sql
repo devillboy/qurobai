@@ -1,0 +1,1 @@
+ALTER TABLE public.maintenance_mode ADD COLUMN IF NOT EXISTS ends_at timestamp with time zone DEFAULT NULL;

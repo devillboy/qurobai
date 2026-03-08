@@ -272,6 +272,7 @@ export type Database = {
           created_at: string
           enabled_at: string | null
           enabled_by: string | null
+          ends_at: string | null
           id: string
           is_enabled: boolean
           message: string | null
@@ -280,6 +281,7 @@ export type Database = {
           created_at?: string
           enabled_at?: string | null
           enabled_by?: string | null
+          ends_at?: string | null
           id?: string
           is_enabled?: boolean
           message?: string | null
@@ -288,6 +290,7 @@ export type Database = {
           created_at?: string
           enabled_at?: string | null
           enabled_by?: string | null
+          ends_at?: string | null
           id?: string
           is_enabled?: boolean
           message?: string | null
