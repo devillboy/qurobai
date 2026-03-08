@@ -1,4 +1,4 @@
-import { Sparkles, Code, Globe, Search, Image, Zap, Brain, ArrowRight } from "lucide-react";
+import { Code, Globe, Image, Zap, Brain, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -9,12 +9,12 @@ interface WelcomeScreenProps {
 }
 
 const quickActions = [
-  { icon: "✍️", label: "Write Code", prompt: "Help me write a React component for a responsive navigation menu", color: "from-blue-500/10 to-blue-600/5" },
-  { icon: "💡", label: "Brainstorm Ideas", prompt: "Give me 5 creative startup ideas using AI technology", color: "from-amber-500/10 to-amber-600/5" },
-  { icon: "🔍", label: "Web Search", prompt: "[Web Search] Latest AI developments and breakthroughs", color: "from-emerald-500/10 to-emerald-600/5" },
-  { icon: "🎨", label: "Create Image", prompt: "Generate an image of a futuristic city with flying cars at sunset", color: "from-purple-500/10 to-purple-600/5" },
-  { icon: "📚", label: "Explain Topic", prompt: "Explain how machine learning neural networks work in simple terms", color: "from-cyan-500/10 to-cyan-600/5" },
-  { icon: "🔬", label: "Deep Search", prompt: "[Deep Search] Compare React vs Next.js for building modern web apps", color: "from-rose-500/10 to-rose-600/5" },
+  { icon: "✍️", label: "Write Code", prompt: "Help me write a React component for a responsive navigation menu", color: "hover:border-[hsl(220_14%_25%)]" },
+  { icon: "💡", label: "Brainstorm", prompt: "Give me 5 creative startup ideas using AI technology", color: "hover:border-[hsl(220_14%_25%)]" },
+  { icon: "🔍", label: "Web Search", prompt: "[Web Search] Latest AI developments and breakthroughs", color: "hover:border-[hsl(220_14%_25%)]" },
+  { icon: "🎨", label: "Create Image", prompt: "Generate an image of a futuristic city with flying cars at sunset", color: "hover:border-[hsl(220_14%_25%)]" },
+  { icon: "📚", label: "Explain", prompt: "Explain how machine learning neural networks work in simple terms", color: "hover:border-[hsl(220_14%_25%)]" },
+  { icon: "🔬", label: "Deep Search", prompt: "[Deep Search] Compare React vs Next.js for building modern web apps", color: "hover:border-[hsl(220_14%_25%)]" },
 ];
 
 export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
@@ -36,57 +36,57 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center py-6 md:py-10 px-3 md:px-4">
-      {/* Greeting */}
+      {/* Greeting with 3D text */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="text-center mb-8 md:mb-10"
       >
-        <p className="text-sm text-muted-foreground mb-2">{greeting},</p>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+        <p className="text-sm text-muted-foreground mb-2 tracking-wide uppercase">{greeting},</p>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-3d">
           <span className="text-gradient">{firstName}</span>
         </h1>
-        <p className="text-muted-foreground mt-3 text-base">
-          Experience Like Never Before
+        <p className="text-muted-foreground mt-3 text-sm tracking-wide">
+          How can I help you today?
         </p>
       </motion.div>
 
-      {/* Quick Actions — card grid */}
+      {/* Quick Actions — clean minimal cards */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.12 }}
         className="w-full max-w-xl mb-8"
       >
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {quickActions.map((action, index) => (
             <motion.button
               key={action.label}
               onClick={() => onQuickAction(action.prompt)}
-              className={`flex flex-col items-start gap-2 p-3.5 rounded-xl border border-border/40 bg-gradient-to-br ${action.color} hover:border-primary/30 transition-all duration-300 text-left group touch-manipulation`}
-              whileHover={{ scale: 1.02 }}
+              className={`flex flex-col items-start gap-2 p-3.5 rounded-xl border border-border bg-card/50 ${action.color} transition-all duration-200 text-left group touch-manipulation`}
+              whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.08 + index * 0.04 }}
             >
-              <span className="text-xl">{action.icon}</span>
+              <span className="text-lg">{action.icon}</span>
               <div>
-                <span className="text-sm font-medium block">{action.label}</span>
-                <ArrowRight className="w-3 h-3 text-muted-foreground/40 group-hover:text-primary/60 transition-colors mt-1" />
+                <span className="text-sm font-medium block text-foreground/80">{action.label}</span>
+                <ArrowRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-foreground/50 transition-colors mt-1" />
               </div>
             </motion.button>
           ))}
         </div>
       </motion.div>
 
-      {/* Capabilities */}
+      {/* Capabilities — minimal */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.4 }}
-        className="flex flex-wrap justify-center gap-4 text-xs text-muted-foreground/60"
+        className="flex flex-wrap justify-center gap-4 text-xs text-muted-foreground/50"
       >
         {[
           { icon: Zap, label: "Fast" },

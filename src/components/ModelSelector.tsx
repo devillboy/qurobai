@@ -53,14 +53,14 @@ const models: ModelOption[] = [
 
 export function ModelSelector({ currentModel, onModelChange }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [hasSubscription, setHasSubscription] = useState(false);
+  const [subscribedModel, setSubscribedModel] = useState<string>("Qurob 3.2");
   const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
       supabase.rpc("get_user_model", { user_id: user.id }).then(({ data }) => {
-        setHasSubscription(data === "Qurob 4" || data === "Q-06");
+        setSubscribedModel(data || "Qurob 3.2");
       });
     }
   }, [user]);
@@ -68,8 +68,15 @@ export function ModelSelector({ currentModel, onModelChange }: ModelSelectorProp
   const current = models.find(m => m.id === currentModel) || models[0];
   const CurrentIcon = current.icon;
 
+  // Per-model gating: user can only use free model + their specific subscribed model
+  const canUseModel = (model: ModelOption): boolean => {
+    if (model.free) return true;
+    // User must have the exact model subscription
+    return subscribedModel === model.id;
+  };
+
   const handleSelect = (model: ModelOption) => {
-    if (!model.free && !hasSubscription) {
+    if (!canUseModel(model)) {
       navigate("/subscribe");
       setOpen(false);
       return;
@@ -94,7 +101,7 @@ export function ModelSelector({ currentModel, onModelChange }: ModelSelectorProp
         {models.map((model) => {
           const Icon = model.icon;
           const isSelected = currentModel === model.id;
-          const isLocked = !model.free && !hasSubscription;
+          const isLocked = !canUseModel(model);
 
           return (
             <button

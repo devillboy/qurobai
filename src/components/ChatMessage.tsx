@@ -23,7 +23,7 @@ interface ChatMessageProps {
 // Loading skeleton component for messages
 export const ChatMessageSkeleton = memo(() => {
   return (
-    <div className="py-5 px-4 md:px-6 rounded-2xl bg-gradient-to-br from-card/60 to-card/40 backdrop-blur-sm border border-border/20">
+    <div className="py-5 px-4 md:px-6 rounded-xl bg-card/40 border border-border/10">
       <div className="max-w-3xl mx-auto flex gap-4">
         <div className="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-primary/50 to-accent/50 skeleton-pulse" />
         <div className="flex-1 min-w-0 space-y-3">
@@ -324,11 +324,11 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
   return (
     <div 
       className={cn(
-        "group py-5 px-4 md:px-6 rounded-2xl transition-all duration-300 animate-fade-in",
+        "group py-5 px-4 md:px-6 rounded-xl transition-all duration-200 animate-fade-in",
         isUser 
           ? "bg-transparent" 
-          : "bg-gradient-to-br from-card/60 to-card/40 backdrop-blur-sm border-l-2 border-primary/30 border border-l-primary/40 border-border/20 hover:border-border/40 shadow-sm hover:shadow-md",
-        isPinned && "ring-2 ring-primary/30 bg-primary/5"
+          : "bg-card/40 border-l-2 border-l-primary/20 border border-border/10 hover:border-border/20",
+        isPinned && "ring-1 ring-primary/20 bg-primary/5"
       )}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
@@ -336,10 +336,10 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
       <div className="max-w-3xl mx-auto flex gap-4">
         {/* Avatar */}
         <div className={cn(
-          "shrink-0 w-9 h-9 rounded-xl flex items-center justify-center shadow-md transition-all duration-300",
+          "shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200",
           isUser 
-            ? "bg-gradient-to-br from-muted to-muted/80 border border-border/50" 
-            : "bg-gradient-to-br from-primary via-primary to-accent shadow-primary/20"
+            ? "bg-muted border border-border/40" 
+            : "bg-primary/10 border border-primary/15"
         )}>
           {isUser ? <User className="w-4 h-4 text-foreground/80" /> : <Bot className="w-4 h-4 text-primary-foreground" />}
         </div>
@@ -360,8 +360,8 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
           <div className={cn(
             "max-w-none",
             isUser 
-              ? "text-foreground/90 text-[15px] leading-relaxed font-normal" 
-              : "text-foreground/85 text-[15px] leading-[1.75] tracking-[0.01em] font-[400]"
+              ? "text-foreground/85 text-[14.5px] leading-relaxed" 
+              : "text-foreground/80 text-[14.5px] leading-[1.8] tracking-[0.01em]"
           )}>
             {renderedContent}
             {isStreaming && (
