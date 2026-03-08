@@ -123,6 +123,50 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
   return null;
 }
 
+// Firecrawl-powered web search (primary)
+async function firecrawlSearch(query: string): Promise<string> {
+  const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!FIRECRAWL_API_KEY) return "";
+  try {
+    const resp = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ query, limit: 8, scrapeOptions: { formats: ["markdown"] } }),
+    });
+    if (!resp.ok) { console.error("Firecrawl search error:", resp.status); return ""; }
+    const data = await resp.json();
+    if (!data.success || !data.data?.length) return "";
+    let result = "**Search Results:**\n";
+    for (const r of data.data.slice(0, 6)) {
+      const snippet = r.markdown ? r.markdown.slice(0, 300).replace(/\n/g, " ").trim() : r.description || "";
+      result += `• **${r.title || r.url}** — ${snippet}\n  ${r.url}\n`;
+    }
+    return result;
+  } catch (e) { console.error("Firecrawl search error:", e); return ""; }
+}
+
+// Firecrawl URL scraper — get full content from a URL
+async function firecrawlScrape(url: string): Promise<string> {
+  const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!FIRECRAWL_API_KEY) return "";
+  try {
+    const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url, formats: ["markdown", "summary"], onlyMainContent: true }),
+    });
+    if (!resp.ok) return "";
+    const data = await resp.json();
+    const markdown = data.data?.markdown || "";
+    const summary = data.data?.summary || "";
+    const title = data.data?.metadata?.title || "";
+    const desc = data.data?.metadata?.description || "";
+    // Return truncated content for context
+    const content = markdown.slice(0, 3000);
+    return `**${title}**${desc ? ` — ${desc}` : ""}\n\n${summary ? `**Summary:** ${summary}\n\n` : ""}${content}`;
+  } catch (e) { console.error("Firecrawl scrape error:", e); return ""; }
+}
+
 async function serperSearch(query: string): Promise<string> {
   const SERPER_API_KEY = Deno.env.get("SERPER_API_KEY");
   if (!SERPER_API_KEY) return "";
@@ -168,22 +212,47 @@ async function fallbackWebSearch(query: string): Promise<string> {
 }
 
 async function performWebSearch(query: string): Promise<string> {
-  let result = await serperSearch(query);
+  // Priority: Firecrawl → Serper → RSS fallback
+  let result = await firecrawlSearch(query);
+  if (!result) result = await serperSearch(query);
   if (!result) result = await fallbackWebSearch(query);
   const timestamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
   return `🔍 **Web Search: "${query}"**\n\n${result}\n\n*Updated: ${timestamp} IST*`;
 }
 
 async function performDeepSearch(query: string): Promise<string> {
-  const SERPER_API_KEY = Deno.env.get("SERPER_API_KEY");
   let allResults = "";
   const searches = [query, `${query} latest 2025 2026`, `${query} analysis`];
   for (const q of searches) {
-    const r = SERPER_API_KEY ? await serperSearch(q) : await fallbackWebSearch(q);
+    // Try Firecrawl first, then Serper, then RSS
+    let r = await firecrawlSearch(q);
+    if (!r) r = await serperSearch(q);
+    if (!r) r = await fallbackWebSearch(q);
     if (r) allResults += r + "\n\n";
   }
   const timestamp = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
   return `🔬 **Deep Search: "${query}"**\n\n${allResults}\n*Deep analysis from multiple sources | ${timestamp} IST*`;
+}
+
+// Auto web search: silently searches when AI might lack knowledge
+async function autoWebSearch(message: string): Promise<string> {
+  const lower = message.toLowerCase();
+  // Topics that likely need fresh/real-time info
+  const needsSearch = /(?:latest|recent|current|today|2025|2026|new|update|release|launch|announce|who\s+(?:won|is\s+the)|what\s+happened|tell\s+me\s+about|explain|kya\s+hua|batao|kaun\s+hai|kab\s+hua)/i.test(lower);
+  if (!needsSearch) return "";
+  
+  // Extract the core query
+  let query = message
+    .replace(/^\[.*?\]\s*/i, "")
+    .replace(/\[ImageData:.*?\]/g, "")
+    .replace(/\[Attachment:.*?\]\(.*?\)/g, "")
+    .trim();
+  if (query.length < 5 || query.length > 200) return "";
+  
+  // Silently search — user won't see this
+  const result = await firecrawlSearch(query);
+  if (!result) return await serperSearch(query);
+  return result;
 }
 
 function getWeatherDescription(code: number): string {
@@ -456,6 +525,11 @@ IMPORTANT: Add a subtle semi-transparent watermark text "QurobAi" in the bottom-
 }
 
 async function checkUrl(url: string): Promise<string> {
+  // Try Firecrawl scrape first for rich content
+  const scraped = await firecrawlScrape(url);
+  if (scraped) return `\n\n## URL CONTENT (User shared this link — analyze and respond based on this content):\n${scraped}`;
+  
+  // Fallback: basic fetch
   try {
     const resp = await fetch(url, { headers: { "User-Agent": "QurobAi/3.2" }, redirect: "follow" });
     const html = await resp.text();
@@ -618,6 +692,13 @@ serve(async (req) => {
         
         const data = await fetchRealtimeData(queryType.type, queryType.query);
         if (data) realtimeContext += `\n\n## REAL-TIME DATA (Present this to user):\n${data}`;
+      } else {
+        // No explicit query type detected — try auto web search silently
+        // This kicks in when AI might not know the answer (latest events, specific facts, etc.)
+        const autoResult = await autoWebSearch(lastUserMessage.content);
+        if (autoResult) {
+          realtimeContext += `\n\n## SUPPLEMENTARY WEB CONTEXT (Use this info to give accurate answers, do NOT mention you searched the web):\n${autoResult}`;
+        }
       }
     }
 
