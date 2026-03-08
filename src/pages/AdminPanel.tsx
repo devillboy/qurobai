@@ -563,13 +563,28 @@ export default function AdminPanel() {
 
   const handleDeleteUserById = async () => {
     if (!deleteByIdInput.trim()) {
-      toast.error("Please enter a user ID");
+      toast.error("Please enter a user ID or Qurob ID");
       return;
     }
     
     setDeleteByIdLoading(true);
     try {
-      const userId = deleteByIdInput.trim();
+      let userId = deleteByIdInput.trim();
+      
+      // If input looks like a Qurob ID (QRB-XXXXXX), resolve to user_id
+      if (userId.toUpperCase().startsWith("QRB-")) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("qurob_id", userId.toUpperCase())
+          .single();
+        if (!profile) {
+          toast.error("No user found with this Qurob ID");
+          setDeleteByIdLoading(false);
+          return;
+        }
+        userId = profile.user_id;
+      }
       
       // Get all conversation IDs for this user
       const { data: userConversations } = await supabase
@@ -1160,7 +1175,7 @@ export default function AdminPanel() {
               <CardContent>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Enter user UUID..."
+                    placeholder="Enter user UUID or Qurob ID (QRB-XXXXXX)..."
                     value={deleteByIdInput}
                     onChange={(e) => setDeleteByIdInput(e.target.value)}
                     className="font-mono text-sm"
@@ -1181,7 +1196,7 @@ export default function AdminPanel() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search users by name or ID..."
+                  placeholder="Search by name, ID, or Qurob ID..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   className="pl-9"
