@@ -169,14 +169,60 @@ const formatText = (text: string): string => {
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em class="italic text-foreground/80">$1</em>')
     .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-[13px] font-mono">$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline underline-offset-2 hover:no-underline transition-all">$1</a>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline underline-offset-2 hover:text-primary/80 transition-all inline-flex items-center gap-1">$1 ↗</a>')
+    .replace(/(^|[^"(])(https?:\/\/[^\s<")\]]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary underline underline-offset-2 hover:text-primary/80 transition-all break-all">$2 ↗</a>')
     .replace(/\n/g, '<br />');
   
   return sanitizeHtml(formatted);
 };
 
+// Render inline attached images
+const InlineAttachedImage = memo(({ src, name }: { src: string; name?: string }) => (
+  <div className="my-2 inline-block">
+    <img 
+      src={src} 
+      alt={name || "Attached image"} 
+      className="rounded-lg max-w-[200px] max-h-[200px] object-cover border border-border/50 cursor-pointer hover:opacity-90 transition-opacity"
+      loading="lazy"
+      onClick={() => window.open(src, "_blank")}
+    />
+  </div>
+));
+InlineAttachedImage.displayName = "InlineAttachedImage";
+
+// Render attached files
+const InlineAttachedFile = memo(({ name, url }: { name: string; url: string }) => (
+  <a 
+    href={url} 
+    target="_blank" 
+    rel="noopener noreferrer"
+    className="my-1 inline-flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border/40 rounded-lg text-sm text-foreground hover:bg-muted transition-colors"
+  >
+    📎 <span className="truncate max-w-[200px]">{name}</span>
+  </a>
+));
+InlineAttachedFile.displayName = "InlineAttachedFile";
+
 const renderContent = (content: string, isUser: boolean) => {
+  // Extract and render inline images from base64 data
+  const imageDataRegex = /\[ImageData:(data:image\/[^;]+;base64,[^\]]+)\]/g;
+  const inlineImages: { url: string }[] = [];
+  let imgMatch;
+  while ((imgMatch = imageDataRegex.exec(content)) !== null) {
+    inlineImages.push({ url: imgMatch[1] });
+  }
+  
   let cleanContent = content.replace(/\[ImageData:data:image\/[^;]+;base64,[^\]]+\]/g, "");
+  
+  // Extract attachment links
+  const attachmentRegex = /\[Attachment:\s*([^\]]+)\]\(([^)]+)\)/g;
+  const attachments: { name: string; url: string }[] = [];
+  let attMatch;
+  while ((attMatch = attachmentRegex.exec(cleanContent)) !== null) {
+    attachments.push({ name: attMatch[1], url: attMatch[2] });
+  }
+  cleanContent = cleanContent.replace(/\[Attachment:\s*[^\]]+\]\([^)]+\)/g, "");
+  
   if (isUser) cleanContent = stripSearchPrefixes(cleanContent);
   
   const generatedImageRegex = /\[GeneratedImage:((?:https?:\/\/[^\]]+|data:image\/[^\]]+))\]/g;
@@ -186,6 +232,15 @@ const renderContent = (content: string, isUser: boolean) => {
   const imageMatches: { index: number; url: string; fullMatch: string }[] = [];
   while ((match = generatedImageRegex.exec(cleanContent)) !== null) {
     imageMatches.push({ index: match.index, url: match[1], fullMatch: match[0] });
+  }
+  
+  // Add inline uploaded images first
+  if (inlineImages.length > 0) {
+    parts.push(
+      <div key="inline-images" className="flex flex-wrap gap-2 mb-2">
+        {inlineImages.map((img, i) => <InlineAttachedImage key={`att-img-${i}`} src={img.url} />)}
+      </div>
+    );
   }
   
   if (imageMatches.length > 0) {
@@ -198,10 +253,20 @@ const renderContent = (content: string, isUser: boolean) => {
     }
     const remaining = cleanContent.slice(lastIndex);
     if (remaining.trim()) parts.push(...renderTextWithCode(remaining, parts.length));
-    return parts;
+  } else {
+    parts.push(...renderTextWithCode(cleanContent, parts.length));
   }
   
-  return renderTextWithCode(cleanContent, 0);
+  // Add attachment files at the end
+  if (attachments.length > 0) {
+    parts.push(
+      <div key="attachments" className="flex flex-wrap gap-2 mt-2">
+        {attachments.map((att, i) => <InlineAttachedFile key={`att-file-${i}`} name={att.name} url={att.url} />)}
+      </div>
+    );
+  }
+  
+  return parts;
 };
 
 const renderTextWithCode = (content: string, keyOffset: number): React.ReactNode[] => {

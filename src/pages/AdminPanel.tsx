@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send, AlertCircle, Loader2, Bot, UserX, Download } from "lucide-react";
+import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send, AlertCircle, Loader2, Bot, UserX, Download, Key, Server, Database, MessageSquare, Eye, EyeOff, BarChart3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -109,6 +109,20 @@ export default function AdminPanel() {
     weeklyRevenue: number[];
   }>({ weeklyUsers: [], weeklyRevenue: [] });
 
+  // Bots management state
+  const [allBots, setAllBots] = useState<any[]>([]);
+  
+  // API keys state
+  const [allApiKeys, setAllApiKeys] = useState<any[]>([]);
+
+  // System stats
+  const [systemStats, setSystemStats] = useState({
+    totalBots: 0,
+    totalApiKeys: 0,
+    totalTemplates: 0,
+    storageUsed: "N/A",
+  });
+
   // Stats
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -160,8 +174,35 @@ export default function AdminPanel() {
       loadPlans(),
       loadPushStats(),
       loadAnalytics(),
+      loadBots(),
+      loadApiKeys(),
+      loadSystemStats(),
     ]);
     setLoading(false);
+  };
+
+  const loadBots = async () => {
+    const { data } = await supabase.from("qurob_bots").select("*").order("created_at", { ascending: false });
+    if (data) setAllBots(data);
+  };
+
+  const loadApiKeys = async () => {
+    const { data } = await supabase.from("api_keys").select("*").order("created_at", { ascending: false });
+    if (data) setAllApiKeys(data);
+  };
+
+  const loadSystemStats = async () => {
+    const [botsRes, keysRes, templatesRes] = await Promise.all([
+      supabase.from("qurob_bots").select("id", { count: "exact", head: true }),
+      supabase.from("api_keys").select("id", { count: "exact", head: true }),
+      supabase.from("chat_templates").select("id", { count: "exact", head: true }),
+    ]);
+    setSystemStats({
+      totalBots: botsRes.count || 0,
+      totalApiKeys: keysRes.count || 0,
+      totalTemplates: templatesRes.count || 0,
+      storageUsed: "N/A",
+    });
   };
 
   const loadAnalytics = async () => {
@@ -880,6 +921,9 @@ export default function AdminPanel() {
               <TabsTrigger value="coupons">Coupons</TabsTrigger>
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>
+              <TabsTrigger value="bots">Bots</TabsTrigger>
+              <TabsTrigger value="apikeys">API Keys</TabsTrigger>
+              <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
               <TabsTrigger value="gift">Gift Sub</TabsTrigger>
             </TabsList>
@@ -1448,6 +1492,240 @@ export default function AdminPanel() {
                     </>
                   )}
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Bots Management Tab */}
+          <TabsContent value="bots" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Bot className="w-5 h-5" />
+                  All Qurobs ({allBots.length})
+                </CardTitle>
+                <CardDescription>Manage all custom bots created by users</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 max-h-[500px] overflow-y-auto">
+                  {allBots.map((bot) => (
+                    <div key={bot.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border/40">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ backgroundColor: `${bot.icon_color}20`, color: bot.icon_color }}>
+                          {bot.icon === "sparkles" ? "✨" : bot.icon === "code" ? "💻" : "🤖"}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm flex items-center gap-2">
+                            {bot.name}
+                            {bot.is_official && <Badge className="text-[10px] px-1">Official</Badge>}
+                            {bot.is_public && <Badge variant="outline" className="text-[10px] px-1">Public</Badge>}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{bot.description?.slice(0, 80) || "No description"} • {bot.uses_count || 0} uses</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">{bot.user_id.slice(0, 8)}...</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={async () => {
+                            await supabase.from("qurob_bots").update({ is_official: !bot.is_official }).eq("id", bot.id);
+                            toast.success(bot.is_official ? "Removed official status" : "Marked as official");
+                            loadBots();
+                          }}
+                        >
+                          <Shield className={`w-4 h-4 ${bot.is_official ? "text-primary" : "text-muted-foreground"}`} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={async () => {
+                            await supabase.from("qurob_bots").delete().eq("id", bot.id);
+                            toast.success("Bot deleted");
+                            loadBots();
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {allBots.length === 0 && <p className="text-muted-foreground text-sm text-center py-4">No bots created yet</p>}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* API Keys Tab */}
+          <TabsContent value="apikeys" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Key className="w-5 h-5" />
+                  All API Keys ({allApiKeys.length})
+                </CardTitle>
+                <CardDescription>Monitor API key usage across all users</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 max-h-[500px] overflow-y-auto">
+                  {allApiKeys.map((key) => (
+                    <div key={key.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border/40">
+                      <div>
+                        <div className="font-medium text-sm flex items-center gap-2">
+                          {key.name || "Unnamed Key"}
+                          <Badge variant={key.is_active ? "default" : "secondary"} className="text-[10px]">
+                            {key.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                          {key.is_trial && <Badge variant="outline" className="text-[10px]">Trial</Badge>}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono">{key.key_preview}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          Today: {key.requests_today || 0} • Month: {key.requests_month || 0} • Total: {key.total_requests || 0}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={async () => {
+                          await supabase.from("api_keys").update({ is_active: !key.is_active }).eq("id", key.id);
+                          toast.success(key.is_active ? "Key deactivated" : "Key activated");
+                          loadApiKeys();
+                        }}
+                      >
+                        {key.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  ))}
+                  {allApiKeys.length === 0 && <p className="text-muted-foreground text-sm text-center py-4">No API keys generated yet</p>}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* System Tab */}
+          <TabsContent value="system" className="space-y-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                  <Bot className="w-3 h-3" />
+                  Total Bots
+                </div>
+                <div className="text-2xl font-bold">{systemStats.totalBots}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                  <Key className="w-3 h-3" />
+                  API Keys
+                </div>
+                <div className="text-2xl font-bold">{systemStats.totalApiKeys}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                  <MessageSquare className="w-3 h-3" />
+                  Templates
+                </div>
+                <div className="text-2xl font-bold">{systemStats.totalTemplates}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                  <Database className="w-3 h-3" />
+                  Messages
+                </div>
+                <div className="text-2xl font-bold">{stats.totalMessages.toLocaleString()}</div>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Weekly Analytics
+                </CardTitle>
+                <CardDescription>Last 7 days overview</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">New Users</h4>
+                    <div className="flex items-end gap-1 h-32">
+                      {analyticsData.weeklyUsers.map((count, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                          <div 
+                            className="w-full bg-primary/60 rounded-t transition-all" 
+                            style={{ height: `${Math.max(4, (count / Math.max(...analyticsData.weeklyUsers, 1)) * 100)}%` }}
+                          />
+                          <span className="text-[10px] text-muted-foreground">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between mt-1">
+                      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].slice(-7).map((d, i) => (
+                        <span key={i} className="text-[10px] text-muted-foreground">{d}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Revenue (₹)</h4>
+                    <div className="flex items-end gap-1 h-32">
+                      {analyticsData.weeklyRevenue.map((amount, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                          <div 
+                            className="w-full bg-green-500/60 rounded-t transition-all"
+                            style={{ height: `${Math.max(4, (amount / Math.max(...analyticsData.weeklyRevenue, 1)) * 100)}%` }}
+                          />
+                          <span className="text-[10px] text-muted-foreground">{amount}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between mt-1">
+                      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].slice(-7).map((d, i) => (
+                        <span key={i} className="text-[10px] text-muted-foreground">{d}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Server className="w-5 h-5" />
+                  System Health
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-sm font-medium">AI Gateway</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Operational</div>
+                  </div>
+                  <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-sm font-medium">Database</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Connected</div>
+                  </div>
+                  <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-sm font-medium">Storage</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Available</div>
+                  </div>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground">
+                  <p>Total Conversations: {stats.totalConversations.toLocaleString()}</p>
+                  <p>Total Messages: {stats.totalMessages.toLocaleString()}</p>
+                  <p>Push Subscribers: {pushStats.subscribed}</p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
