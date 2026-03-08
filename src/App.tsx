@@ -55,7 +55,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
-  const { isMaintenance, maintenanceMessage, loading: maintenanceLoading } = useMaintenanceMode();
+  const { isMaintenance, maintenanceMessage, endsAt, loading: maintenanceLoading } = useMaintenanceMode();
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
 
