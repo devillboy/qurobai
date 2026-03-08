@@ -926,6 +926,10 @@ export default function AdminPanel() {
               <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
               <TabsTrigger value="gift">Gift Sub</TabsTrigger>
+              <TabsTrigger value="fraud" className="text-destructive">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                Fraud
+              </TabsTrigger>
             </TabsList>
           </ScrollArea>
 
