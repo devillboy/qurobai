@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useCallback, lazy, Suspense } from "react";
+import { useState, useCallback, useEffect, lazy, Suspense } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +16,8 @@ import NotFound from "@/pages/NotFound";
 import { HelmetProvider } from "react-helmet-async";
 import { SplashScreen } from "@/components/SplashScreen";
 import { WhatsNewPopup } from "@/components/WhatsNewPopup";
+import { MaintenancePage } from "@/components/MaintenancePage";
+import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 
 // Lazy loaded pages
 const Subscribe = lazy(() => import("@/pages/Subscribe"));
@@ -52,6 +55,21 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
+  const { isMaintenance, maintenanceMessage, loading: maintenanceLoading } = useMaintenanceMode();
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").then(({ data }) => {
+        setIsAdmin(!!(data && data.length > 0));
+      });
+    }
+  }, [user]);
+
+  if (maintenanceLoading) return <PageLoader />;
+  if (isMaintenance && !isAdmin) return <MaintenancePage message={maintenanceMessage} />;
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>

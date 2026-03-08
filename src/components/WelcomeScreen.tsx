@@ -1,4 +1,4 @@
-import { Code, Globe, Image, Zap, Brain, ArrowRight } from "lucide-react";
+import { Code, Globe, Image, Zap, Brain, ArrowRight, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -20,6 +20,7 @@ const quickActions = [
 export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
   const { user } = useAuth();
   const [displayName, setDisplayName] = useState("");
+  const [promptTemplates, setPromptTemplates] = useState<{ title: string; prompt: string; icon: string; category: string }[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -28,6 +29,11 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
           setDisplayName(data?.display_name || user.email?.split("@")[0] || "");
         });
     }
+    // Fetch prompt templates
+    supabase.from("chat_templates").select("title, prompt, icon, category").eq("is_public", true).limit(8)
+      .then(({ data }) => {
+        if (data?.length) setPromptTemplates(data);
+      });
   }, [user]);
 
   const firstName = displayName.split(" ")[0] || "there";
@@ -80,6 +86,37 @@ export const WelcomeScreen = ({ onQuickAction }: WelcomeScreenProps) => {
           ))}
         </div>
       </motion.div>
+
+      {/* Prompt Templates */}
+      {promptTemplates.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="w-full max-w-xl mb-8"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen className="w-4 h-4 text-muted-foreground/60" />
+            <span className="text-xs text-muted-foreground/60 uppercase tracking-wide">Prompt Templates</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {promptTemplates.map((t, i) => (
+              <motion.button
+                key={t.title}
+                onClick={() => onQuickAction(t.prompt)}
+                className="px-3 py-1.5 rounded-lg border border-border bg-card/40 hover:bg-card/80 text-xs text-foreground/70 transition-colors"
+                whileTap={{ scale: 0.97 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 + i * 0.03 }}
+              >
+                {t.icon && <span className="mr-1">{t.icon === "sparkles" ? "✨" : t.icon}</span>}
+                {t.title}
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Capabilities — minimal */}
       <motion.div
