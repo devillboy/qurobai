@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight, 
+  Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
   LogOut, Sparkles, Settings, Shield, Search, Code, Bot, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
