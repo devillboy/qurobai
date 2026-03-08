@@ -6,10 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Generate VAPID keys if not present (run once to generate, then store in secrets)
-// You can use: npx web-push generate-vapid-keys
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY") || "";
-const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") || "";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,7 +21,6 @@ serve(async (req) => {
     const body = await req.json();
     const { action, title, message, userIds } = body;
 
-    // Return VAPID public key for client subscription
     if (action === "getVapidKey") {
       return new Response(
         JSON.stringify({ publicKey: VAPID_PUBLIC_KEY }),
@@ -32,83 +28,73 @@ serve(async (req) => {
       );
     }
 
-    // Send push notifications
     if (action === "send") {
-      if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-        return new Response(
-          JSON.stringify({ error: "VAPID keys not configured. Generate keys with: npx web-push generate-vapid-keys" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // PRIMARY: Always create in-app notifications so users never miss anything
+      let targetUserIds: string[] = userIds || [];
+      
+      if (!targetUserIds.length) {
+        // Broadcast: get all user IDs from profiles
+        const { data: allProfiles } = await supabase.from("profiles").select("user_id");
+        targetUserIds = (allProfiles || []).map((p: any) => p.user_id);
       }
 
-      // Get push subscriptions
+      let notificationsCreated = 0;
+      for (const uid of targetUserIds) {
+        const { error } = await supabase.from("notifications").insert({
+          user_id: uid,
+          title: title || "QurobAi",
+          message: message || "You have a new notification",
+          type: "push",
+          read: false,
+        });
+        if (!error) notificationsCreated++;
+      }
+
+      // SECONDARY: Best-effort Web Push (may fail without proper VAPID encryption)
+      let pushSent = 0;
+      let pushFailed = 0;
+
       let query = supabase.from("push_subscriptions").select("*");
-      
-      if (userIds && userIds.length > 0) {
-        query = query.in("user_id", userIds);
-      }
-      
-      const { data: subscriptions, error } = await query;
-      
-      if (error) {
-        throw error;
-      }
+      if (userIds?.length) query = query.in("user_id", userIds);
+      const { data: subscriptions } = await query;
 
-      if (!subscriptions || subscriptions.length === 0) {
-        return new Response(
-          JSON.stringify({ success: true, sent: 0, message: "No push subscriptions found" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (subscriptions?.length) {
+        const payload = JSON.stringify({
+          title: title || "QurobAi",
+          body: message || "You have a new notification",
+          icon: "/favicon.ico",
+          data: { url: "/" }
+        });
 
-      const payload = JSON.stringify({
-        title: title || "QurobAi",
-        body: message || "You have a new notification",
-        icon: "/favicon.ico",
-        data: { url: "/" }
-      });
-
-      let sent = 0;
-      let failed = 0;
-
-      // Send to each subscription using Web Push
-      for (const sub of subscriptions) {
-        try {
-          // For now, we'll use a simple approach
-          // In production, you'd want to use a proper web-push library
-          const pushResponse = await sendWebPush(
-            {
-              endpoint: sub.endpoint,
-              keys: {
-                p256dh: sub.p256dh,
-                auth: sub.auth
+        for (const sub of subscriptions) {
+          try {
+            const resp = await fetch(sub.endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/octet-stream", "TTL": "86400" },
+              body: payload,
+            });
+            if (resp.ok || resp.status === 201) {
+              pushSent++;
+            } else {
+              pushFailed++;
+              if (resp.status === 410 || resp.status === 404) {
+                await supabase.from("push_subscriptions").delete().eq("id", sub.id);
               }
-            },
-            payload,
-            VAPID_PUBLIC_KEY,
-            VAPID_PRIVATE_KEY
-          );
-
-          if (pushResponse.ok) {
-            sent++;
-          } else {
-            failed++;
-            // Remove invalid subscriptions
-            if (pushResponse.status === 410 || pushResponse.status === 404) {
-              await supabase
-                .from("push_subscriptions")
-                .delete()
-                .eq("id", sub.id);
             }
+          } catch {
+            pushFailed++;
           }
-        } catch (e) {
-          console.error("Push send error:", e);
-          failed++;
         }
       }
 
       return new Response(
-        JSON.stringify({ success: true, sent, failed, total: subscriptions.length }),
+        JSON.stringify({
+          success: true,
+          notifications_created: notificationsCreated,
+          push_sent: pushSent,
+          push_failed: pushFailed,
+          total_users: targetUserIds.length,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -125,29 +111,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Simplified Web Push implementation
-async function sendWebPush(
-  subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
-  payload: string,
-  vapidPublicKey: string,
-  vapidPrivateKey: string
-): Promise<Response> {
-  // This is a simplified version - in production use proper web-push library
-  // For now, we'll just make the request and handle 201/404/410 responses
-  
-  try {
-    const response = await fetch(subscription.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "TTL": "86400",
-      },
-      body: payload,
-    });
-    return response;
-  } catch (e) {
-    // Return a failed response object
-    return new Response(null, { status: 500 });
-  }
-}
