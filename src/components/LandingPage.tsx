@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { 
   Sparkles, Code, Zap, Shield, Globe, 
   Brain, ArrowRight, MessageSquare, Check, 
-  Search, Image, Mic, ChevronRight, Star
+  Search, Image, Mic, ChevronRight, Star,
+  Users, TrendingUp, Award, Heart, Quote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
