@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send, AlertCircle, Loader2, Bot, UserX, Download } from "lucide-react";
+import { ArrowLeft, Check, X, Plus, Trash2, Users, CreditCard, Bell, Shield, Activity, Gift, RefreshCw, Search, Mail, Send, AlertCircle, Loader2, Bot, UserX, Download, Key, Server, Database, MessageSquare, Eye, EyeOff, BarChart3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -109,6 +109,20 @@ export default function AdminPanel() {
     weeklyRevenue: number[];
   }>({ weeklyUsers: [], weeklyRevenue: [] });
 
+  // Bots management state
+  const [allBots, setAllBots] = useState<any[]>([]);
+  
+  // API keys state
+  const [allApiKeys, setAllApiKeys] = useState<any[]>([]);
+
+  // System stats
+  const [systemStats, setSystemStats] = useState({
+    totalBots: 0,
+    totalApiKeys: 0,
+    totalTemplates: 0,
+    storageUsed: "N/A",
+  });
+
   // Stats
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -160,8 +174,35 @@ export default function AdminPanel() {
       loadPlans(),
       loadPushStats(),
       loadAnalytics(),
+      loadBots(),
+      loadApiKeys(),
+      loadSystemStats(),
     ]);
     setLoading(false);
+  };
+
+  const loadBots = async () => {
+    const { data } = await supabase.from("qurob_bots").select("*").order("created_at", { ascending: false });
+    if (data) setAllBots(data);
+  };
+
+  const loadApiKeys = async () => {
+    const { data } = await supabase.from("api_keys").select("*").order("created_at", { ascending: false });
+    if (data) setAllApiKeys(data);
+  };
+
+  const loadSystemStats = async () => {
+    const [botsRes, keysRes, templatesRes] = await Promise.all([
+      supabase.from("qurob_bots").select("id", { count: "exact", head: true }),
+      supabase.from("api_keys").select("id", { count: "exact", head: true }),
+      supabase.from("chat_templates").select("id", { count: "exact", head: true }),
+    ]);
+    setSystemStats({
+      totalBots: botsRes.count || 0,
+      totalApiKeys: keysRes.count || 0,
+      totalTemplates: templatesRes.count || 0,
+      storageUsed: "N/A",
+    });
   };
 
   const loadAnalytics = async () => {
