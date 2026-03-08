@@ -525,6 +525,11 @@ IMPORTANT: Add a subtle semi-transparent watermark text "QurobAi" in the bottom-
 }
 
 async function checkUrl(url: string): Promise<string> {
+  // Try Firecrawl scrape first for rich content
+  const scraped = await firecrawlScrape(url);
+  if (scraped) return `\n\n## URL CONTENT (User shared this link — analyze and respond based on this content):\n${scraped}`;
+  
+  // Fallback: basic fetch
   try {
     const resp = await fetch(url, { headers: { "User-Agent": "QurobAi/3.2" }, redirect: "follow" });
     const html = await resp.text();
