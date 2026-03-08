@@ -68,7 +68,7 @@ const AppRoutes = () => {
   }, [user]);
 
   if (maintenanceLoading) return <PageLoader />;
-  if (isMaintenance && !isAdmin) return <MaintenancePage message={maintenanceMessage} />;
+  if (isMaintenance && !isAdmin) return <MaintenancePage message={maintenanceMessage} endsAt={endsAt} />;
 
   return (
     <Suspense fallback={<PageLoader />}>
