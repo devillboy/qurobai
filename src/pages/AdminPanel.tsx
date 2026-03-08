@@ -1214,7 +1214,10 @@ export default function AdminPanel() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate text-sm">{u.display_name || "Unnamed"}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono truncate">{u.user_id}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono truncate">
+                        {u.qurob_id && <span className="text-primary mr-2">{u.qurob_id}</span>}
+                        {u.user_id}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {u.subscription ? (
@@ -1887,7 +1890,7 @@ export default function AdminPanel() {
                         setGiftUserSearch(e.target.value);
                         setSelectedGiftUser(null);
                       }}
-                      placeholder="Search by name or ID..."
+                      placeholder="Search by name, ID, or Qurob ID..."
                       className="pl-9"
                     />
                   </div>
@@ -1905,7 +1908,10 @@ export default function AdminPanel() {
                         >
                           <div>
                             <div className="font-medium">{u.display_name || "Unnamed"}</div>
-                            <div className="text-xs text-muted-foreground font-mono">{u.user_id.slice(0, 8)}...</div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {u.qurob_id && <span className="text-primary mr-1">{u.qurob_id}</span>}
+                              {u.user_id.slice(0, 8)}...
+                            </div>
                           </div>
                           {u.subscription && (
                             <Badge variant="outline">{u.subscription.plan_name}</Badge>
