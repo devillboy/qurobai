@@ -48,6 +48,7 @@ export const ChatSidebar = ({
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [menuExpanded, setMenuExpanded] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
