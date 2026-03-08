@@ -1,8 +1,12 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /chat
+Disallow: /admin
 
 User-agent: Bingbot
 Allow: /
+Disallow: /chat
+Disallow: /admin
 
 User-agent: Twitterbot
 Allow: /
@@ -12,5 +16,7 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /chat
+Disallow: /admin
 
 Sitemap: https://qurobai.lovable.app/sitemap.xml

@@ -198,7 +198,6 @@ export default function Subscribe() {
         plan_id: selectedPlan.id,
         amount_paid: Math.round(finalPrice),
         coupon_code: couponCode || null,
-        payment_method: paymentMethod,
       };
 
       if (screenshotUrl) {
@@ -206,11 +205,13 @@ export default function Subscribe() {
       }
 
       if (paymentMethod === "google_redeem") {
-        paymentData.admin_notes = `Google Play Redeem Code: ${redeemCode}`;
+        paymentData.admin_notes = `Payment Method: ${paymentMethod} | Google Play Redeem Code: ${redeemCode}`;
+      } else {
+        paymentData.admin_notes = `Payment Method: ${paymentMethod}`;
       }
 
       if (transactionId) {
-        paymentData.admin_notes = `${paymentData.admin_notes || ""} Transaction ID: ${transactionId}`.trim();
+        paymentData.admin_notes = `${paymentData.admin_notes} | Transaction ID: ${transactionId}`.trim();
       }
 
       const { data: insertData, error: insertError } = await supabase
@@ -324,7 +325,7 @@ export default function Subscribe() {
                 <div className="p-2 rounded-lg bg-muted">
                   <Zap className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <CardTitle className="text-lg">Qurob 2</CardTitle>
+                <CardTitle className="text-lg">Qurob 3.2</CardTitle>
               </div>
               <CardDescription className="text-2xl font-bold text-foreground mt-2">
                 Free<span className="text-sm font-normal text-muted-foreground ml-1">forever</span>
