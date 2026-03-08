@@ -6,7 +6,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 
-const CURRENT_VERSION = "3.2.0";
+const CURRENT_VERSION = "3.3.0";
 
 interface Update {
   version: string;
@@ -18,6 +18,31 @@ interface Update {
 }
 
 const updates: Update[] = [
+  {
+    version: "3.3.0",
+    date: "2026-03-08",
+    title: "Refined & Boosted",
+    summary: "All AI models fine-tuned with unique personalities, context-aware thinking, timestamps, SEO blog section, security hardening, and 3D UI polish.",
+    type: "major",
+    highlights: [
+      "All 4 models (Qurob 2, 3.2, 4, Q-06) individually tuned with unique personalities & optimized temperatures",
+      "Qurob 4 upgraded to Gemini 3.1 Pro Preview — strongest reasoning yet",
+      "AI no longer writes unnecessary code for simple messages",
+      "Context-aware thinking indicators — different animations for search, code, links, images",
+      "Message timestamps on every chat bubble",
+      "Minimum 3-4 sec thinking time for natural, thoughtful responses",
+      "Message editing — edit sent messages and regenerate AI response",
+      "Emoji reactions on AI messages (👍 👎 ❤️)",
+      "Model selector moved next to mic button for quick access",
+      "3D button effects across the entire UI",
+      "SEO blog section on landing page targeting Indian AI searches",
+      "File attachment fix — all file types now supported on mobile",
+      "Security: coupon codes no longer publicly visible, bot official status protected",
+      "350k free tokens/month for free users",
+      "Character count in input field",
+      "Scroll-to-bottom FAB in long conversations",
+    ],
+  },
   {
     version: "3.2.0",
     date: "2026-03-05",

@@ -156,6 +156,7 @@ const Index = () => {
                     <motion.div key={message.id} layout="position" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }} transition={messageTransition}>
                       <ChatMessage
                         role={message.role} content={message.content} messageId={message.id} isPinned={message.isPinned}
+                        timestamp={message.timestamp}
                         isStreaming={isLoading && message.role === "assistant" && message.id === messages[messages.length - 1]?.id}
                         onRegenerate={message.role === "assistant" && index === messages.length - 1 && currentConversationId ? () => regenerateLastMessage(currentConversationId) : undefined}
                         onPin={() => togglePinMessage(message.id)}

@@ -16,6 +16,7 @@ interface ChatMessageProps {
   content: string;
   isStreaming?: boolean;
   isPinned?: boolean;
+  timestamp?: Date;
   onRegenerate?: () => void;
   onPin?: () => void;
   onEdit?: (newContent: string) => void;
@@ -360,7 +361,7 @@ const ReactionButton = memo(({ emoji, count, active, onClick }: { emoji: string;
 ));
 ReactionButton.displayName = "ReactionButton";
 
-export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, onRegenerate, onPin, onEdit, messageId }: ChatMessageProps) => {
+export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, timestamp, onRegenerate, onPin, onEdit, messageId }: ChatMessageProps) => {
   const [copied, setCopied] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -450,6 +451,11 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
             )}>
               {isUser ? "You" : "QurobAi"}
             </span>
+            {timestamp && (
+              <span className="text-[10px] text-muted-foreground/50 font-mono">
+                {timestamp.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+              </span>
+            )}
             {isPinned && <Pin className="w-3 h-3 text-amber-500 animate-fade-in" />}
           </div>
           
@@ -540,7 +546,8 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
     prevProps.isPinned === nextProps.isPinned &&
     prevProps.role === nextProps.role &&
     prevProps.messageId === nextProps.messageId &&
-    prevProps.onEdit === nextProps.onEdit
+    prevProps.onEdit === nextProps.onEdit &&
+    prevProps.timestamp?.getTime() === nextProps.timestamp?.getTime()
   );
 });
 
