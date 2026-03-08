@@ -55,7 +55,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
-  const { isMaintenance, maintenanceMessage, loading: maintenanceLoading } = useMaintenanceMode();
+  const { isMaintenance, maintenanceMessage, endsAt, loading: maintenanceLoading } = useMaintenanceMode();
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -68,7 +68,7 @@ const AppRoutes = () => {
   }, [user]);
 
   if (maintenanceLoading) return <PageLoader />;
-  if (isMaintenance && !isAdmin) return <MaintenancePage message={maintenanceMessage} />;
+  if (isMaintenance && !isAdmin) return <MaintenancePage message={maintenanceMessage} endsAt={endsAt} />;
 
   return (
     <Suspense fallback={<PageLoader />}>

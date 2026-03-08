@@ -69,6 +69,8 @@ export default function AdminPanel() {
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [maintenanceId, setMaintenanceId] = useState<string | null>(null);
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [maintenanceDuration, setMaintenanceDuration] = useState("3.5");
+  const [maintenanceEndsAt, setMaintenanceEndsAt] = useState<string | null>(null);
   const [giftUserSearch, setGiftUserSearch] = useState("");
   const [selectedGiftUser, setSelectedGiftUser] = useState<UserData | null>(null);
   const [giftPlan, setGiftPlan] = useState("");
@@ -228,7 +230,7 @@ export default function AdminPanel() {
 
   const loadMaintenanceStatus = async () => {
     const { data } = await supabase.from("maintenance_mode").select("*").limit(1).maybeSingle();
-    if (data) { setMaintenanceMode(data.is_enabled); setMaintenanceMessage(data.message || ""); setMaintenanceId(data.id); }
+    if (data) { setMaintenanceMode(data.is_enabled); setMaintenanceMessage(data.message || ""); setMaintenanceId(data.id); setMaintenanceEndsAt((data as any).ends_at || null); }
     else { const { data: n } = await supabase.from("maintenance_mode").insert({ is_enabled: false, message: "QurobAi is under maintenance." }).select().single(); if (n) { setMaintenanceId(n.id); setMaintenanceMessage(n.message || ""); } }
   };
 
@@ -301,9 +303,10 @@ export default function AdminPanel() {
     if (!maintenanceId) { await loadMaintenanceStatus(); return; }
     setMaintenanceLoading(true);
     const ns = !maintenanceMode;
-    await supabase.from("maintenance_mode").update({ is_enabled: ns, message: maintenanceMessage || "QurobAi is under maintenance.", enabled_by: ns ? user?.id : null, enabled_at: ns ? new Date().toISOString() : null }).eq("id", maintenanceId);
-    setMaintenanceMode(ns); setMaintenanceLoading(false);
-    toast.success(ns ? "Maintenance ON" : "Maintenance OFF");
+    const endsAt = ns ? new Date(Date.now() + parseFloat(maintenanceDuration) * 3600000).toISOString() : null;
+    await supabase.from("maintenance_mode").update({ is_enabled: ns, message: maintenanceMessage || "QurobAi is under maintenance.", enabled_by: ns ? user?.id : null, enabled_at: ns ? new Date().toISOString() : null, ends_at: endsAt } as any).eq("id", maintenanceId);
+    setMaintenanceMode(ns); setMaintenanceEndsAt(endsAt); setMaintenanceLoading(false);
+    toast.success(ns ? `Maintenance ON for ${maintenanceDuration}h` : "Maintenance OFF");
   };
 
   const handleGiftSubscription = async () => {
@@ -792,6 +795,32 @@ export default function AdminPanel() {
                 <div><div className="font-medium text-sm">Maintenance Mode</div><div className="text-xs text-muted-foreground">{maintenanceMode ? "Users see maintenance page" : "App is accessible"}</div></div>
                 <Switch checked={maintenanceMode} onCheckedChange={handleToggleMaintenance} disabled={maintenanceLoading} />
               </div>
+
+              {maintenanceMode && maintenanceEndsAt && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <div className="text-xs font-medium text-destructive flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />Scheduled End</div>
+                  <div className="text-sm font-mono mt-1 text-foreground">{new Date(maintenanceEndsAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST</div>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-xs">Duration (hours)</Label>
+                <Select value={maintenanceDuration} onValueChange={setMaintenanceDuration}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0.5">30 min</SelectItem>
+                    <SelectItem value="1">1 hour</SelectItem>
+                    <SelectItem value="2">2 hours</SelectItem>
+                    <SelectItem value="3">3 hours</SelectItem>
+                    <SelectItem value="3.5">3.5 hours</SelectItem>
+                    <SelectItem value="5">5 hours</SelectItem>
+                    <SelectItem value="8">8 hours</SelectItem>
+                    <SelectItem value="12">12 hours</SelectItem>
+                    <SelectItem value="24">24 hours</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <Label className="text-xs">Message</Label>
                 <Textarea value={maintenanceMessage} onChange={e => setMaintenanceMessage(e.target.value)} rows={3} />
