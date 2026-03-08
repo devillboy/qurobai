@@ -69,6 +69,8 @@ export default function AdminPanel() {
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [maintenanceId, setMaintenanceId] = useState<string | null>(null);
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [maintenanceDuration, setMaintenanceDuration] = useState("3.5");
+  const [maintenanceEndsAt, setMaintenanceEndsAt] = useState<string | null>(null);
   const [giftUserSearch, setGiftUserSearch] = useState("");
   const [selectedGiftUser, setSelectedGiftUser] = useState<UserData | null>(null);
   const [giftPlan, setGiftPlan] = useState("");
@@ -228,7 +230,7 @@ export default function AdminPanel() {
 
   const loadMaintenanceStatus = async () => {
     const { data } = await supabase.from("maintenance_mode").select("*").limit(1).maybeSingle();
-    if (data) { setMaintenanceMode(data.is_enabled); setMaintenanceMessage(data.message || ""); setMaintenanceId(data.id); }
+    if (data) { setMaintenanceMode(data.is_enabled); setMaintenanceMessage(data.message || ""); setMaintenanceId(data.id); setMaintenanceEndsAt((data as any).ends_at || null); }
     else { const { data: n } = await supabase.from("maintenance_mode").insert({ is_enabled: false, message: "QurobAi is under maintenance." }).select().single(); if (n) { setMaintenanceId(n.id); setMaintenanceMessage(n.message || ""); } }
   };
 
@@ -301,9 +303,10 @@ export default function AdminPanel() {
     if (!maintenanceId) { await loadMaintenanceStatus(); return; }
     setMaintenanceLoading(true);
     const ns = !maintenanceMode;
-    await supabase.from("maintenance_mode").update({ is_enabled: ns, message: maintenanceMessage || "QurobAi is under maintenance.", enabled_by: ns ? user?.id : null, enabled_at: ns ? new Date().toISOString() : null }).eq("id", maintenanceId);
-    setMaintenanceMode(ns); setMaintenanceLoading(false);
-    toast.success(ns ? "Maintenance ON" : "Maintenance OFF");
+    const endsAt = ns ? new Date(Date.now() + parseFloat(maintenanceDuration) * 3600000).toISOString() : null;
+    await supabase.from("maintenance_mode").update({ is_enabled: ns, message: maintenanceMessage || "QurobAi is under maintenance.", enabled_by: ns ? user?.id : null, enabled_at: ns ? new Date().toISOString() : null, ends_at: endsAt } as any).eq("id", maintenanceId);
+    setMaintenanceMode(ns); setMaintenanceEndsAt(endsAt); setMaintenanceLoading(false);
+    toast.success(ns ? `Maintenance ON for ${maintenanceDuration}h` : "Maintenance OFF");
   };
 
   const handleGiftSubscription = async () => {
