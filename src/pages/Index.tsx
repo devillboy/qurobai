@@ -18,6 +18,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const messageTransition = { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const };
 
@@ -38,7 +39,22 @@ const Index = () => {
     if (stored) { try { setActiveQurob(JSON.parse(stored)); } catch { /* ignore */ } }
   }, []);
 
+  const { subscribe, isSubscribed, isSupported, permission } = usePushNotifications();
+
   useEffect(() => { if (!authLoading && !user) navigate("/auth"); }, [user, authLoading, navigate]);
+
+  // Auto-prompt for push notification permission
+  useEffect(() => {
+    if (!user || !isSupported || isSubscribed || permission === "denied") return;
+    const prompted = localStorage.getItem("qurobai_push_prompted");
+    if (prompted) return;
+    const timer = setTimeout(async () => {
+      localStorage.setItem("qurobai_push_prompted", "true");
+      const ok = await subscribe();
+      if (ok) toast.success("Push notifications enabled! 🔔");
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [user, isSupported, isSubscribed, permission, subscribe]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
