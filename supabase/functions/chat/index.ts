@@ -73,13 +73,20 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
   }
   
   const imagePatterns = [
-    /generate\s+(?:an?\s+)?image/i, /create\s+(?:an?\s+)?(?:image|picture|art)/i,
-    /draw\s+(?:an?\s+)?(?:me\s+)?/i, /make\s+(?:an?\s+)?(?:image|picture)/i,
-    /imagine\s+/i, /banao\s+(?:ek\s+)?(?:image|tasveer|photo)/i,
-    /(?:image|tasveer|photo)\s+banao/i, /can\s+you\s+(?:make|create|generate|draw)\s+(?:an?\s+)?(?:image|picture)/i,
+    /generate\s+(?:an?\s+)?image/i, /create\s+(?:an?\s+)?(?:image|picture|art|photo)/i,
+    /draw\s+(?:an?\s+)?(?:me\s+)?/i, /make\s+(?:an?\s+)?(?:image|picture|photo)/i,
+    /imagine\s+/i, /banao\s+(?:ek\s+)?(?:image|tasveer|photo|picture)/i,
+    /(?:image|tasveer|photo|picture)\s+banao/i, /can\s+you\s+(?:make|create|generate|draw)\s+(?:an?\s+)?(?:image|picture|photo)/i,
+    /(?:ek|mujhe|meri|mere)\s+(?:image|tasveer|photo|picture)\s+(?:bana|de|do|banao|generate)/i,
+    /(?:image|tasveer|photo|picture)\s+(?:bana|de|do|banao|generate|dikhao)/i,
+    /(?:bana|banado|banaao)\s+(?:ek\s+)?(?:image|tasveer|photo|picture)/i,
+    /(?:photo|image|picture|tasveer)\s+(?:chahiye|dikhao|dikha)/i,
+    /(?:generate|create|make|draw)\s+(?:a\s+)?(?:pic|photo|picture|image)\s+(?:of|about)/i,
+    /(?:give\s+me|show\s+me|i\s+want)\s+(?:an?\s+)?(?:image|picture|photo)/i,
+    /(?:paint|sketch|illustrate)\s+/i,
   ];
   if (imagePatterns.some(p => p.test(lower))) {
-    let prompt = message.replace(/(?:please\s+)?(?:can\s+you\s+)?(?:generate|create|draw|make|imagine|banao)\s+(?:an?\s+)?(?:me\s+)?(?:ek\s+)?(?:image|picture|art|tasveer|photo)?\s*(?:of|about|for|ka|ki)?\s*/gi, "").trim();
+    let prompt = message.replace(/(?:please\s+)?(?:can\s+you\s+)?(?:mujhe\s+)?(?:ek\s+)?(?:generate|create|draw|make|imagine|banao|bana|banado|banaao|paint|sketch|illustrate|dikhao|dikha|chahiye)\s*(?:an?\s+)?(?:me\s+)?(?:ek\s+)?(?:image|picture|art|tasveer|photo|pic)?\s*(?:of|about|for|ka|ki|ke|mein)?\s*/gi, "").trim();
     return { type: "image_generation", query: prompt || message };
   }
   
