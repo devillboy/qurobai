@@ -405,7 +405,58 @@ export default function AdminPanel() {
     }
   };
 
-  const loadUsers = async () => {
+  const loadFraudData = async () => {
+    setFraudLoading(true);
+    try {
+      // Rejected payments
+      const { data: rejected } = await supabase
+        .from("payment_screenshots")
+        .select("*, subscription_plans(name)")
+        .eq("status", "rejected")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      // All payments with UTR to find duplicates
+      const { data: allPayments } = await supabase
+        .from("payment_screenshots")
+        .select("id, utr_number, user_id, status, amount_paid, admin_notes, created_at")
+        .not("utr_number", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      // Find duplicate UTR attempts
+      const utrMap = new Map<string, any[]>();
+      (allPayments || []).forEach(p => {
+        if (p.utr_number) {
+          const existing = utrMap.get(p.utr_number) || [];
+          existing.push(p);
+          utrMap.set(p.utr_number, existing);
+        }
+      });
+      const duplicates = Array.from(utrMap.entries())
+        .filter(([, payments]) => payments.length > 1)
+        .map(([utr, payments]) => ({ utr, payments, count: payments.length }));
+
+      // Recent suspicious activity (rejected + admin_notes with fraud/duplicate)
+      const { data: suspicious } = await supabase
+        .from("payment_screenshots")
+        .select("id, user_id, status, admin_notes, amount_paid, utr_number, created_at")
+        .or("status.eq.rejected,admin_notes.ilike.%FRAUD%,admin_notes.ilike.%Duplicate%,admin_notes.ilike.%Invalid UTR%")
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      setFraudData({
+        rejectedPayments: rejected || [],
+        duplicateAttempts: duplicates,
+        recentActivity: suspicious || [],
+      });
+    } catch (e) {
+      console.error("Error loading fraud data:", e);
+    }
+    setFraudLoading(false);
+  };
+
+
     const { data: profiles, error } = await supabase
       .from("profiles")
       .select("*")
