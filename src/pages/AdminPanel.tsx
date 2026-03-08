@@ -30,6 +30,7 @@ interface UserData {
   id: string;
   user_id: string;
   display_name: string | null;
+  qurob_id: string | null;
   created_at: string;
   subscription?: {
     plan_name: string;
@@ -481,6 +482,7 @@ export default function AdminPanel() {
       id: p.id,
       user_id: p.user_id,
       display_name: p.display_name,
+      qurob_id: (p as any).qurob_id || null,
       created_at: p.created_at,
       subscription: subMap.get(p.user_id) || null,
     }));
@@ -561,13 +563,28 @@ export default function AdminPanel() {
 
   const handleDeleteUserById = async () => {
     if (!deleteByIdInput.trim()) {
-      toast.error("Please enter a user ID");
+      toast.error("Please enter a user ID or Qurob ID");
       return;
     }
     
     setDeleteByIdLoading(true);
     try {
-      const userId = deleteByIdInput.trim();
+      let userId = deleteByIdInput.trim();
+      
+      // If input looks like a Qurob ID (QRB-XXXXXX), resolve to user_id
+      if (userId.toUpperCase().startsWith("QRB-")) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("qurob_id", userId.toUpperCase())
+          .single();
+        if (!profile) {
+          toast.error("No user found with this Qurob ID");
+          setDeleteByIdLoading(false);
+          return;
+        }
+        userId = profile.user_id;
+      }
       
       // Get all conversation IDs for this user
       const { data: userConversations } = await supabase
@@ -852,13 +869,15 @@ export default function AdminPanel() {
   const filteredUsers = users.filter(u => 
     !userSearch || 
     u.display_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.user_id.toLowerCase().includes(userSearch.toLowerCase())
+    u.user_id.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.qurob_id?.toLowerCase().includes(userSearch.toLowerCase())
   );
 
   const giftUserResults = users.filter(u =>
     giftUserSearch && (
       u.display_name?.toLowerCase().includes(giftUserSearch.toLowerCase()) ||
-      u.user_id.toLowerCase().includes(giftUserSearch.toLowerCase())
+      u.user_id.toLowerCase().includes(giftUserSearch.toLowerCase()) ||
+      u.qurob_id?.toLowerCase().includes(giftUserSearch.toLowerCase())
     )
   ).slice(0, 5);
 
@@ -1156,7 +1175,7 @@ export default function AdminPanel() {
               <CardContent>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Enter user UUID..."
+                    placeholder="Enter user UUID or Qurob ID (QRB-XXXXXX)..."
                     value={deleteByIdInput}
                     onChange={(e) => setDeleteByIdInput(e.target.value)}
                     className="font-mono text-sm"
@@ -1177,7 +1196,7 @@ export default function AdminPanel() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search users by name or ID..."
+                  placeholder="Search by name, ID, or Qurob ID..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   className="pl-9"
@@ -1195,7 +1214,10 @@ export default function AdminPanel() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate text-sm">{u.display_name || "Unnamed"}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono truncate">{u.user_id}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono truncate">
+                        {u.qurob_id && <span className="text-primary mr-2">{u.qurob_id}</span>}
+                        {u.user_id}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {u.subscription ? (
@@ -1868,7 +1890,7 @@ export default function AdminPanel() {
                         setGiftUserSearch(e.target.value);
                         setSelectedGiftUser(null);
                       }}
-                      placeholder="Search by name or ID..."
+                      placeholder="Search by name, ID, or Qurob ID..."
                       className="pl-9"
                     />
                   </div>
@@ -1886,7 +1908,10 @@ export default function AdminPanel() {
                         >
                           <div>
                             <div className="font-medium">{u.display_name || "Unnamed"}</div>
-                            <div className="text-xs text-muted-foreground font-mono">{u.user_id.slice(0, 8)}...</div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {u.qurob_id && <span className="text-primary mr-1">{u.qurob_id}</span>}
+                              {u.user_id.slice(0, 8)}...
+                            </div>
                           </div>
                           {u.subscription && (
                             <Badge variant="outline">{u.subscription.plan_name}</Badge>

@@ -418,6 +418,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          qurob_id: string
           updated_at: string
           user_id: string
         }
@@ -426,6 +427,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          qurob_id?: string
           updated_at?: string
           user_id: string
         }
@@ -434,6 +436,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          qurob_id?: string
           updated_at?: string
           user_id?: string
         }
@@ -728,6 +731,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_qurob_id: { Args: never; Returns: string }
       get_user_model: { Args: { user_id: string }; Returns: string }
       has_role: {
         Args: {
