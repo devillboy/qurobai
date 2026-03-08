@@ -205,11 +205,13 @@ export default function Subscribe() {
       }
 
       if (paymentMethod === "google_redeem") {
-        paymentData.admin_notes = `Google Play Redeem Code: ${redeemCode}`;
+        paymentData.admin_notes = `Payment Method: ${paymentMethod} | Google Play Redeem Code: ${redeemCode}`;
+      } else {
+        paymentData.admin_notes = `Payment Method: ${paymentMethod}`;
       }
 
       if (transactionId) {
-        paymentData.admin_notes = `${paymentData.admin_notes || ""} Transaction ID: ${transactionId}`.trim();
+        paymentData.admin_notes = `${paymentData.admin_notes} | Transaction ID: ${transactionId}`.trim();
       }
 
       const { data: insertData, error: insertError } = await supabase
