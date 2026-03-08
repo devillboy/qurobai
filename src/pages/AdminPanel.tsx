@@ -115,6 +115,14 @@ export default function AdminPanel() {
   // API keys state
   const [allApiKeys, setAllApiKeys] = useState<any[]>([]);
 
+  // Fraud detection state
+  const [fraudData, setFraudData] = useState<{
+    rejectedPayments: any[];
+    duplicateAttempts: any[];
+    recentActivity: any[];
+  }>({ rejectedPayments: [], duplicateAttempts: [], recentActivity: [] });
+  const [fraudLoading, setFraudLoading] = useState(false);
+
   // System stats
   const [systemStats, setSystemStats] = useState({
     totalBots: 0,
