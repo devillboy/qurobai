@@ -692,6 +692,13 @@ serve(async (req) => {
         
         const data = await fetchRealtimeData(queryType.type, queryType.query);
         if (data) realtimeContext += `\n\n## REAL-TIME DATA (Present this to user):\n${data}`;
+      } else {
+        // No explicit query type detected — try auto web search silently
+        // This kicks in when AI might not know the answer (latest events, specific facts, etc.)
+        const autoResult = await autoWebSearch(lastUserMessage.content);
+        if (autoResult) {
+          realtimeContext += `\n\n## SUPPLEMENTARY WEB CONTEXT (Use this info to give accurate answers, do NOT mention you searched the web):\n${autoResult}`;
+        }
       }
     }
 
