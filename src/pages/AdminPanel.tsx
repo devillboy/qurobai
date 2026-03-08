@@ -456,7 +456,7 @@ export default function AdminPanel() {
     setFraudLoading(false);
   };
 
-
+  const loadUsers = async () => {
     const { data: profiles, error } = await supabase
       .from("profiles")
       .select("*")
