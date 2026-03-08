@@ -12,6 +12,7 @@ interface ChatInputEnhancedProps {
   onSend: (message: string) => void;
   isLoading?: boolean;
   onStop?: () => void;
+  modelSelector?: React.ReactNode;
 }
 
 interface AttachmentFile {
@@ -22,7 +23,7 @@ interface AttachmentFile {
   base64?: string;
 }
 
-export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhancedProps) {
+export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector }: ChatInputEnhancedProps) {
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -216,6 +217,9 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhanc
             className="flex-1 min-h-[40px] max-h-[180px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-1.5 text-[15px] placeholder:text-muted-foreground/50"
             rows={1}
           />
+
+          {/* Model selector inline */}
+          {modelSelector && <div className="shrink-0">{modelSelector}</div>}
 
           <Button variant="ghost" size="icon"
             className={cn("shrink-0 h-9 w-9 rounded-xl transition-all touch-manipulation", isRecording ? "text-destructive bg-destructive/15" : "text-muted-foreground hover:text-foreground hover:bg-primary/10")}

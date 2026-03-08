@@ -103,6 +103,7 @@ const Index = () => {
   ]);
 
   const showThinking = isLoading && (messages.length === 0 || messages[messages.length - 1]?.role === "user" || messages[messages.length - 1]?.content === "");
+  const lastUserMsg = messages.filter(m => m.role === "user").pop()?.content;
 
   if (authLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!user) return null;
@@ -166,7 +167,7 @@ const Index = () => {
                 <AnimatePresence>
                   {showThinking && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                      <ThinkingIndicator isThinking={showThinking} />
+                      <ThinkingIndicator isThinking={showThinking} context={lastUserMsg} />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -189,15 +190,11 @@ const Index = () => {
             </AnimatePresence>
 
             <div className="mt-auto pt-2 md:pt-3 safe-area-bottom">
-              <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} onStop={stopGeneration} />
-              <div className="flex items-center justify-between mt-1.5">
-                {/* Model selector bottom-right */}
-                <div className="hidden md:flex">
-                  <button onClick={() => setCommandPaletteOpen(true)} className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors flex items-center gap-1.5">
-                    Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">⌘K</kbd> for commands
-                  </button>
-                </div>
-                <ModelSelector currentModel={selectedModel} onModelChange={changeModel} />
+              <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} onStop={stopGeneration} modelSelector={<ModelSelector currentModel={selectedModel} onModelChange={changeModel} />} />
+              <div className="hidden md:flex mt-1.5 px-1">
+                <button onClick={() => setCommandPaletteOpen(true)} className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors flex items-center gap-1.5">
+                  Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">⌘K</kbd> for commands
+                </button>
               </div>
             </div>
           </div>
