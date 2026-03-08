@@ -795,6 +795,32 @@ export default function AdminPanel() {
                 <div><div className="font-medium text-sm">Maintenance Mode</div><div className="text-xs text-muted-foreground">{maintenanceMode ? "Users see maintenance page" : "App is accessible"}</div></div>
                 <Switch checked={maintenanceMode} onCheckedChange={handleToggleMaintenance} disabled={maintenanceLoading} />
               </div>
+
+              {maintenanceMode && maintenanceEndsAt && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <div className="text-xs font-medium text-destructive flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />Scheduled End</div>
+                  <div className="text-sm font-mono mt-1 text-foreground">{new Date(maintenanceEndsAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST</div>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-xs">Duration (hours)</Label>
+                <Select value={maintenanceDuration} onValueChange={setMaintenanceDuration}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0.5">30 min</SelectItem>
+                    <SelectItem value="1">1 hour</SelectItem>
+                    <SelectItem value="2">2 hours</SelectItem>
+                    <SelectItem value="3">3 hours</SelectItem>
+                    <SelectItem value="3.5">3.5 hours</SelectItem>
+                    <SelectItem value="5">5 hours</SelectItem>
+                    <SelectItem value="8">8 hours</SelectItem>
+                    <SelectItem value="12">12 hours</SelectItem>
+                    <SelectItem value="24">24 hours</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <Label className="text-xs">Message</Label>
                 <Textarea value={maintenanceMessage} onChange={e => setMaintenanceMessage(e.target.value)} rows={3} />
