@@ -316,37 +316,104 @@ function summarizeConversation(messages: any[]): any[] {
   return [...firstMessages, { role: "system", content: `[Earlier: User discussed ${summaryPoints.slice(0, 5).join("; ")}...]` }, ...recentMessages];
 }
 
+// Image generation using Lovable AI Gateway (primary) with Fireworks fallback
 async function generateImage(prompt: string, supabase: any, userId?: string): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
-  if (!FIREWORKS_API_KEY) return "Image generation is not configured. Please contact admin.";
-  try {
-    const resp = await fetch("https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${FIREWORKS_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, width: 1024, height: 1024, steps: 4, seed: Math.floor(Math.random() * 1000000) }),
-    });
-    if (resp.ok) {
-      const imageBlob = await resp.blob();
-      const imageBuffer = await imageBlob.arrayBuffer();
-      let imageUrlResult = `data:image/png;base64,${btoa(new Uint8Array(imageBuffer).reduce((d, b) => d + String.fromCharCode(b), ""))}`;
-      if (userId) {
-        try {
-          const fileName = `${userId}/${Date.now()}-generated.png`;
-          const { data: uploadData, error: uploadError } = await supabase.storage.from("chat-attachments").upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
-          if (!uploadError && uploadData) {
-            const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(uploadData.path);
-            imageUrlResult = urlData.publicUrl;
+
+  // PRIMARY: Lovable AI Gateway with gemini-2.5-flash-image
+  if (LOVABLE_API_KEY) {
+    try {
+      console.log("Generating image via Lovable AI Gateway");
+      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [
+            { role: "user", content: `Generate an image: ${prompt}` }
+          ],
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        // Check for image in response
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          // If response contains base64 image data or URL
+          const imageMatch = content.match(/!\[.*?\]\((.*?)\)/);
+          const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+          
+          if (base64Match) {
+            let imageUrl = base64Match[0];
+            // Try to upload to storage
+            if (userId) {
+              try {
+                const base64Data = imageUrl.split(",")[1];
+                const binaryStr = atob(base64Data);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+                const fileName = `${userId}/${Date.now()}-generated.png`;
+                const { data: uploadData, error: uploadError } = await supabase.storage.from("chat-attachments").upload(fileName, bytes, { contentType: "image/png", upsert: false });
+                if (!uploadError && uploadData) {
+                  const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(uploadData.path);
+                  imageUrl = urlData.publicUrl;
+                }
+              } catch (e) { console.log("Storage upload error:", e); }
+            }
+            return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrl}]\n\nLet me know if you'd like any changes!`;
           }
-        } catch (e) { console.log("Storage upload error:", e); }
+          
+          if (imageMatch?.[1]) {
+            return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageMatch[1]}]\n\nLet me know if you'd like any changes!`;
+          }
+          
+          // Model may have returned text description instead
+          return content;
+        }
+      } else {
+        console.error("Lovable image gen error:", resp.status, await resp.text());
       }
-      return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrlResult}]\n\nLet me know if you'd like any changes!`;
+    } catch (e) {
+      console.error("Lovable image gen failed:", e);
     }
-    if (resp.status === 429) return "Image generation is rate limited. Please wait and try again.";
-    return "Sorry, I couldn't generate the image right now. Please try again.";
-  } catch (e) {
-    console.error("Image generation error:", e);
-    return `Image generation failed: ${e instanceof Error ? e.message : "Unknown error"}`;
   }
+
+  // FALLBACK: Fireworks API
+  if (FIREWORKS_API_KEY) {
+    try {
+      const resp = await fetch("https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${FIREWORKS_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, width: 1024, height: 1024, steps: 4, seed: Math.floor(Math.random() * 1000000) }),
+      });
+      if (resp.ok) {
+        const imageBlob = await resp.blob();
+        const imageBuffer = await imageBlob.arrayBuffer();
+        let imageUrlResult = `data:image/png;base64,${btoa(new Uint8Array(imageBuffer).reduce((d, b) => d + String.fromCharCode(b), ""))}`;
+        if (userId) {
+          try {
+            const fileName = `${userId}/${Date.now()}-generated.png`;
+            const { data: uploadData, error: uploadError } = await supabase.storage.from("chat-attachments").upload(fileName, new Uint8Array(imageBuffer), { contentType: "image/png", upsert: false });
+            if (!uploadError && uploadData) {
+              const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(uploadData.path);
+              imageUrlResult = urlData.publicUrl;
+            }
+          } catch (e) { console.log("Storage upload error:", e); }
+        }
+        return `Here's the image I generated for "${prompt}":\n\n[GeneratedImage:${imageUrlResult}]\n\nLet me know if you'd like any changes!`;
+      }
+      if (resp.status === 429) return "Image generation is rate limited. Please wait and try again.";
+    } catch (e) {
+      console.error("Fireworks image gen error:", e);
+    }
+  }
+
+  return "Sorry, image generation is currently unavailable. Please try again later.";
 }
 
 async function checkUrl(url: string): Promise<string> {
@@ -383,7 +450,6 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
     
     if (!LOVABLE_API_KEY && !GOOGLE_GEMINI_API_KEY && !OPENROUTER_API_KEY) {
       console.error("No AI API keys configured");
@@ -436,13 +502,13 @@ serve(async (req) => {
           else if (userModel === "Q-06") { modelName = "Q-06"; isCodeSpecialist = true; }
           else modelName = "Qurob 3.2";
         } else {
-          // Validate requested model against subscription
+          // Per-model gating: validate requested model against specific subscription
           if (requestedModel === "Qurob 4" || requestedModel === "Q-06") {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
-            const isPremium = userModel === "Qurob 4" || userModel === "Q-06";
-            if (!isPremium) {
+            // User must have the exact model subscription to use it
+            if (userModel !== requestedModel) {
               return new Response(JSON.stringify({ 
-                error: "This model requires a premium subscription. Please upgrade to use it.",
+                error: `You need a ${requestedModel} subscription to use this model. Please upgrade.`,
                 code: "PAYMENT_REQUIRED",
               }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
             }
@@ -479,7 +545,7 @@ serve(async (req) => {
       if (queryType) {
         console.log("Detected query:", queryType.type, queryType.query);
         
-        if (queryType.type === "image_generation" && FIREWORKS_API_KEY) {
+        if (queryType.type === "image_generation") {
           const imageResponse = await generateImage(queryType.query || "beautiful artwork", supabase, userId);
           const encoder = new TextEncoder();
           const stream = new ReadableStream({
@@ -656,7 +722,6 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         
         if (geminiResponse.ok && geminiResponse.body) {
           console.log("Gemini fallback streaming started");
-          // Convert Gemini SSE to OpenAI-compatible SSE
           const reader = geminiResponse.body.getReader();
           const encoder = new TextEncoder();
           const decoder = new TextDecoder();

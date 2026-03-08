@@ -192,7 +192,7 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop }: ChatInputEnhanc
         )}
 
         {/* Input bar */}
-        <div className="relative flex items-end gap-1 bg-card/80 backdrop-blur-sm rounded-2xl border border-border/40 p-1.5 shadow-xl hover:border-border/60 transition-colors">
+        <div className="relative flex items-end gap-1 bg-card/60 rounded-xl border border-border p-1.5 shadow-md hover:border-border/80 transition-colors">
           <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx" onChange={handleFileUpload} className="hidden" />
 
           <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-xl touch-manipulation" onClick={() => setShowTemplates(!showTemplates)}>
