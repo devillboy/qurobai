@@ -166,13 +166,25 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "AI verification not configured", manual_review_required: true }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const verificationPrompt = `You are a payment verification AI for QurobAi. Analyze this payment screenshot and verify:
-1. Is this a valid UPI payment screenshot?
-2. Can you see a successful payment confirmation?
-3. What is the amount shown in the screenshot?
-4. Does it appear to be a genuine payment (not edited/fake)?
+    const verificationPrompt = `You are a STRICT payment fraud detection AI for QurobAi. Analyze this payment screenshot with MAXIMUM scrutiny. Check ALL of these:
 
-The expected payment amount is ₹${expectedAmount} (or close to it with possible coupon discount).
+1. **UPI App Identification**: Which UPI app is this from? (GPay, PhonePe, Paytm, BHIM, etc.) If it's not a recognized UPI app or looks like a custom/unknown app, mark as suspicious.
+
+2. **Payment Status**: Does it clearly show "Payment Successful" or equivalent confirmation? Partial/pending/failed screenshots must be rejected.
+
+3. **Amount Verification**: What exact amount is shown? Expected: ₹${expectedAmount} (±₹10 tolerance for coupon discounts).
+
+4. **Receiver Details**: Does the screenshot show the receiver as "9153109561@ybl" or "QurobAi" or a matching UPI ID? If the receiver is different or not visible, flag it.
+
+5. **Transaction/UTR ID**: Is a valid 12-22 digit numeric transaction reference number visible? Extract it if possible.
+
+6. **Timestamp Check**: What date/time is shown on the screenshot? If the payment date is more than 48 hours old, flag it. If no timestamp is visible, mark as suspicious.
+
+7. **Image Authenticity**: Look for signs of editing — mismatched fonts, inconsistent colors, blurred areas around text, pixelation around numbers, unusual spacing, screenshot-of-screenshot artifacts, or any overlay/watermark inconsistencies.
+
+8. **Sender Details**: Is a sender name/UPI ID visible? (This helps prevent reuse of someone else's screenshot)
+
+IMPORTANT: Be VERY strict. When in doubt, recommend "manual_review", NOT "approve". Only give "high" confidence + "approve" if ALL checks pass cleanly.
 
 Respond in this exact JSON format ONLY, no other text:
 {
@@ -181,9 +193,17 @@ Respond in this exact JSON format ONLY, no other text:
   "detected_amount": number or null,
   "amount_matches": true/false,
   "appears_genuine": true/false,
+  "upi_app": "app name or unknown",
+  "receiver_matches": true/false,
+  "detected_utr": "UTR number or null",
+  "payment_timestamp": "detected timestamp or null",
+  "timestamp_valid": true/false,
+  "sender_info": "sender name/UPI or null",
+  "editing_signs_detected": true/false,
   "confidence": "high"/"medium"/"low",
   "recommendation": "approve"/"reject"/"manual_review",
-  "reason": "Brief explanation"
+  "reason": "Detailed explanation of all checks performed and results",
+  "red_flags": ["list of any suspicious findings"]
 }`;
 
     let verification = null;

@@ -115,6 +115,14 @@ export default function AdminPanel() {
   // API keys state
   const [allApiKeys, setAllApiKeys] = useState<any[]>([]);
 
+  // Fraud detection state
+  const [fraudData, setFraudData] = useState<{
+    rejectedPayments: any[];
+    duplicateAttempts: any[];
+    recentActivity: any[];
+  }>({ rejectedPayments: [], duplicateAttempts: [], recentActivity: [] });
+  const [fraudLoading, setFraudLoading] = useState(false);
+
   // System stats
   const [systemStats, setSystemStats] = useState({
     totalBots: 0,
@@ -395,6 +403,57 @@ export default function AdminPanel() {
     if (!error && data) {
       setCoupons(data);
     }
+  };
+
+  const loadFraudData = async () => {
+    setFraudLoading(true);
+    try {
+      // Rejected payments
+      const { data: rejected } = await supabase
+        .from("payment_screenshots")
+        .select("*, subscription_plans(name)")
+        .eq("status", "rejected")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      // All payments with UTR to find duplicates
+      const { data: allPayments } = await supabase
+        .from("payment_screenshots")
+        .select("id, utr_number, user_id, status, amount_paid, admin_notes, created_at")
+        .not("utr_number", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      // Find duplicate UTR attempts
+      const utrMap = new Map<string, any[]>();
+      (allPayments || []).forEach(p => {
+        if (p.utr_number) {
+          const existing = utrMap.get(p.utr_number) || [];
+          existing.push(p);
+          utrMap.set(p.utr_number, existing);
+        }
+      });
+      const duplicates = Array.from(utrMap.entries())
+        .filter(([, payments]) => payments.length > 1)
+        .map(([utr, payments]) => ({ utr, payments, count: payments.length }));
+
+      // Recent suspicious activity (rejected + admin_notes with fraud/duplicate)
+      const { data: suspicious } = await supabase
+        .from("payment_screenshots")
+        .select("id, user_id, status, admin_notes, amount_paid, utr_number, created_at")
+        .or("status.eq.rejected,admin_notes.ilike.%FRAUD%,admin_notes.ilike.%Duplicate%,admin_notes.ilike.%Invalid UTR%")
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      setFraudData({
+        rejectedPayments: rejected || [],
+        duplicateAttempts: duplicates,
+        recentActivity: suspicious || [],
+      });
+    } catch (e) {
+      console.error("Error loading fraud data:", e);
+    }
+    setFraudLoading(false);
   };
 
   const loadUsers = async () => {
@@ -926,6 +985,10 @@ export default function AdminPanel() {
               <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
               <TabsTrigger value="gift">Gift Sub</TabsTrigger>
+              <TabsTrigger value="fraud" className="text-destructive">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                Fraud
+              </TabsTrigger>
             </TabsList>
           </ScrollArea>
 
@@ -1873,6 +1936,157 @@ export default function AdminPanel() {
                   <Gift className="w-4 h-4 mr-2" />
                   Gift Subscription
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Fraud Detection Tab */}
+          <TabsContent value="fraud" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-destructive flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Fraud Detection Dashboard
+              </h3>
+              <Button onClick={loadFraudData} disabled={fraudLoading} variant="outline" size="sm">
+                <RefreshCw className={`w-4 h-4 mr-2 ${fraudLoading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <Card className="border-destructive/30">
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Rejected Payments</p>
+                  <p className="text-2xl font-bold text-destructive">{fraudData.rejectedPayments.length}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-orange-500/30">
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Duplicate UTR Attempts</p>
+                  <p className="text-2xl font-bold text-orange-500">{fraudData.duplicateAttempts.length}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-yellow-500/30">
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Suspicious Activity</p>
+                  <p className="text-2xl font-bold text-yellow-500">{fraudData.recentActivity.length}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Duplicate UTR Attempts */}
+            {fraudData.duplicateAttempts.length > 0 && (
+              <Card className="border-destructive/50">
+                <CardHeader>
+                  <CardTitle className="text-destructive flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    🚨 Duplicate UTR Attempts
+                  </CardTitle>
+                  <CardDescription>Same UTR used multiple times — possible fraud</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-3">
+                      {fraudData.duplicateAttempts.map((dup: any, i: number) => (
+                        <div key={i} className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                          <div className="flex justify-between items-start mb-2">
+                            <code className="text-sm font-mono text-destructive">{dup.utr}</code>
+                            <Badge variant="destructive">{dup.count}x used</Badge>
+                          </div>
+                          <div className="space-y-1">
+                            {dup.payments.map((p: any) => (
+                              <div key={p.id} className="text-xs text-muted-foreground flex justify-between">
+                                <span>User: {p.user_id.slice(0, 8)}... | ₹{p.amount_paid}</span>
+                                <span>{new Date(p.created_at).toLocaleDateString("en-IN")}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Rejected Payments */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <X className="w-5 h-5 text-destructive" />
+                  Rejected Payments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px]">
+                  <div className="space-y-2">
+                    {fraudData.rejectedPayments.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">No rejected payments. Click Refresh to load.</p>
+                    ) : (
+                      fraudData.rejectedPayments.map((p: any) => (
+                        <div key={p.id} className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-sm font-medium">₹{p.amount_paid} — {p.subscription_plans?.name || "Unknown Plan"}</p>
+                              <p className="text-xs text-muted-foreground mt-1">User: {p.user_id.slice(0, 12)}...</p>
+                              {p.utr_number && (
+                                <p className="text-xs font-mono mt-1">UTR: {p.utr_number}</p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <Badge variant="destructive">Rejected</Badge>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(p.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                              </p>
+                            </div>
+                          </div>
+                          {p.admin_notes && (
+                            <p className="text-xs text-muted-foreground mt-2 bg-muted/50 p-2 rounded">
+                              {p.admin_notes}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Suspicious Activity Log */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-yellow-500" />
+                  Suspicious Activity Log
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[300px]">
+                  <div className="space-y-2">
+                    {fraudData.recentActivity.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">No suspicious activity. Click Refresh to load.</p>
+                    ) : (
+                      fraudData.recentActivity.map((a: any) => (
+                        <div key={a.id} className="flex items-start gap-3 p-2 rounded border-l-2 border-yellow-500/50 bg-muted/30">
+                          <AlertCircle className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-mono">{a.user_id.slice(0, 12)}...</span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(a.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 truncate">
+                              {a.admin_notes || `Status: ${a.status} | ₹${a.amount_paid}`}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
