@@ -249,84 +249,113 @@ export const ChatSidebar = ({
 
       {/* Footer */}
       <div className="p-3 border-t border-sidebar-border space-y-1">
+        {/* Toggle Menu Button */}
         <Button
           variant="ghost"
-          onClick={() => navigate("/subscribe")}
-          className={`w-full justify-start gap-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary ${
-            collapsed ? "px-3" : ""
+          onClick={() => setMenuExpanded(!menuExpanded)}
+          className={`w-full justify-between gap-2 rounded-lg hover:bg-sidebar-accent ${
+            collapsed ? "px-3 justify-center" : ""
           }`}
         >
-          <Sparkles className="w-4 h-4 shrink-0" />
-          {!collapsed && <span className="font-medium">Upgrade</span>}
+          <div className="flex items-center gap-2">
+            <Settings className="w-4 h-4 shrink-0" />
+            {!collapsed && <span className="text-sm">Menu</span>}
+          </div>
+          {!collapsed && (
+            menuExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />
+          )}
         </Button>
 
-        {isAdmin && (
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/admin")}
-            className={`w-full justify-start gap-2 rounded-lg ${
-              collapsed ? "px-3" : ""
-            }`}
-          >
-            <Shield className="w-4 h-4 shrink-0" />
-            {!collapsed && <span>Admin Panel</span>}
-          </Button>
-        )}
+        <AnimatePresence>
+          {menuExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden space-y-1"
+            >
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/subscribe")}
+                className={`w-full justify-start gap-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary ${
+                  collapsed ? "px-3" : ""
+                }`}
+              >
+                <Sparkles className="w-4 h-4 shrink-0" />
+                {!collapsed && <span className="font-medium">Upgrade</span>}
+              </Button>
 
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/qurobs")}
-          className={`w-full justify-start gap-2 rounded-lg ${
-            collapsed ? "px-3" : ""
-          }`}
-        >
-          <Bot className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>Qurobs</span>}
-        </Button>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/admin")}
+                  className={`w-full justify-start gap-2 rounded-lg ${
+                    collapsed ? "px-3" : ""
+                  }`}
+                >
+                  <Shield className="w-4 h-4 shrink-0" />
+                  {!collapsed && <span>Admin Panel</span>}
+                </Button>
+              )}
 
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/api-access")}
-          className={`w-full justify-start gap-2 rounded-lg ${
-            collapsed ? "px-3" : ""
-          }`}
-        >
-          <Code className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>API Access</span>}
-        </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/qurobs")}
+                className={`w-full justify-start gap-2 rounded-lg ${
+                  collapsed ? "px-3" : ""
+                }`}
+              >
+                <Bot className="w-4 h-4 shrink-0" />
+                {!collapsed && <span>Qurobs</span>}
+              </Button>
 
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/patch-updates")}
-          className={`w-full justify-start gap-2 rounded-lg ${
-            collapsed ? "px-3" : ""
-          }`}
-        >
-          <FileText className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>What's New</span>}
-        </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/api-access")}
+                className={`w-full justify-start gap-2 rounded-lg ${
+                  collapsed ? "px-3" : ""
+                }`}
+              >
+                <Code className="w-4 h-4 shrink-0" />
+                {!collapsed && <span>API Access</span>}
+              </Button>
 
-        <Button
-          variant="ghost"
-          onClick={onOpenSettings}
-          className={`w-full justify-start gap-2 rounded-lg ${
-            collapsed ? "px-3" : ""
-          }`}
-        >
-          <Settings className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>Settings</span>}
-        </Button>
-        
-        <Button
-          variant="ghost"
-          onClick={handleSignOut}
-          className={`w-full justify-start gap-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 ${
-            collapsed ? "px-3" : ""
-          }`}
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>Sign Out</span>}
-        </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/patch-updates")}
+                className={`w-full justify-start gap-2 rounded-lg ${
+                  collapsed ? "px-3" : ""
+                }`}
+              >
+                <FileText className="w-4 h-4 shrink-0" />
+                {!collapsed && <span>What's New</span>}
+              </Button>
+
+              <Button
+                variant="ghost"
+                onClick={onOpenSettings}
+                className={`w-full justify-start gap-2 rounded-lg ${
+                  collapsed ? "px-3" : ""
+                }`}
+              >
+                <Settings className="w-4 h-4 shrink-0" />
+                {!collapsed && <span>Settings</span>}
+              </Button>
+              
+              <Button
+                variant="ghost"
+                onClick={handleSignOut}
+                className={`w-full justify-start gap-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 ${
+                  collapsed ? "px-3" : ""
+                }`}
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                {!collapsed && <span>Sign Out</span>}
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Search Overlay */}
