@@ -514,8 +514,17 @@ serve(async (req) => {
     let customInstructions = "";
     let persona = "default";
 
+    let userQurobId = "";
     if (userId) {
       try {
+        // Fetch user's Qurob ID
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("qurob_id")
+          .eq("user_id", userId)
+          .single();
+        if (profileData?.qurob_id) userQurobId = profileData.qurob_id;
+
         const { data: settings } = await supabase
           .from("user_settings")
           .select("base_tone, custom_instructions, persona, tokens_used_today, tokens_reset_date")
@@ -615,12 +624,28 @@ serve(async (req) => {
     // Vision handling via Lovable AI Gateway (supports multimodal)
     if (hasImage && imageUrl) {
       console.log("Using Vision API via gateway");
+      const userImageText = lastUserMessage?.content?.trim() || "";
+      const visionPrompt = userImageText && userImageText !== "What's in this image? Describe it in detail." 
+        ? userImageText 
+        : "Describe this image in detail. What do you see?";
+      
       const visionMessages = processedMessages.map((m: any, i: number) => {
         if (m.role === "user" && i === processedMessages.length - 1) {
-          return { role: "user", content: [{ type: "text", text: m.content || "What's in this image?" }, { type: "image_url", image_url: { url: imageUrl } }] };
+          return { role: "user", content: [{ type: "text", text: visionPrompt }, { type: "image_url", image_url: { url: imageUrl } }] };
         }
         return m;
       });
+
+      const visionSystemPrompt = `You are ${modelName}, QurobAi's AI created by Soham from India. You CAN see and analyze images.
+
+CRITICAL RULES FOR IMAGE ANALYSIS:
+- Actually DESCRIBE what you see in the image
+- If user sent a message with the image, respond based on THAT context (not "analyzing code")
+- If user asks "ye kya hai" or "what is this" — describe the image content
+- If user asks to solve/explain something in the image — do that
+- NEVER say "I'm analyzing the code" unless there is actually code in the image
+- Be specific about colors, objects, text, people, scenes you see
+- Match user's language (Hindi/English/Hinglish)`;
       
       // Try Lovable AI Gateway for vision
       if (LOVABLE_API_KEY) {
@@ -630,7 +655,7 @@ serve(async (req) => {
             headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "google/gemini-2.5-flash",
-              messages: [{ role: "system", content: `You are ${modelName}, QurobAi's AI created by Soham from India. You CAN see and analyze images.` }, ...visionMessages],
+              messages: [{ role: "system", content: visionSystemPrompt }, ...visionMessages],
               stream: true, temperature: 0.7, max_tokens: 2048,
             }),
           });
@@ -647,7 +672,7 @@ serve(async (req) => {
           headers: { "Authorization": `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://qurobai.lovable.app", "X-Title": "QurobAi" },
           body: JSON.stringify({
             model: "qwen/qwen-2-vl-72b-instruct",
-            messages: [{ role: "system", content: `You are ${modelName}, QurobAi's AI created by Soham from India. You CAN see and analyze images.` }, ...visionMessages],
+            messages: [{ role: "system", content: visionSystemPrompt }, ...visionMessages],
             stream: true, temperature: 0.7, max_tokens: 2048,
           }),
         });
@@ -690,11 +715,15 @@ Created by **Soham from India** for **QurobAi** — India's AI Assistant.
 - If asked who you are: "I'm ${modelName}, QurobAi's AI assistant, created by Soham from India"
 
 ## CAPABILITIES
-- See & analyze uploaded images
+- See & analyze uploaded images (describe what you ACTUALLY see, don't say "analyzing code")
 - Generate images ("generate an image of...")
 - Real-time data: weather, crypto, stocks, news, cricket, currency
 - Web Search & Deep Search
 - Code playground with [Playground] tag
+
+${userQurobId ? `## USER'S QUROB ID: ${userQurobId}
+- If user asks "mera ID kya hai", "what is my ID", "my Qurob ID", "mera qurob id" etc., reply with their Qurob ID: **${userQurobId}**
+- This is their unique identifier on QurobAi platform` : ""}
 
 ## PERSONALITY: ${personaStyles[persona] || personaStyles.default}
 ## TONE: ${toneStyle}
