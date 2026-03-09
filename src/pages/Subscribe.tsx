@@ -144,16 +144,9 @@ export default function Subscribe() {
   };
 
   const handleSubmit = async (): Promise<boolean> => {
-    if (paymentMethod === "google_redeem") {
-      if (!redeemCode.trim()) {
-        toast.error("Please enter the Google Play redeem code");
-        return false;
-      }
-    } else {
-      if (!screenshot) {
-        toast.error("Please upload payment screenshot");
-        return false;
-      }
+    if (!screenshot) {
+      toast.error("Please upload payment screenshot");
+      return false;
     }
 
     if (!selectedPlan) {
@@ -192,11 +185,7 @@ export default function Subscribe() {
         paymentData.screenshot_url = screenshotUrl;
       }
 
-      if (paymentMethod === "google_redeem") {
-        paymentData.admin_notes = `Payment Method: ${paymentMethod} | Google Play Redeem Code: ${redeemCode}`;
-      } else {
-        paymentData.admin_notes = `Payment Method: ${paymentMethod}`;
-      }
+      paymentData.admin_notes = `Payment Method: ${paymentMethod}`;
 
       if (transactionId) {
         paymentData.admin_notes = `${paymentData.admin_notes} | Transaction ID: ${transactionId}`.trim();
@@ -271,12 +260,9 @@ export default function Subscribe() {
   const finalPrice = selectedPlan ? selectedPlan.price_inr * (1 - discount / 100) : 0;
   const canOpenDrawer = Boolean(selectedPlan && selectedPlan.price_inr > 0);
 
-  const canContinueToProof =
-    paymentMethod === "google_redeem" ? Boolean(redeemCode.trim()) : true;
+  const canContinueToProof = true;
 
-  const canSubmit =
-    !loading &&
-    (paymentMethod === "google_redeem" ? Boolean(redeemCode.trim()) : Boolean(screenshot));
+  const canSubmit = !loading && Boolean(screenshot);
 
   return (
     <div className="min-h-screen bg-background gradient-mesh p-4 md:p-6">
@@ -573,7 +559,7 @@ export default function Subscribe() {
 
               {drawerStep === "proof" && (
                 <div className="space-y-3">
-                  {paymentMethod !== "google_redeem" ? (
+                  {paymentMethod === "upi" && (
                     <>
                       <Label className="text-sm">Upload Payment Screenshot</Label>
                       <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
