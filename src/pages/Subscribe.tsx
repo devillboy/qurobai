@@ -582,8 +582,7 @@ export default function Subscribe() {
                         </div>
                       )}
                     </div>
-                  </>
-                  )}
+                   </>
 
                   <p className="text-xs text-center text-muted-foreground">
                     🔒 Secure payment • Admin verification within 24 hours
