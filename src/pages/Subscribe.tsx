@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/drawer";
 import { ThreeDText } from "@/components/ThreeDText";
 
-type PaymentMethod = "upi" | "google_redeem" | "bank_transfer";
+type PaymentMethod = "upi";
 
 type DrawerStep = "pay" | "proof";
 
@@ -39,7 +39,6 @@ export default function Subscribe() {
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
-  const [redeemCode, setRedeemCode] = useState("");
   const [transactionId, setTransactionId] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerStep, setDrawerStep] = useState<DrawerStep>("pay");
@@ -47,17 +46,6 @@ export default function Subscribe() {
   // Payment config (kept on backend; fallback to hardcoded for safety)
   const [upiId, setUpiId] = useState<string>("9153109561@ybl");
 
-  // Bank details are optional for now (can be moved to backend later)
-  const bankDetails = useMemo(
-    () =>
-      [
-        { label: "Bank Name", value: "—" },
-        { label: "Account No", value: "—" },
-        { label: "IFSC Code", value: "—" },
-        { label: "Holder", value: "—" },
-      ] as const,
-    [],
-  );
 
   useEffect(() => {
     if (!user) {
@@ -546,128 +534,40 @@ export default function Subscribe() {
                     </Button>
                   </div>
 
-                  {/* Payment methods */}
-                  <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-muted/50">
-                      <TabsTrigger value="upi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                        <QrCode className="w-4 h-4 mr-1.5" />
-                        UPI
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="google_redeem"
-                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  {/* UPI Payment */}
+                  <div className="p-4 rounded-xl bg-card border border-border space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-5 h-5 text-primary" />
+                      <span className="font-semibold">Pay via UPI</span>
+                      <Badge variant="secondary" className="ml-auto">Instant</Badge>
+                    </div>
+
+                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                      <span className="text-sm text-muted-foreground">UPI ID:</span>
+                      <code className="font-mono text-primary flex-1 font-medium">{upiId}</code>
+                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(upiId, "UPI ID")}
+                        aria-label="Copy UPI ID"
                       >
-                        <Gift className="w-4 h-4 mr-1.5" />
-                        Redeem
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="bank_transfer"
-                        className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                      >
-                        <Building2 className="w-4 h-4 mr-1.5" />
-                        Bank
-                      </TabsTrigger>
-                    </TabsList>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
 
-                    <TabsContent value="upi" className="space-y-3 mt-4">
-                      <div className="p-4 rounded-xl bg-card border border-border space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Wallet className="w-5 h-5 text-primary" />
-                          <span className="font-semibold">Pay via UPI</span>
-                        </div>
+                    <Button onClick={openUpiApp} variant="outline" className="w-full hover-lift">
+                      <Smartphone className="w-4 h-4 mr-2" />
+                      Open UPI App
+                    </Button>
 
-                        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
-                          <span className="text-sm text-muted-foreground">UPI ID:</span>
-                          <code className="font-mono text-primary flex-1 font-medium">{upiId}</code>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(upiId, "UPI ID")}
-                            aria-label="Copy UPI ID"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-
-                        <Button onClick={openUpiApp} variant="outline" className="w-full hover-lift">
-                          <Smartphone className="w-4 h-4 mr-2" />
-                          Open UPI App
-                        </Button>
-
-                        <div className="pt-2 border-t border-border/50">
-                          <Label className="text-sm font-medium">UTR / Transaction ID</Label>
-                          <p className="text-[11px] text-muted-foreground mb-1.5">Enter UTR for instant auto-approval ⚡</p>
-                          <Input
-                            value={transactionId}
-                            onChange={(e) => setTransactionId(e.target.value)}
-                            placeholder="Enter UTR or Transaction ID"
-                            className="mt-1 bg-input/50 font-mono"
-                          />
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="google_redeem" className="space-y-3 mt-4">
-                      <div className="p-4 rounded-xl bg-card border border-border space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Gift className="w-5 h-5 text-success" />
-                          <span className="font-semibold">Google Play Redeem Code</span>
-                        </div>
-
-                        <div>
-                          <Label className="text-sm">Redeem Code</Label>
-                          <Input
-                            value={redeemCode}
-                            onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
-                            placeholder="XXXX-XXXX-XXXX-XXXX"
-                            className="mt-1 font-mono tracking-widest bg-input/50 text-center text-lg"
-                          />
-                        </div>
-
-                        <p className="text-xs text-muted-foreground">
-                          Tip: Gift card amount should be around ₹{Math.round(finalPrice)}.
-                        </p>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="bank_transfer" className="space-y-3 mt-4">
-                      <div className="p-4 rounded-xl bg-card border border-border space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-5 h-5 text-primary" />
-                          <span className="font-semibold">Bank Transfer</span>
-                        </div>
-
-                        <div className="space-y-2">
-                          {bankDetails.map(({ label, value }) => (
-                            <div
-                              key={label}
-                              className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border/50"
-                            >
-                              <span className="text-sm text-muted-foreground">{label}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono font-medium text-sm">{value}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => copyToClipboard(value, label)}
-                                  aria-label={`Copy ${label}`}
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div>
-                          <Label className="text-sm">Transaction ID (Optional)</Label>
-                          <Input
-                            value={transactionId}
-                            onChange={(e) => setTransactionId(e.target.value)}
-                            placeholder="Enter UTR / Transaction ID"
-                            className="mt-1 bg-input/50"
-                          />
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+                    <div className="pt-2 border-t border-border/50">
+                      <Label className="text-sm font-medium">UTR / Transaction ID</Label>
+                      <p className="text-[11px] text-muted-foreground mb-1.5">Enter UTR for instant auto-approval ⚡</p>
+                      <Input
+                        value={transactionId}
+                        onChange={(e) => setTransactionId(e.target.value)}
+                        placeholder="Enter UTR or Transaction ID"
+                        className="mt-1 bg-input/50 font-mono"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
