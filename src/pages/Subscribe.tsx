@@ -559,37 +559,30 @@ export default function Subscribe() {
 
               {drawerStep === "proof" && (
                 <div className="space-y-3">
-                  {paymentMethod === "upi" && (
-                    <>
-                      <Label className="text-sm">Upload Payment Screenshot</Label>
-                      <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileChange}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
+                  <>
+                    <Label className="text-sm">Upload Payment Screenshot</Label>
+                    <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      {previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt="Payment screenshot preview"
+                          loading="lazy"
+                          className="max-h-52 mx-auto rounded-lg object-contain"
                         />
-                        {previewUrl ? (
-                          <img
-                            src={previewUrl}
-                            alt="Payment screenshot preview"
-                            loading="lazy"
-                            className="max-h-52 mx-auto rounded-lg object-contain"
-                          />
-                        ) : (
-                          <div className="space-y-2">
-                            <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground">Tap to upload screenshot</p>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="p-4 rounded-xl bg-card border border-border">
-                      <p className="text-sm text-muted-foreground">
-                        Redeem code submitted without screenshot.
-                      </p>
+                      ) : (
+                        <div className="space-y-2">
+                          <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Tap to upload screenshot</p>
+                        </div>
+                      )}
                     </div>
+                  </>
                   )}
 
                   <p className="text-xs text-center text-muted-foreground">
