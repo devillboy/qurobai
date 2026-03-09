@@ -267,6 +267,77 @@ export type Database = {
         }
         Relationships: []
       }
+      fraud_attempts: {
+        Row: {
+          attempt_type: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          payment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          attempt_type: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          payment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          attempt_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          payment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fraud_attempts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payment_screenshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      login_alerts: {
+        Row: {
+          alert_sent: boolean | null
+          created_at: string | null
+          device_info: string | null
+          id: string
+          ip_address: string | null
+          is_new_device: boolean | null
+          is_new_location: boolean | null
+          location: string | null
+          user_id: string
+        }
+        Insert: {
+          alert_sent?: boolean | null
+          created_at?: string | null
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          is_new_device?: boolean | null
+          is_new_location?: boolean | null
+          location?: string | null
+          user_id: string
+        }
+        Update: {
+          alert_sent?: boolean | null
+          created_at?: string | null
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          is_new_device?: boolean | null
+          is_new_location?: boolean | null
+          location?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       maintenance_mode: {
         Row: {
           created_at: string
@@ -580,6 +651,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_bans: {
+        Row: {
+          ban_level: number | null
+          ban_reason: string | null
+          created_at: string | null
+          id: string
+          last_offense_at: string | null
+          permanent_ban: boolean | null
+          temp_blocked_until: string | null
+          updated_at: string | null
+          user_id: string
+          warning_count: number | null
+        }
+        Insert: {
+          ban_level?: number | null
+          ban_reason?: string | null
+          created_at?: string | null
+          id?: string
+          last_offense_at?: string | null
+          permanent_ban?: boolean | null
+          temp_blocked_until?: string | null
+          updated_at?: string | null
+          user_id: string
+          warning_count?: number | null
+        }
+        Update: {
+          ban_level?: number | null
+          ban_reason?: string | null
+          created_at?: string | null
+          id?: string
+          last_offense_at?: string | null
+          permanent_ban?: boolean | null
+          temp_blocked_until?: string | null
+          updated_at?: string | null
+          user_id?: string
+          warning_count?: number | null
+        }
+        Relationships: []
+      }
       user_memory: {
         Row: {
           created_at: string | null
@@ -624,6 +734,42 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          device_info: string | null
+          id: string
+          ip_address: string | null
+          is_current: boolean | null
+          last_active_at: string | null
+          location: string | null
+          login_at: string | null
+          session_token: string | null
+          user_id: string
+        }
+        Insert: {
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean | null
+          last_active_at?: string | null
+          location?: string | null
+          login_at?: string | null
+          session_token?: string | null
+          user_id: string
+        }
+        Update: {
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean | null
+          last_active_at?: string | null
+          location?: string | null
+          login_at?: string | null
+          session_token?: string | null
           user_id?: string
         }
         Relationships: []
