@@ -18,6 +18,7 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { WhatsNewPopup } from "@/components/WhatsNewPopup";
 import { MaintenancePage } from "@/components/MaintenancePage";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import { Analytics } from "@vercel/analytics/react";
 
 // Lazy loaded pages
 const Subscribe = lazy(() => import("@/pages/Subscribe"));
@@ -118,6 +119,7 @@ function App() {
               <WhatsNewPopup />
               <Toaster />
               <Sonner />
+              <Analytics />
             </TooltipProvider>
           </AuthProvider>
         </BrowserRouter>
