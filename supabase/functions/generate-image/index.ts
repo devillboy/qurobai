@@ -21,10 +21,10 @@ serve(async (req) => {
       );
     }
 
-    const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
-    
-    if (!FIREWORKS_API_KEY) {
-      console.error("FIREWORKS_API_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "Image generation service not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -33,50 +33,88 @@ serve(async (req) => {
 
     console.log("Generating image with prompt:", prompt.slice(0, 100));
 
-    // Call Fireworks AI image generation API
-    const response = await fetch(
-      "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          width: 1024,
-          height: 1024,
-          steps: 4,
-          seed: Math.floor(Math.random() * 1000000),
-        }),
-      }
-    );
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3.1-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: `Generate an image based on this description: ${prompt}`,
+          },
+        ],
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Fireworks API error:", response.status, errorText);
-      
+      console.error("Lovable AI error:", response.status, errorText);
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ error: "Failed to generate image. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get the image as blob
-    const imageBlob = await response.blob();
-    const imageBuffer = await imageBlob.arrayBuffer();
-    const base64Image = btoa(
-      new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-    );
+    const result = await response.json();
+    console.log("Lovable AI response received");
 
-    console.log("Image generated successfully, size:", imageBlob.size);
+    // Extract image from the response - Gemini image models return base64 inline
+    const choice = result.choices?.[0];
+    const content = choice?.message?.content;
+
+    // Check for inline_data (base64 image) in parts
+    const parts = choice?.message?.parts;
+    let base64Image: string | null = null;
+    let mimeType = "image/png";
+
+    if (parts && Array.isArray(parts)) {
+      for (const part of parts) {
+        if (part.inline_data) {
+          base64Image = part.inline_data.data;
+          mimeType = part.inline_data.mime_type || "image/png";
+          break;
+        }
+      }
+    }
+
+    // Also check if content itself contains a base64 image or data URI
+    if (!base64Image && typeof content === "string") {
+      const dataUriMatch = content.match(/data:(image\/[^;]+);base64,([A-Za-z0-9+/=]+)/);
+      if (dataUriMatch) {
+        mimeType = dataUriMatch[1];
+        base64Image = dataUriMatch[2];
+      }
+    }
+
+    if (!base64Image) {
+      console.error("No image data in response:", JSON.stringify(result).slice(0, 500));
+      return new Response(
+        JSON.stringify({ error: "No image was generated. Try a different prompt." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Image extracted successfully, mime:", mimeType);
+
+    const imageDataUri = `data:${mimeType};base64,${base64Image}`;
 
     // Optionally upload to Supabase storage
     if (userId) {
@@ -85,11 +123,20 @@ serve(async (req) => {
         const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        const fileName = `${userId}/${Date.now()}-generated.png`;
+        const ext = mimeType.includes("png") ? "png" : "jpg";
+        const fileName = `${userId}/${Date.now()}-generated.${ext}`;
+
+        // Convert base64 to Uint8Array
+        const binaryStr = atob(base64Image);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("chat-attachments")
-          .upload(fileName, imageBlob, {
-            contentType: "image/png",
+          .upload(fileName, bytes, {
+            contentType: mimeType,
             upsert: false,
           });
 
@@ -104,25 +151,21 @@ serve(async (req) => {
             JSON.stringify({
               success: true,
               imageUrl: urlData.publicUrl,
-              base64: `data:image/png;base64,${base64Image}`,
+              base64: imageDataUri,
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        if (uploadError) console.error("Storage upload error:", uploadError);
       } catch (uploadErr) {
         console.error("Storage upload error:", uploadErr);
       }
     }
 
-    // Return base64 image if storage upload failed or no userId
     return new Response(
-      JSON.stringify({
-        success: true,
-        base64: `data:image/png;base64,${base64Image}`,
-      }),
+      JSON.stringify({ success: true, base64: imageDataUri }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error) {
     console.error("Image generation error:", error);
     return new Response(
