@@ -157,12 +157,8 @@ export const useChat = (conversationId: string | null) => {
     let lastUpdateTime = 0;
     const MIN_UPDATE_INTERVAL = 50;
 
-    // Minimum thinking delay (3-4 seconds) for natural feel
-    const thinkingDelay = 3000 + Math.random() * 1000; // 3-4 sec random
-    await new Promise(resolve => setTimeout(resolve, thinkingDelay));
-    
-    // Check if aborted during delay
-    if (abortController.signal.aborted) { setIsLoading(false); return; }
+    // Short, snappy delay so first token arrives in ~2s window total
+    // (real AI response time is 2–5s; no artificial wait needed)
 
     await streamChat({
       messages: messageHistory, userId: user?.id, model: selectedModelRef.current, signal: abortController.signal,
