@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Zap, Code, Crown } from "lucide-react";
+import { Sparkles, Zap, Code, Crown, Activity } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -31,14 +31,15 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
 
   return (
     <TooltipProvider>
-      <div className={`flex items-center gap-3 px-4 py-2.5 backdrop-blur-sm rounded-lg border ${isUltimate ? "bg-gradient-to-r from-yellow-500/10 via-orange-500/5 to-purple-600/10 border-yellow-500/40" : "bg-card/50"}`}>
+      <div className={`flex items-center gap-3 px-3.5 py-2 backdrop-blur-md rounded-xl border transition-colors ${isUltimate ? "bg-gradient-to-r from-yellow-500/10 via-orange-500/5 to-purple-600/10 border-yellow-500/40 shadow-[0_0_24px_-12px_rgba(234,179,8,0.6)]" : "bg-card/60 border-border/50"}`}>
         <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${isUltimate ? "bg-yellow-400" : isPremium ? "bg-primary" : "bg-emerald-500"}`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isUltimate ? "bg-yellow-500" : isPremium ? "bg-primary" : "bg-emerald-500"}`} />
+          </span>
           {isUltimate ? (
             <>
-              <div className="relative">
-                <Crown className="w-4 h-4 text-yellow-500" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-              </div>
+              <Crown className="w-4 h-4 text-yellow-500" />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge className="font-semibold cursor-help bg-gradient-to-r from-yellow-500 via-orange-500 to-purple-600 text-white border-0">
@@ -52,14 +53,11 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
                   </ul>
                 </TooltipContent>
               </Tooltip>
-              <span className="text-xs text-yellow-500 font-bold">ULTIMATE</span>
+              <span className="text-[10px] tracking-wider text-yellow-500 font-bold uppercase">Ultimate</span>
             </>
           ) : isPremium ? (
             <>
-              <div className="relative">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              </div>
+              <Sparkles className="w-4 h-4 text-primary" />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge variant="default" className="font-semibold cursor-help">{displayModel}</Badge>
@@ -71,11 +69,11 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
                   </ul>
                 </TooltipContent>
               </Tooltip>
-              <span className="text-xs text-primary font-medium">Premium</span>
+              <span className="text-[10px] tracking-wider text-primary font-semibold uppercase">Premium</span>
             </>
           ) : (
             <>
-              <Zap className="w-4 h-4 text-muted-foreground" />
+              <Zap className="w-4 h-4 text-emerald-500" />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge variant="secondary" className="cursor-help">{displayModel}</Badge>
@@ -87,12 +85,21 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
                   </ul>
                 </TooltipContent>
               </Tooltip>
-              <span className="text-xs text-muted-foreground">Free</span>
+              <span className="text-[10px] tracking-wider text-emerald-500 font-semibold uppercase">Live</span>
             </>
           )}
         </div>
         
         <div className="flex items-center gap-2 ml-auto">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted/40 text-muted-foreground">
+                <Activity className="w-3 h-3" />
+                <span className="text-[10px] font-medium">~2s</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent><p>Typical response time: 2–5s</p></TooltipContent>
+          </Tooltip>
           {isUltimate && (
             <Tooltip>
               <TooltipTrigger asChild>

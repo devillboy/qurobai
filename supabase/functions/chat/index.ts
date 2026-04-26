@@ -550,8 +550,8 @@ const MODEL_MAP: Record<string, string> = {
   "Qurob 5": "fireworks",
 };
 
-// Fireworks model id for Qurob 5 — latest top-tier tuned model
-const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507";
+// Fireworks model id for Qurob 5 — latest top-tier tuned model (verified available)
+const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b";
 
 // Per-model temperature tuning
 const MODEL_TEMPERATURE: Record<string, number> = {
@@ -927,7 +927,6 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
             stream: true,
             temperature,
             max_tokens: 8192,
-            ...(modelName === "Qurob 5" ? { reasoning: { effort: "high" } } : {}),
           }),
         });
 
