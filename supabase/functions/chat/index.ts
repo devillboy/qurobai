@@ -546,7 +546,12 @@ const MODEL_MAP: Record<string, string> = {
   "Qurob 3.2": "google/gemini-3-flash-preview",
   "Qurob 4": "google/gemini-3.1-pro-preview",
   "Q-06": "google/gemini-2.5-pro",
+  // Qurob 5 uses Fireworks (handled separately, not via Lovable AI Gateway)
+  "Qurob 5": "fireworks",
 };
+
+// Fireworks model id for Qurob 5 — latest top-tier tuned model
+const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507";
 
 // Per-model temperature tuning
 const MODEL_TEMPERATURE: Record<string, number> = {
@@ -554,6 +559,7 @@ const MODEL_TEMPERATURE: Record<string, number> = {
   "Qurob 3.2": 0.55,   // Free: precise but natural
   "Qurob 4": 0.4,      // Pro: focused reasoning, less randomness
   "Q-06": 0.15,         // Code: very precise, minimal creativity
+  "Qurob 5": 0.3,      // Ultimate Agent: focused, deep reasoning
 };
 
 serve(async (req) => {
@@ -615,7 +621,7 @@ serve(async (req) => {
             await supabase.from("user_settings").update({ tokens_used_today: 0, tokens_reset_date: today }).eq("user_id", userId);
           } else {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
-            const isPremium = userModel === "Qurob 4" || userModel === "Q-06";
+            const isPremium = userModel === "Qurob 4" || userModel === "Q-06" || userModel === "Qurob 5";
             // Free: 350k tokens/month ≈ ~11,667/day; Paid: 1M/day
             const dailyLimit = isPremium ? 1000000 : 11667;
             if ((settings.tokens_used_today || 0) >= dailyLimit) {
@@ -630,12 +636,13 @@ serve(async (req) => {
         // If no model was explicitly requested, use subscription-based model
         if (!requestedModel) {
           const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
-          if (userModel === "Qurob 4") modelName = "Qurob 4";
+          if (userModel === "Qurob 5") modelName = "Qurob 5";
+          else if (userModel === "Qurob 4") modelName = "Qurob 4";
           else if (userModel === "Q-06") { modelName = "Q-06"; isCodeSpecialist = true; }
           else modelName = "Qurob 3.2";
         } else {
           // Per-model gating: validate requested model against specific subscription
-          if (requestedModel === "Qurob 4" || requestedModel === "Q-06") {
+          if (requestedModel === "Qurob 4" || requestedModel === "Q-06" || requestedModel === "Qurob 5") {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
             // User must have the exact model subscription to use it
             if (userModel !== requestedModel) {
