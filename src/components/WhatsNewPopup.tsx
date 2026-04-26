@@ -5,15 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const CURRENT_VERSION = "3.0.0";
+const CURRENT_VERSION = "5.0.0";
 
 const highlights = [
-  "🔍 Web Search & Deep Search in chat",
-  "🤖 Custom Qurobs — build your own AI assistants",
-  "⚡ Professional new splash screen",
-  "📱 Better mobile experience",
-  "🔒 Encryption indicators in chat",
-  "🎨 Redesigned Settings with tabs",
+  "👑 Qurob 5 launched — Next-Gen Ultimate Agent (₹1289/mo)",
+  "🔍 Auto Web + Deep Search built into Qurob 5",
+  "🚀 Powered by Fireworks AI — most powerful tuned reasoning",
+  "🧠 Multi-step autonomous agent with live web grounding",
+  "✨ All existing models optimized — Qurob 4 + Q-06 sharper",
+  "🎨 Refreshed UI with Ultimate badge and gradient highlights",
 ];
 
 export const WhatsNewPopup = () => {
