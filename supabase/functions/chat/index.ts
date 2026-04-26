@@ -870,7 +870,49 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
 
     console.log("Using model:", modelName, "gateway:", gatewayModel);
 
-    // PRIMARY: Lovable AI Gateway
+    // PRIMARY for Qurob 5: Fireworks AI (most powerful tuned agent backend)
+    if (modelName === "Qurob 5") {
+      const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
+      if (FIREWORKS_API_KEY) {
+        try {
+          const fwResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: JSON.stringify({
+              model: FIREWORKS_QUROB5_MODEL,
+              messages: allMessages,
+              stream: true,
+              temperature,
+              max_tokens: 8192,
+              top_p: 0.95,
+            }),
+          });
+          if (fwResponse.ok && fwResponse.body) {
+            console.log("Qurob 5 / Fireworks streaming started");
+            return new Response(fwResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          }
+          const errTxt = await fwResponse.text();
+          console.error("Fireworks error:", fwResponse.status, errTxt);
+          if (fwResponse.status === 429) {
+            return new Response(JSON.stringify({ error: "Qurob 5 is busy right now. Please try again in a few seconds." }), {
+              status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } catch (e) {
+          console.error("Fireworks call failed:", e);
+        }
+      } else {
+        console.error("FIREWORKS_API_KEY not configured for Qurob 5");
+      }
+      // If Fireworks failed, fall through to Lovable AI Gateway with a strong fallback model
+    }
+
+    // PRIMARY: Lovable AI Gateway (skip for Qurob 5 if it already failed; use pro fallback model)
+    const effectiveGatewayModel = modelName === "Qurob 5" ? "openai/gpt-5" : gatewayModel;
     if (LOVABLE_API_KEY) {
       try {
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -880,11 +922,12 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: gatewayModel,
+            model: effectiveGatewayModel,
             messages: allMessages,
             stream: true,
             temperature,
             max_tokens: 8192,
+            ...(modelName === "Qurob 5" ? { reasoning: { effort: "high" } } : {}),
           }),
         });
 
