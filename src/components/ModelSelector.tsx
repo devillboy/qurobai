@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, Sparkles, Zap, Code, Lock, Check, Clock } from "lucide-react";
+import { ChevronDown, Sparkles, Zap, Code, Lock, Check, Clock, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,6 +39,15 @@ const models: ModelOption[] = [
     free: true,
     badge: "FREE",
     color: "text-muted-foreground",
+  },
+  {
+    id: "Qurob 5",
+    name: "Qurob 5",
+    description: "Ultimate Agent • ₹1289/mo",
+    icon: Crown,
+    free: false,
+    badge: "ULTIMATE",
+    color: "text-yellow-500",
   },
   {
     id: "Qurob 4",
