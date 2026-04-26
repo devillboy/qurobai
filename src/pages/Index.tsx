@@ -207,7 +207,7 @@ const Index = () => {
             </AnimatePresence>
 
             <div className="mt-auto pt-2 md:pt-3 safe-area-bottom">
-              <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} onStop={stopGeneration} modelSelector={<ModelSelector currentModel={selectedModel} onModelChange={changeModel} />} />
+              <ChatInputEnhanced onSend={handleSendMessage} isLoading={isLoading} onStop={stopGeneration} currentModel={selectedModel} modelSelector={<ModelSelector currentModel={selectedModel} onModelChange={changeModel} />} />
               <div className="hidden md:flex mt-1.5 px-1">
                 <button onClick={() => setCommandPaletteOpen(true)} className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors flex items-center gap-1.5">
                   Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">⌘K</kbd> for commands
