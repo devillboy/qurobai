@@ -256,6 +256,7 @@ export default function Subscribe() {
 
   const premiumPlan = plans.find(p => p.name === "Premium");
    const q06Plan = plans.find(p => p.name === "Code Specialist" || p.model_name === "Q-06");
+   const qurob5Plan = plans.find(p => p.model_name === "Qurob 5" || p.name === "Ultimate Agent");
   
   const finalPrice = selectedPlan ? selectedPlan.price_inr * (1 - discount / 100) : 0;
   const canOpenDrawer = Boolean(selectedPlan && selectedPlan.price_inr > 0);
@@ -287,6 +288,67 @@ export default function Subscribe() {
           </h1>
           <p className="text-muted-foreground">Choose the perfect plan for your needs</p>
         </div>
+
+        {/* Qurob 5 Hero Card — Ultimate Agent */}
+        {qurob5Plan && (
+          <div className="mb-6 max-w-5xl mx-auto">
+            <Card
+              className={`relative overflow-hidden cursor-pointer transition-all duration-300 ${
+                selectedPlan?.model_name === "Qurob 5"
+                  ? "border-2 border-yellow-500 glow"
+                  : "premium-card hover:border-yellow-500/60"
+              }`}
+              onClick={() => setSelectedPlan(qurob5Plan)}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/15 via-purple-500/10 to-primary/10" />
+              <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 via-orange-500 to-purple-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg flex items-center gap-1 shadow-lg">
+                <Crown className="w-3 h-3" />
+                ULTIMATE • MOST POWERFUL
+              </div>
+              <CardHeader className="pb-3 relative z-10 pt-8">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-yellow-500 via-orange-500 to-purple-600 shadow-lg">
+                    <Crown className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      Qurob 5
+                      <Badge className="bg-gradient-to-r from-yellow-500 to-purple-600 text-white border-0 text-[10px]">NEW</Badge>
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Next-Gen Fully Tuned Agent</p>
+                  </div>
+                </div>
+                <CardDescription className="mt-3">
+                  <span className="text-3xl font-bold text-foreground">
+                    ₹{Math.round(qurob5Plan.price_inr * (1 - discount / 100))}
+                  </span>
+                  {discount > 0 && (
+                    <span className="ml-2 line-through text-muted-foreground text-sm">
+                      ₹{qurob5Plan.price_inr}
+                    </span>
+                  )}
+                  <span className="text-sm font-normal text-muted-foreground ml-1">/ month</span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-sm">
+                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-yellow-500 shrink-0" /><strong>Auto Web + Deep Search</strong></div>
+                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-yellow-500 shrink-0" />Most powerful tuned reasoning</div>
+                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-yellow-500 shrink-0" />Multi-step autonomous agent</div>
+                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-yellow-500 shrink-0" />Real-time web grounding</div>
+                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-yellow-500 shrink-0" />Source citations built-in</div>
+                  <div className="flex items-center gap-2"><Check className="w-4 h-4 text-yellow-500 shrink-0" />Includes Qurob 4 + Q-06 features</div>
+                </div>
+                <div className="mt-4 p-2.5 rounded-lg bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-purple-600/10 border border-yellow-500/30">
+                  <div className="flex items-center gap-2">
+                    <Rocket className="w-3.5 h-3.5 text-yellow-500" />
+                    <span className="text-xs font-medium">Fireworks AI • Tuned for India-first agentic workflows</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Plan Cards */}
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 max-w-5xl mx-auto">

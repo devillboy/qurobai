@@ -13,6 +13,7 @@ interface ChatInputEnhancedProps {
   isLoading?: boolean;
   onStop?: () => void;
   modelSelector?: React.ReactNode;
+  currentModel?: string;
 }
 
 interface AttachmentFile {
@@ -23,7 +24,8 @@ interface AttachmentFile {
   base64?: string;
 }
 
-export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector }: ChatInputEnhancedProps) {
+export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector, currentModel }: ChatInputEnhancedProps) {
+  const isQurob5 = currentModel === "Qurob 5";
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -142,29 +144,38 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector }: 
       <div className="max-w-3xl mx-auto">
         {showTemplates && <TemplatesPicker onSelect={handleTemplateSelect} onClose={() => setShowTemplates(false)} />}
 
-        {/* Search toggles */}
-        <div className="flex items-center gap-1.5 mb-2">
-          <button
-            onClick={() => { setWebSearchOn(!webSearchOn); if (deepSearchOn) setDeepSearchOn(false); }}
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all touch-manipulation border btn-3d",
-              webSearchOn ? "bg-primary/15 text-primary border-primary/40" : "bg-secondary/50 text-muted-foreground border-border/40 hover:border-primary/30"
-            )}
-          >
-            <Globe className="w-3 h-3" />
-            Web
-          </button>
-          <button
-            onClick={() => { setDeepSearchOn(!deepSearchOn); if (webSearchOn) setWebSearchOn(false); }}
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all touch-manipulation border btn-3d",
-              deepSearchOn ? "bg-accent/15 text-accent-foreground border-accent/40" : "bg-secondary/50 text-muted-foreground border-border/40 hover:border-accent/30"
-            )}
-          >
-            <Search className="w-3 h-3" />
-            Deep
-          </button>
-        </div>
+        {/* Search toggles — hidden for Qurob 5 (auto-search built-in) */}
+        {isQurob5 ? (
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border bg-gradient-to-r from-yellow-500/15 via-orange-500/10 to-purple-600/15 text-yellow-600 border-yellow-500/40">
+              <Search className="w-3 h-3" />
+              Auto Web + Deep Search Active
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 mb-2">
+            <button
+              onClick={() => { setWebSearchOn(!webSearchOn); if (deepSearchOn) setDeepSearchOn(false); }}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all touch-manipulation border btn-3d",
+                webSearchOn ? "bg-primary/15 text-primary border-primary/40" : "bg-secondary/50 text-muted-foreground border-border/40 hover:border-primary/30"
+              )}
+            >
+              <Globe className="w-3 h-3" />
+              Web
+            </button>
+            <button
+              onClick={() => { setDeepSearchOn(!deepSearchOn); if (webSearchOn) setWebSearchOn(false); }}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all touch-manipulation border btn-3d",
+                deepSearchOn ? "bg-accent/15 text-accent-foreground border-accent/40" : "bg-secondary/50 text-muted-foreground border-border/40 hover:border-accent/30"
+              )}
+            >
+              <Search className="w-3 h-3" />
+              Deep
+            </button>
+          </div>
+        )}
 
         {/* Attachments */}
         {attachments.length > 0 && (

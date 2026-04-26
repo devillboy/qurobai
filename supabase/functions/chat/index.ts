@@ -546,7 +546,12 @@ const MODEL_MAP: Record<string, string> = {
   "Qurob 3.2": "google/gemini-3-flash-preview",
   "Qurob 4": "google/gemini-3.1-pro-preview",
   "Q-06": "google/gemini-2.5-pro",
+  // Qurob 5 uses Fireworks (handled separately, not via Lovable AI Gateway)
+  "Qurob 5": "fireworks",
 };
+
+// Fireworks model id for Qurob 5 — latest top-tier tuned model
+const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507";
 
 // Per-model temperature tuning
 const MODEL_TEMPERATURE: Record<string, number> = {
@@ -554,6 +559,7 @@ const MODEL_TEMPERATURE: Record<string, number> = {
   "Qurob 3.2": 0.55,   // Free: precise but natural
   "Qurob 4": 0.4,      // Pro: focused reasoning, less randomness
   "Q-06": 0.15,         // Code: very precise, minimal creativity
+  "Qurob 5": 0.3,      // Ultimate Agent: focused, deep reasoning
 };
 
 serve(async (req) => {
@@ -615,7 +621,7 @@ serve(async (req) => {
             await supabase.from("user_settings").update({ tokens_used_today: 0, tokens_reset_date: today }).eq("user_id", userId);
           } else {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
-            const isPremium = userModel === "Qurob 4" || userModel === "Q-06";
+            const isPremium = userModel === "Qurob 4" || userModel === "Q-06" || userModel === "Qurob 5";
             // Free: 350k tokens/month ≈ ~11,667/day; Paid: 1M/day
             const dailyLimit = isPremium ? 1000000 : 11667;
             if ((settings.tokens_used_today || 0) >= dailyLimit) {
@@ -630,12 +636,13 @@ serve(async (req) => {
         // If no model was explicitly requested, use subscription-based model
         if (!requestedModel) {
           const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
-          if (userModel === "Qurob 4") modelName = "Qurob 4";
+          if (userModel === "Qurob 5") modelName = "Qurob 5";
+          else if (userModel === "Qurob 4") modelName = "Qurob 4";
           else if (userModel === "Q-06") { modelName = "Q-06"; isCodeSpecialist = true; }
           else modelName = "Qurob 3.2";
         } else {
           // Per-model gating: validate requested model against specific subscription
-          if (requestedModel === "Qurob 4" || requestedModel === "Q-06") {
+          if (requestedModel === "Qurob 4" || requestedModel === "Q-06" || requestedModel === "Qurob 5") {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
             // User must have the exact model subscription to use it
             if (userModel !== requestedModel) {
@@ -695,9 +702,17 @@ serve(async (req) => {
       } else {
         // No explicit query type detected — try auto web search silently
         // This kicks in when AI might not know the answer (latest events, specific facts, etc.)
-        const autoResult = await autoWebSearch(lastUserMessage.content);
-        if (autoResult) {
-          realtimeContext += `\n\n## SUPPLEMENTARY WEB CONTEXT (Use this info to give accurate answers, do NOT mention you searched the web):\n${autoResult}`;
+        // For Qurob 5: ALWAYS auto-search to back every answer with live web data.
+        if (modelName === "Qurob 5") {
+          const forced = await firecrawlSearch(lastUserMessage.content);
+          if (forced) {
+            realtimeContext += `\n\n## LIVE WEB CONTEXT (Qurob 5 auto-grounded — use these facts, cite sources naturally):\n${forced}`;
+          }
+        } else {
+          const autoResult = await autoWebSearch(lastUserMessage.content);
+          if (autoResult) {
+            realtimeContext += `\n\n## SUPPLEMENTARY WEB CONTEXT (Use this info to give accurate answers, do NOT mention you searched the web):\n${autoResult}`;
+          }
         }
       }
     }
@@ -781,6 +796,7 @@ CRITICAL RULES FOR IMAGE ANALYSIS:
       "Qurob 3.2": `You are Qurob 3.2 — QurobAi's flagship free model. You're intelligent, articulate, and adaptive. You understand context deeply, provide well-structured responses, and can handle complex topics with nuance. You're conversational yet informative — the perfect balance of smart and approachable.`,
       "Qurob 4": `You are Qurob 4 — QurobAi's premium reasoning powerhouse. You excel at deep analysis, complex problem-solving, multi-step reasoning, and nuanced understanding. You think before responding, break down complex problems, provide thorough yet clear explanations. You're the expert consultant — methodical, insightful, and precise. When reasoning through problems, show your thought process step-by-step.`,
       "Q-06": `You are Q-06 — QurobAi's elite Code Specialist. You are an expert-level programmer across 100+ languages. You write clean, production-ready, optimized code with proper error handling, comments, and best practices. You think like a senior engineer — considering edge cases, performance, security, and maintainability. Always provide complete, runnable code. Explain your architectural decisions briefly.`,
+      "Qurob 5": `You are Qurob 5 — QurobAi's flagship Ultimate Agent, the most powerful tuned model in the lineup. You are autonomous, proactive, and operate like a senior multi-step research agent. You ALWAYS verify facts with live web data (auto Web + Deep Search is built-in), plan before acting, break complex tasks into clean steps, and deliver complete, polished solutions. You think deeply, cite sources naturally when web-grounded, and never give shallow answers. You're India-first, warm, precise, and autonomous — the ultimate AI partner.`,
     };
 
     const systemPrompt = `${modelPersonality[modelName] || modelPersonality["Qurob 3.2"]}
@@ -854,7 +870,49 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
 
     console.log("Using model:", modelName, "gateway:", gatewayModel);
 
-    // PRIMARY: Lovable AI Gateway
+    // PRIMARY for Qurob 5: Fireworks AI (most powerful tuned agent backend)
+    if (modelName === "Qurob 5") {
+      const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
+      if (FIREWORKS_API_KEY) {
+        try {
+          const fwResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: JSON.stringify({
+              model: FIREWORKS_QUROB5_MODEL,
+              messages: allMessages,
+              stream: true,
+              temperature,
+              max_tokens: 8192,
+              top_p: 0.95,
+            }),
+          });
+          if (fwResponse.ok && fwResponse.body) {
+            console.log("Qurob 5 / Fireworks streaming started");
+            return new Response(fwResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          }
+          const errTxt = await fwResponse.text();
+          console.error("Fireworks error:", fwResponse.status, errTxt);
+          if (fwResponse.status === 429) {
+            return new Response(JSON.stringify({ error: "Qurob 5 is busy right now. Please try again in a few seconds." }), {
+              status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } catch (e) {
+          console.error("Fireworks call failed:", e);
+        }
+      } else {
+        console.error("FIREWORKS_API_KEY not configured for Qurob 5");
+      }
+      // If Fireworks failed, fall through to Lovable AI Gateway with a strong fallback model
+    }
+
+    // PRIMARY: Lovable AI Gateway (skip for Qurob 5 if it already failed; use pro fallback model)
+    const effectiveGatewayModel = modelName === "Qurob 5" ? "openai/gpt-5" : gatewayModel;
     if (LOVABLE_API_KEY) {
       try {
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -864,11 +922,12 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: gatewayModel,
+            model: effectiveGatewayModel,
             messages: allMessages,
             stream: true,
             temperature,
             max_tokens: 8192,
+            ...(modelName === "Qurob 5" ? { reasoning: { effort: "high" } } : {}),
           }),
         });
 
