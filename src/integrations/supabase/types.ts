@@ -200,6 +200,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          memory_enabled: boolean | null
           project_id: string | null
           title: string
           updated_at: string
@@ -208,6 +209,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          memory_enabled?: boolean | null
           project_id?: string | null
           title?: string
           updated_at?: string
@@ -216,6 +218,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          memory_enabled?: boolean | null
           project_id?: string | null
           title?: string
           updated_at?: string
@@ -777,9 +780,11 @@ export type Database = {
       user_settings: {
         Row: {
           base_tone: string | null
+          brain_memory_enabled: boolean
           chat_density: string | null
           created_at: string
           custom_instructions: string | null
+          default_per_chat_memory: boolean
           font_size: string | null
           gemini_api_key: string | null
           id: string
@@ -796,9 +801,11 @@ export type Database = {
         }
         Insert: {
           base_tone?: string | null
+          brain_memory_enabled?: boolean
           chat_density?: string | null
           created_at?: string
           custom_instructions?: string | null
+          default_per_chat_memory?: boolean
           font_size?: string | null
           gemini_api_key?: string | null
           id?: string
@@ -815,9 +822,11 @@ export type Database = {
         }
         Update: {
           base_tone?: string | null
+          brain_memory_enabled?: boolean
           chat_density?: string | null
           created_at?: string
           custom_instructions?: string | null
+          default_per_chat_memory?: boolean
           font_size?: string | null
           gemini_api_key?: string | null
           id?: string
