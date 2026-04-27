@@ -118,8 +118,8 @@ Deno.serve(async (req) => {
               },
               message: {
                 payload: pushPayload,
+                adminContact: "mailto:sohamghosh679@gmail.com",
               },
-              adminContact: "mailto:sohamghosh679@gmail.com",
             });
 
             const resp = await fetch(endpoint, {
