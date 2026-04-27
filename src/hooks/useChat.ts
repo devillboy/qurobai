@@ -9,6 +9,7 @@ export interface Message {
   content: string;
   timestamp: Date;
   isPinned?: boolean;
+  latencyMs?: number;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -164,8 +165,11 @@ export const useChat = (conversationId: string | null) => {
   const doStream = useCallback(async (messageHistory: Array<{ role: string; content: string }>, convId: string) => {
     const assistantMessageId = crypto.randomUUID();
     let assistantContent = "";
-    let hasAddedAssistantMessage = false;
+    let hasAddedAssistantMessage = true;
+    let firstTokenLatencyMs: number | undefined;
+    const streamStartedAt = performance.now();
     setIsLoading(true);
+    setMessages((prev) => [...prev, { id: assistantMessageId, role: "assistant", content: "", timestamp: new Date() }]);
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
     let pendingUpdate = false;
@@ -179,14 +183,15 @@ export const useChat = (conversationId: string | null) => {
       messages: messageHistory, userId: user?.id, model: selectedModelRef.current, conversationId: convId, memoryEnabled: memoryEnabledRef.current, signal: abortController.signal,
       onDelta: (delta) => {
         assistantContent += delta;
+        if (firstTokenLatencyMs === undefined) firstTokenLatencyMs = Math.max(1, Math.round(performance.now() - streamStartedAt));
         const now = Date.now();
         if (!pendingUpdate && (now - lastUpdateTime) >= MIN_UPDATE_INTERVAL) {
           pendingUpdate = true; lastUpdateTime = now;
           requestAnimationFrame(() => {
             setMessages((prev) => {
               const lastMsg = prev[prev.length - 1];
-              if (lastMsg?.id === assistantMessageId) return prev.map((msg) => msg.id === assistantMessageId ? { ...msg, content: assistantContent } : msg);
-              else if (!hasAddedAssistantMessage) { hasAddedAssistantMessage = true; return [...prev, { id: assistantMessageId, role: "assistant" as const, content: assistantContent, timestamp: new Date() }]; }
+              if (lastMsg?.id === assistantMessageId) return prev.map((msg) => msg.id === assistantMessageId ? { ...msg, content: assistantContent, latencyMs: firstTokenLatencyMs } : msg);
+              else if (!hasAddedAssistantMessage) { hasAddedAssistantMessage = true; return [...prev, { id: assistantMessageId, role: "assistant" as const, content: assistantContent, timestamp: new Date(), latencyMs: firstTokenLatencyMs }]; }
               return prev;
             });
             pendingUpdate = false;
@@ -194,10 +199,11 @@ export const useChat = (conversationId: string | null) => {
         }
       },
       onDone: async () => {
+        const finalLatency = firstTokenLatencyMs ?? Math.max(1, Math.round(performance.now() - streamStartedAt));
         setMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
-          if (lastMsg?.id === assistantMessageId) return prev.map((msg) => msg.id === assistantMessageId ? { ...msg, content: assistantContent } : msg);
-          else if (!hasAddedAssistantMessage && assistantContent) return [...prev, { id: assistantMessageId, role: "assistant" as const, content: assistantContent, timestamp: new Date() }];
+          if (lastMsg?.id === assistantMessageId) return prev.map((msg) => msg.id === assistantMessageId ? { ...msg, content: assistantContent, latencyMs: finalLatency } : msg);
+          else if (!hasAddedAssistantMessage && assistantContent) return [...prev, { id: assistantMessageId, role: "assistant" as const, content: assistantContent, timestamp: new Date(), latencyMs: finalLatency }];
           return prev;
         });
         setIsLoading(false); abortControllerRef.current = null;
