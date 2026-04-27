@@ -907,9 +907,9 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
       }
     }
 
-    // PRIMARY: Lovable AI Gateway (skip for Qurob 5 if it already failed; use pro fallback model)
-    const effectiveGatewayModel = modelName === "Qurob 5" ? "openai/gpt-5" : gatewayModel;
-    if (LOVABLE_API_KEY) {
+    // PRIMARY: Lovable AI Gateway for non-Qurob-5 models. Qurob 5 stays on direct providers for lower latency.
+    const effectiveGatewayModel = gatewayModel;
+    if (LOVABLE_API_KEY && modelName !== "Qurob 5" && modelName !== "ArticQuro") {
       try {
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
