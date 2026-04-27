@@ -650,9 +650,12 @@ serve(async (req) => {
       } else {
         // No explicit query type detected — try auto web search silently
         // This kicks in when AI might not know the answer (latest events, specific facts, etc.)
-        // For Qurob 5: ALWAYS auto-search to back every answer with live web data.
-        if (modelName === "Qurob 5") {
-          const forced = await firecrawlSearch(lastUserMessage.content);
+          // Qurob 5 auto-searches only when freshness is needed; simple chats must answer instantly.
+          if (modelName === "Qurob 5" && !isSimpleFastReply(lastUserMessage.content)) {
+            const forced = await Promise.race([
+              firecrawlSearch(lastUserMessage.content),
+              new Promise<string>((resolve) => setTimeout(() => resolve(""), 1800)),
+            ]);
           if (forced) {
             realtimeContext += `\n\n## LIVE WEB CONTEXT (Qurob 5 auto-grounded — use these facts, cite sources naturally):\n${forced}`;
           }
