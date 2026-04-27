@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useMemo } from "react";
-import { Bot, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2, Maximize2, Pencil, ThumbsUp, ThumbsDown, Heart, X } from "lucide-react";
+import { Bot, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2, Maximize2, Pencil, ThumbsUp, ThumbsDown, Heart, X, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   isPinned?: boolean;
   timestamp?: Date;
+  latencyMs?: number;
   onRegenerate?: () => void;
   onPin?: () => void;
   onEdit?: (newContent: string) => void;
@@ -43,6 +44,25 @@ export const ChatMessageSkeleton = memo(() => {
 });
 
 ChatMessageSkeleton.displayName = "ChatMessageSkeleton";
+
+const TokenStreamingSkeleton = memo(() => (
+  <div className="space-y-3 animate-fade-in" aria-label="QurobAi is streaming a response">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+      </span>
+      <span className="font-medium">Streaming tokens</span>
+    </div>
+    <div className="space-y-2.5">
+      <Skeleton className="h-4 w-[96%] bg-primary/10" />
+      <Skeleton className="h-4 w-[88%] bg-muted/70" />
+      <Skeleton className="h-4 w-[72%] bg-muted/60" />
+    </div>
+  </div>
+));
+
+TokenStreamingSkeleton.displayName = "TokenStreamingSkeleton";
 
 // Claude-style code block with enhanced design
 const CodeBlock = memo(({ code, language }: { code: string; language: string }) => {
