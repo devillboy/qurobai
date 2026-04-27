@@ -550,8 +550,9 @@ const MODEL_MAP: Record<string, string> = {
   "Qurob 5": "fireworks",
 };
 
-// Fireworks model id for Qurob 5 — latest top-tier tuned model (verified available)
-const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b";
+// Fireworks model id for Qurob 5 — latest top-tier tuned model
+// Use the instruct variant (faster + verified-available endpoint)
+const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507";
 
 // Per-model temperature tuning
 const MODEL_TEMPERATURE: Record<string, number> = {
@@ -871,10 +872,13 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
     console.log("Using model:", modelName, "gateway:", gatewayModel);
 
     // PRIMARY for Qurob 5: Fireworks AI (most powerful tuned agent backend)
+    // Tuned for speed: lower max_tokens, faster top_p, tight temperature, short connect timeout
     if (modelName === "Qurob 5") {
       const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
       if (FIREWORKS_API_KEY) {
         try {
+          const ctrl = new AbortController();
+          const tId = setTimeout(() => ctrl.abort(), 8000); // 8s connect cap — fail fast to fallback
           const fwResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -886,29 +890,53 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
               model: FIREWORKS_QUROB5_MODEL,
               messages: allMessages,
               stream: true,
-              temperature,
-              max_tokens: 8192,
-              top_p: 0.95,
+              temperature: 0.3,
+              max_tokens: 2048,    // smaller cap → faster TTFT + completion
+              top_p: 0.9,
+              top_k: 40,
             }),
+            signal: ctrl.signal,
           });
+          clearTimeout(tId);
           if (fwResponse.ok && fwResponse.body) {
             console.log("Qurob 5 / Fireworks streaming started");
             return new Response(fwResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
           const errTxt = await fwResponse.text();
           console.error("Fireworks error:", fwResponse.status, errTxt);
-          if (fwResponse.status === 429) {
-            return new Response(JSON.stringify({ error: "Qurob 5 is busy right now. Please try again in a few seconds." }), {
-              status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
+          // Fall through to OpenRouter for fast Qwen fallback
         } catch (e) {
-          console.error("Fireworks call failed:", e);
+          console.error("Fireworks call failed (timeout or error):", e);
         }
       } else {
         console.error("FIREWORKS_API_KEY not configured for Qurob 5");
       }
-      // If Fireworks failed, fall through to Lovable AI Gateway with a strong fallback model
+
+      // FAST FALLBACK for Qurob 5: OpenRouter Qwen 2.5 72B (very fast TTFT)
+      if (OPENROUTER_API_KEY) {
+        try {
+          const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://qurobai.lovable.app",
+              "X-Title": "QurobAi",
+            },
+            body: JSON.stringify({
+              model: "qwen/qwen-2.5-72b-instruct",
+              messages: allMessages,
+              stream: true,
+              temperature: 0.3,
+              max_tokens: 2048,
+            }),
+          });
+          if (orResp.ok && orResp.body) {
+            console.log("Qurob 5 / OpenRouter Qwen fallback streaming");
+            return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          }
+        } catch (e) { console.error("OpenRouter Qurob5 fallback failed:", e); }
+      }
     }
 
     // PRIMARY: Lovable AI Gateway (skip for Qurob 5 if it already failed; use pro fallback model)
