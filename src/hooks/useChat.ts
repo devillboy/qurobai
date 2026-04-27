@@ -14,17 +14,17 @@ export interface Message {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 async function streamChat({
-  messages, userId, model, onDelta, onDone, onError, signal,
+  messages, userId, model, conversationId, memoryEnabled, onDelta, onDone, onError, signal,
 }: {
   messages: Array<{ role: string; content: string }>;
-  userId?: string; model?: string;
+  userId?: string; model?: string; conversationId?: string; memoryEnabled?: boolean;
   onDelta: (deltaText: string) => void; onDone: () => void; onError: (error: Error) => void; signal?: AbortSignal;
 }) {
   try {
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-      body: JSON.stringify({ messages, userId, model }), signal,
+      body: JSON.stringify({ messages, userId, model, conversationId, memoryEnabled }), signal,
     });
     if (!resp.ok) {
       const errorData = await resp.json().catch(() => ({}));
@@ -86,16 +86,19 @@ export const useChat = (conversationId: string | null) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentModel, setCurrentModel] = useState<string>("Qurob 3.2");
   const [selectedModel, setSelectedModel] = useState<string>("Qurob 3.2");
+  const [memoryEnabled, setMemoryEnabled] = useState<boolean | undefined>(undefined);
   const { user } = useAuth();
   
   const messagesRef = useRef<Message[]>([]);
   const isLoadingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const selectedModelRef = useRef(selectedModel);
+  const memoryEnabledRef = useRef<boolean | undefined>(undefined);
   
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { isLoadingRef.current = isLoading; }, [isLoading]);
   useEffect(() => { selectedModelRef.current = selectedModel; }, [selectedModel]);
+  useEffect(() => { memoryEnabledRef.current = memoryEnabled; }, [memoryEnabled]);
   useEffect(() => { if (user) loadUserModel(); }, [user]);
 
   const loadUserModel = useCallback(async () => {
@@ -111,9 +114,21 @@ export const useChat = (conversationId: string | null) => {
   }, [user]);
 
   useEffect(() => {
-    if (conversationId && user) loadMessages(conversationId);
-    else setMessages([]);
+    if (conversationId && user) { loadMessages(conversationId); loadConversationMemory(conversationId); }
+    else { setMessages([]); setMemoryEnabled(undefined); }
   }, [conversationId, user]);
+
+  const loadConversationMemory = useCallback(async (convId: string) => {
+    const { data } = await supabase.from("conversations").select("memory_enabled").eq("id", convId).single();
+    setMemoryEnabled(data?.memory_enabled ?? undefined);
+  }, []);
+
+  const toggleMemory = useCallback(async (next: boolean) => {
+    setMemoryEnabled(next);
+    if (conversationId) {
+      await supabase.from("conversations").update({ memory_enabled: next }).eq("id", conversationId);
+    }
+  }, [conversationId]);
 
   const loadMessages = useCallback(async (convId: string) => {
     const { data, error } = await supabase.from("messages").select("*").eq("conversation_id", convId).order("created_at", { ascending: true });
@@ -161,7 +176,7 @@ export const useChat = (conversationId: string | null) => {
     // (real AI response time is 2–5s; no artificial wait needed)
 
     await streamChat({
-      messages: messageHistory, userId: user?.id, model: selectedModelRef.current, signal: abortController.signal,
+      messages: messageHistory, userId: user?.id, model: selectedModelRef.current, conversationId: convId, memoryEnabled: memoryEnabledRef.current, signal: abortController.signal,
       onDelta: (delta) => {
         assistantContent += delta;
         const now = Date.now();
@@ -249,6 +264,6 @@ export const useChat = (conversationId: string | null) => {
   const clearMessages = useCallback(() => { setMessages([]); }, []);
 
   return useMemo(() => ({
-    messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage,
-  }), [messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage]);
+    messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage, memoryEnabled, toggleMemory,
+  }), [messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage, memoryEnabled, toggleMemory]);
 };
