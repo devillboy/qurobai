@@ -392,6 +392,12 @@ function summarizeConversation(messages: any[]): any[] {
   return [...firstMessages, { role: "system", content: `[Earlier: User discussed ${summaryPoints.slice(0, 5).join("; ")}...]` }, ...recentMessages];
 }
 
+function isSimpleFastReply(message: string): boolean {
+  const clean = message.replace(/^\[(?:web|deep)\s*search\]\s*/i, "").trim();
+  if (clean.length <= 90 && !/https?:\/\//i.test(clean) && !/(latest|current|today|news|search|compare|code|build|analyze|research|explain in detail)/i.test(clean)) return true;
+  return /^(hi|hello|hey|yo|hii|kaise ho|kya haal|thanks?|ok|haan|na|yes|no|who are you|tum kaun ho)[\s!.?]*$/i.test(clean);
+}
+
 // Image generation — PRIMARY: Fireworks FLUX.1 schnell (fast + premium quality, no Lovable AI Gateway)
 async function generateImage(prompt: string, supabase: any, userId?: string): Promise<string> {
   const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
