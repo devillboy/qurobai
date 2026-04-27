@@ -828,7 +828,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
       if (FIREWORKS_API_KEY) {
         try {
           const ctrl = new AbortController();
-          const tId = setTimeout(() => ctrl.abort(), 8000); // 8s connect cap — fail fast to fallback
+          const tId = setTimeout(() => ctrl.abort(), 3500); // fail fast so users never wait 10–30s
           const fwResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -841,7 +841,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
               messages: allMessages,
               stream: true,
               temperature: 0.3,
-              max_tokens: 2048,    // smaller cap → faster TTFT + completion
+              max_tokens: 900,     // smaller cap → faster TTFT + completion for normal chat
               top_p: 0.9,
               top_k: 40,
             }),
@@ -862,9 +862,11 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         console.error("FIREWORKS_API_KEY not configured for Qurob 5");
       }
 
-      // FAST FALLBACK for Qurob 5: OpenRouter Qwen 2.5 72B (very fast TTFT)
+      // FAST FALLBACK for Qurob 5: OpenRouter Qwen 72B (very fast TTFT)
       if (OPENROUTER_API_KEY) {
         try {
+          const ctrl = new AbortController();
+          const tId = setTimeout(() => ctrl.abort(), 6000);
           const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -878,9 +880,11 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
               messages: allMessages,
               stream: true,
               temperature: 0.3,
-              max_tokens: 2048,
+              max_tokens: 900,
             }),
+            signal: ctrl.signal,
           });
+          clearTimeout(tId);
           if (orResp.ok && orResp.body) {
             console.log("Qurob 5 / OpenRouter Qwen fallback streaming");
             return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
