@@ -5,6 +5,7 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ThinkingIndicator } from "@/components/ThinkingIndicator";
 import { ChatInputEnhanced } from "@/components/ChatInputEnhanced";
+import { BrainMemoryToggle } from "@/components/BrainMemoryToggle";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ModelSelector } from "@/components/ModelSelector";
@@ -29,7 +30,7 @@ const Index = () => {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [activeQurob, setActiveQurob] = useState<any>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
-  const { messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage } = useChat(currentConversationId);
+  const { messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage, memoryEnabled, toggleMemory } = useChat(currentConversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -159,6 +160,11 @@ const Index = () => {
               </div>
             </div>
           )}
+
+          {/* Brain Memory toggle bar (shows on every chat) */}
+          <div className="px-3 md:px-4 pt-2 max-w-3xl w-full mx-auto">
+            <BrainMemoryToggle enabled={memoryEnabled} onToggle={toggleMemory} />
+          </div>
           
           <div className="flex-1 max-w-3xl w-full mx-auto px-3 md:px-4 py-2 md:py-4 flex flex-col overflow-hidden relative">
             {messages.length === 0 ? (

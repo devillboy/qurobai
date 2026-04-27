@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   Sparkles, Mail, Calendar, Shield, CreditCard, History, ChevronRight, Crown, LogOut,
   Sliders, Download, FileText, Scale, Lock, MessageCircle, HardDrive, Palette, Search,
-  Mic, Key, Sun, Moon, Monitor, User, Volume2, Languages, Keyboard, Bot, Settings2, Database, Info, Copy, Hash
+  Mic, Key, Sun, Moon, Monitor, User, Volume2, Languages, Keyboard, Bot, Settings2, Database, Info, Copy, Hash, Brain
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PersonalizationDialog } from "./PersonalizationDialog";
@@ -41,6 +41,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     voice_output_enabled: false,
     theme_preference: "dark",
     language_preference: "en",
+    brain_memory_enabled: true,
   });
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     if (!user) return;
     const { data } = await supabase
       .from("user_settings")
-      .select("voice_output_enabled, theme_preference, language_preference")
+      .select("voice_output_enabled, theme_preference, language_preference, brain_memory_enabled")
       .eq("user_id", user.id)
       .single();
     if (data) {
@@ -64,6 +65,7 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
         voice_output_enabled: data.voice_output_enabled || false,
         theme_preference: data.theme_preference || "dark",
         language_preference: data.language_preference || "en",
+        brain_memory_enabled: data.brain_memory_enabled !== false,
       });
     }
   };
@@ -374,6 +376,18 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                   <Switch
                     checked={settings.voice_output_enabled}
                     onCheckedChange={(v) => updateSetting("voice_output_enabled", v)}
+                  />
+                }
+              />
+              <SettingRow
+                icon={Brain}
+                label="Brain Memory"
+                description="Remember your preferences across all chats"
+                highlight
+                action={
+                  <Switch
+                    checked={settings.brain_memory_enabled}
+                    onCheckedChange={(v) => updateSetting("brain_memory_enabled", v)}
                   />
                 }
               />
