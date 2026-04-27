@@ -26,6 +26,7 @@ interface AttachmentFile {
 
 export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector, currentModel }: ChatInputEnhancedProps) {
   const isQurob5 = currentModel === "Qurob 5";
+  const isArticQuro = currentModel === "ArticQuro";
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -109,6 +110,7 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector, cu
     const trimmedMessage = message.trim();
     if (!trimmedMessage && attachments.length === 0) return;
     let finalMessage = trimmedMessage;
+    if (isArticQuro) finalMessage = `Generate an image of ${finalMessage || "premium artwork"}`;
     if (deepSearchOn) finalMessage = `[Deep Search] ${finalMessage}`;
     else if (webSearchOn) finalMessage = `[Web Search] ${finalMessage}`;
     const imageAttachments = attachments.filter(a => a.type.startsWith("image/") && a.base64);
@@ -145,7 +147,14 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector, cu
         {showTemplates && <TemplatesPicker onSelect={handleTemplateSelect} onClose={() => setShowTemplates(false)} />}
 
         {/* Search toggles — hidden for Qurob 5 (auto-search built-in) */}
-        {isQurob5 ? (
+        {isArticQuro ? (
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border bg-primary/10 text-primary border-primary/30">
+              <Sparkles className="w-3 h-3" />
+              ArticQuro Image Mode Active
+            </div>
+          </div>
+        ) : isQurob5 ? (
           <div className="flex items-center gap-1.5 mb-2">
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border bg-gradient-to-r from-yellow-500/15 via-orange-500/10 to-purple-600/15 text-yellow-600 border-yellow-500/40">
               <Search className="w-3 h-3" />
@@ -223,7 +232,7 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector, cu
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={deepSearchOn ? "Deep search anything..." : webSearchOn ? "Search the web..." : "Message QurobAi..."}
+            placeholder={isArticQuro ? "Describe the image you want..." : deepSearchOn ? "Deep search anything..." : webSearchOn ? "Search the web..." : "Message QurobAi..."}
             disabled={isLoading}
             className="flex-1 min-h-[40px] max-h-[180px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-1.5 text-[15px] placeholder:text-muted-foreground/50"
             rows={1}
