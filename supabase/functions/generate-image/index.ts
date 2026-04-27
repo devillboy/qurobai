@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, userId } = await req.json();
+    const { prompt, userId, model } = await req.json();
 
     if (!prompt) {
       return new Response(
@@ -21,98 +21,60 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
+    const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
+    if (!FIREWORKS_API_KEY) {
+      console.error("FIREWORKS_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "Image generation service not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Generating image with prompt:", prompt.slice(0, 100));
+    // Default to FLUX.1 schnell (ultra-fast, high quality). Allow `sd3` for higher quality.
+    const fwEndpoint = model === "sd3"
+      ? "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/stable-diffusion-3-medium/text_to_image"
+      : "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image";
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    console.log("Generating image via Fireworks (FLUX schnell):", prompt.slice(0, 100));
+
+    const response = await fetch(fwEndpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${FIREWORKS_API_KEY}`,
         "Content-Type": "application/json",
+        "Accept": "image/png",
       },
       body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: `Generate an image based on this description: ${prompt}`,
-          },
-        ],
+        prompt,
+        width: 1024,
+        height: 1024,
+        steps: model === "sd3" ? 30 : 4,
+        seed: Math.floor(Math.random() * 1000000),
+        guidance_scale: 3.5,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Lovable AI error:", response.status, errorText);
-
+      console.error("Fireworks image error:", response.status, errorText);
       if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Image generation rate limited. Please try again shortly." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ error: "Failed to generate image. Please try again." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Failed to generate image. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const result = await response.json();
-    console.log("Lovable AI response received");
-
-    // Extract image from the response - Gemini image models return base64 inline
-    const choice = result.choices?.[0];
-    const content = choice?.message?.content;
-
-    // Check for inline_data (base64 image) in parts
-    const parts = choice?.message?.parts;
-    let base64Image: string | null = null;
-    let mimeType = "image/png";
-
-    if (parts && Array.isArray(parts)) {
-      for (const part of parts) {
-        if (part.inline_data) {
-          base64Image = part.inline_data.data;
-          mimeType = part.inline_data.mime_type || "image/png";
-          break;
-        }
-      }
+    const imgBuf = new Uint8Array(await response.arrayBuffer());
+    const mimeType = "image/png";
+    // base64 encode in chunks to avoid call-stack issues for large arrays
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < imgBuf.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, Array.from(imgBuf.subarray(i, i + chunk)) as any);
     }
-
-    // Also check if content itself contains a base64 image or data URI
-    if (!base64Image && typeof content === "string") {
-      const dataUriMatch = content.match(/data:(image\/[^;]+);base64,([A-Za-z0-9+/=]+)/);
-      if (dataUriMatch) {
-        mimeType = dataUriMatch[1];
-        base64Image = dataUriMatch[2];
-      }
-    }
-
-    if (!base64Image) {
-      console.error("No image data in response:", JSON.stringify(result).slice(0, 500));
-      return new Response(
-        JSON.stringify({ error: "No image was generated. Try a different prompt." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("Image extracted successfully, mime:", mimeType);
+    const base64Image = btoa(binary);
+    console.log("Fireworks image bytes:", imgBuf.length);
 
     const imageDataUri = `data:${mimeType};base64,${base64Image}`;
 
@@ -123,15 +85,8 @@ serve(async (req) => {
         const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        const ext = mimeType.includes("png") ? "png" : "jpg";
-        const fileName = `${userId}/${Date.now()}-generated.${ext}`;
-
-        // Convert base64 to Uint8Array
-        const binaryStr = atob(base64Image);
-        const bytes = new Uint8Array(binaryStr.length);
-        for (let i = 0; i < binaryStr.length; i++) {
-          bytes[i] = binaryStr.charCodeAt(i);
-        }
+        const fileName = `${userId}/${Date.now()}-generated.png`;
+        const bytes = imgBuf;
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("chat-attachments")
