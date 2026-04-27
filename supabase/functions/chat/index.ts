@@ -627,6 +627,20 @@ serve(async (req) => {
         const urlInfo = await checkUrl(urlMatch[0]);
         if (urlInfo) realtimeContext += urlInfo;
       }
+
+      if (modelName === "ArticQuro") {
+        const prompt = lastUserMessage.content.replace(/^(?:generate|create|make|draw)\s+(?:an?\s+)?(?:image|picture|art|photo)\s*(?:of|about)?\s*/i, "").trim();
+        const imageResponse = await generateImage(prompt || lastUserMessage.content || "premium artwork", supabase, userId);
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: imageResponse.replace("FLUX.1 [schnell]", "ArticQuro") } }] })}\n\n`));
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          }
+        });
+        return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+      }
       
       const queryType = detectQueryType(lastUserMessage.content);
       if (queryType) {
