@@ -469,13 +469,14 @@ const MODEL_MAP: Record<string, string> = {
   "Qurob 3.2": "google/gemini-3-flash-preview",
   "Qurob 4": "google/gemini-3.1-pro-preview",
   "Q-06": "google/gemini-2.5-pro",
+  "ArticQuro": "image",
   // Qurob 5 uses Fireworks (handled separately, not via Lovable AI Gateway)
   "Qurob 5": "fireworks",
 };
 
 // Fireworks model id for Qurob 5 — latest top-tier tuned model
-// Use the instruct variant (faster + verified-available endpoint)
-const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507";
+// Keep Qwen 235B, but use the stable Fireworks slug (the previous instruct-2507 slug returns 404).
+const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b";
 
 // Per-model temperature tuning
 const MODEL_TEMPERATURE: Record<string, number> = {
@@ -484,6 +485,7 @@ const MODEL_TEMPERATURE: Record<string, number> = {
   "Qurob 4": 0.4,      // Pro: focused reasoning, less randomness
   "Q-06": 0.15,         // Code: very precise, minimal creativity
   "Qurob 5": 0.3,      // Ultimate Agent: focused, deep reasoning
+  "ArticQuro": 0.35,   // Image prompts: crisp visual direction
 };
 
 serve(async (req) => {
