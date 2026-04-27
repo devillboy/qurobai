@@ -201,6 +201,7 @@ export const useChat = (conversationId: string | null) => {
       onDone: async () => {
         const finalLatency = firstTokenLatencyMs ?? Math.max(1, Math.round(performance.now() - streamStartedAt));
         setMessages((prev) => {
+          if (!assistantContent.trim()) return prev.filter((msg) => msg.id !== assistantMessageId);
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.id === assistantMessageId) return prev.map((msg) => msg.id === assistantMessageId ? { ...msg, content: assistantContent, latencyMs: finalLatency } : msg);
           else if (!hasAddedAssistantMessage && assistantContent) return [...prev, { id: assistantMessageId, role: "assistant" as const, content: assistantContent, timestamp: new Date(), latencyMs: finalLatency }];
