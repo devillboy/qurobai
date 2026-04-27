@@ -492,7 +492,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, userId, model: requestedModel } = await req.json();
+    const { messages, userId, model: requestedModel, conversationId, memoryEnabled: memoryEnabledOverride } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Invalid request format" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -519,6 +519,7 @@ serve(async (req) => {
     let persona = "default";
 
     let userQurobId = "";
+    let brainMemoryActive = false; // resolved from global setting + per-chat override
     if (userId) {
       try {
         // Fetch user's Qurob ID
@@ -531,7 +532,7 @@ serve(async (req) => {
 
         const { data: settings } = await supabase
           .from("user_settings")
-          .select("base_tone, custom_instructions, persona, tokens_used_today, tokens_reset_date")
+          .select("base_tone, custom_instructions, persona, tokens_used_today, tokens_reset_date, brain_memory_enabled")
           .eq("user_id", userId)
           .single();
 
@@ -539,6 +540,18 @@ serve(async (req) => {
           baseTone = settings.base_tone || "professional";
           customInstructions = settings.custom_instructions || "";
           persona = settings.persona || "default";
+          // Resolve brain memory: explicit per-chat override > per-conversation field > global
+          brainMemoryActive = settings.brain_memory_enabled !== false; // default true
+          if (typeof memoryEnabledOverride === "boolean") {
+            brainMemoryActive = memoryEnabledOverride;
+          } else if (conversationId) {
+            const { data: conv } = await supabase
+              .from("conversations")
+              .select("memory_enabled")
+              .eq("id", conversationId)
+              .single();
+            if (conv && typeof conv.memory_enabled === "boolean") brainMemoryActive = conv.memory_enabled;
+          }
           
           const today = new Date().toISOString().split("T")[0];
           if (settings.tokens_reset_date !== today) {
@@ -579,9 +592,12 @@ serve(async (req) => {
           if (requestedModel === "Q-06") isCodeSpecialist = true;
         }
 
-        const { data: memories } = await supabase.from("user_memory").select("memory_key, memory_value").eq("user_id", userId).limit(25);
-        if (memories?.length) {
-          customInstructions = `## USER PREFERENCES:\n${memories.map(m => `- ${m.memory_key}: ${m.memory_value}`).join("\n")}\n\n${customInstructions}`;
+        // Only inject long-term user memory when Brain Memory is ON
+        if (brainMemoryActive) {
+          const { data: memories } = await supabase.from("user_memory").select("memory_key, memory_value").eq("user_id", userId).limit(25);
+          if (memories?.length) {
+            customInstructions = `## USER PREFERENCES (Brain Memory ON — remember these across conversations):\n${memories.map(m => `- ${m.memory_key}: ${m.memory_value}`).join("\n")}\n\n${customInstructions}`;
+          }
         }
         
         await supabase.from("user_settings").update({ tokens_used_today: (settings?.tokens_used_today || 0) + 1 }).eq("user_id", userId);
