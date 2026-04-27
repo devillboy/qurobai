@@ -573,6 +573,7 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
     prevProps.isPinned === nextProps.isPinned &&
     prevProps.role === nextProps.role &&
     prevProps.messageId === nextProps.messageId &&
+    prevProps.latencyMs === nextProps.latencyMs &&
     prevProps.onEdit === nextProps.onEdit &&
     prevProps.timestamp?.getTime() === nextProps.timestamp?.getTime()
   );
