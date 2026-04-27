@@ -381,7 +381,7 @@ const ReactionButton = memo(({ emoji, count, active, onClick }: { emoji: string;
 ));
 ReactionButton.displayName = "ReactionButton";
 
-export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, timestamp, onRegenerate, onPin, onEdit, messageId }: ChatMessageProps) => {
+export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, timestamp, latencyMs, onRegenerate, onPin, onEdit, messageId }: ChatMessageProps) => {
   const [copied, setCopied] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -438,6 +438,8 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
   const isUser = role === "user";
 
   const renderedContent = useMemo(() => renderContent(content, isUser), [content, isUser]);
+  const showStreamingSkeleton = !isUser && isStreaming && !content.trim();
+  const latencyLabel = latencyMs ? `${(latencyMs / 1000).toFixed(latencyMs < 10000 ? 1 : 0)}s` : null;
 
   return (
     <div 
@@ -477,6 +479,11 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
               </span>
             )}
             {isPinned && <Pin className="w-3 h-3 text-amber-500 animate-fade-in" />}
+            {!isUser && latencyLabel && (
+              <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                <Timer className="w-3 h-3" /> {latencyLabel}
+              </span>
+            )}
           </div>
           
           {/* Content or Edit mode */}
@@ -502,7 +509,7 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
                 ? "text-foreground/85 text-[14.5px] leading-relaxed" 
                 : "text-foreground/80 text-[14.5px] leading-[1.8] tracking-[0.01em]"
             )}>
-              {renderedContent}
+              {showStreamingSkeleton ? <TokenStreamingSkeleton /> : renderedContent}
               {isStreaming && (
                 <span className="inline-flex items-center gap-1 ml-1.5 align-middle">
                   <span className="w-[3px] h-5 bg-primary rounded-sm animate-pulse" />
