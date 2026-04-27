@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useMemo } from "react";
-import { Bot, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2, Maximize2, Pencil, ThumbsUp, ThumbsDown, Heart, X } from "lucide-react";
+import { Bot, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2, Maximize2, Pencil, ThumbsUp, ThumbsDown, Heart, X, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   isPinned?: boolean;
   timestamp?: Date;
+  latencyMs?: number;
   onRegenerate?: () => void;
   onPin?: () => void;
   onEdit?: (newContent: string) => void;
@@ -43,6 +44,25 @@ export const ChatMessageSkeleton = memo(() => {
 });
 
 ChatMessageSkeleton.displayName = "ChatMessageSkeleton";
+
+const TokenStreamingSkeleton = memo(() => (
+  <div className="space-y-3 animate-fade-in" aria-label="QurobAi is streaming a response">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+      </span>
+      <span className="font-medium">Streaming tokens</span>
+    </div>
+    <div className="space-y-2.5">
+      <Skeleton className="h-4 w-[96%] bg-primary/10" />
+      <Skeleton className="h-4 w-[88%] bg-muted/70" />
+      <Skeleton className="h-4 w-[72%] bg-muted/60" />
+    </div>
+  </div>
+));
+
+TokenStreamingSkeleton.displayName = "TokenStreamingSkeleton";
 
 // Claude-style code block with enhanced design
 const CodeBlock = memo(({ code, language }: { code: string; language: string }) => {
@@ -361,7 +381,7 @@ const ReactionButton = memo(({ emoji, count, active, onClick }: { emoji: string;
 ));
 ReactionButton.displayName = "ReactionButton";
 
-export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, timestamp, onRegenerate, onPin, onEdit, messageId }: ChatMessageProps) => {
+export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, timestamp, latencyMs, onRegenerate, onPin, onEdit, messageId }: ChatMessageProps) => {
   const [copied, setCopied] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -418,6 +438,8 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
   const isUser = role === "user";
 
   const renderedContent = useMemo(() => renderContent(content, isUser), [content, isUser]);
+  const showStreamingSkeleton = !isUser && isStreaming && !content.trim();
+  const latencyLabel = latencyMs ? `${(latencyMs / 1000).toFixed(latencyMs < 10000 ? 1 : 0)}s` : null;
 
   return (
     <div 
@@ -457,6 +479,11 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
               </span>
             )}
             {isPinned && <Pin className="w-3 h-3 text-amber-500 animate-fade-in" />}
+            {!isUser && latencyLabel && (
+              <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                <Timer className="w-3 h-3" /> {latencyLabel}
+              </span>
+            )}
           </div>
           
           {/* Content or Edit mode */}
@@ -482,7 +509,7 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
                 ? "text-foreground/85 text-[14.5px] leading-relaxed" 
                 : "text-foreground/80 text-[14.5px] leading-[1.8] tracking-[0.01em]"
             )}>
-              {renderedContent}
+              {showStreamingSkeleton ? <TokenStreamingSkeleton /> : renderedContent}
               {isStreaming && (
                 <span className="inline-flex items-center gap-1 ml-1.5 align-middle">
                   <span className="w-[3px] h-5 bg-primary rounded-sm animate-pulse" />
@@ -546,6 +573,7 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
     prevProps.isPinned === nextProps.isPinned &&
     prevProps.role === nextProps.role &&
     prevProps.messageId === nextProps.messageId &&
+    prevProps.latencyMs === nextProps.latencyMs &&
     prevProps.onEdit === nextProps.onEdit &&
     prevProps.timestamp?.getTime() === nextProps.timestamp?.getTime()
   );

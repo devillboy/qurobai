@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Zap, Code, Crown, Activity } from "lucide-react";
+import { Sparkles, Zap, Code, Crown, Activity, Image } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -12,12 +12,18 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
   const navigate = useNavigate();
   const isUltimate = currentModel === "Qurob 5";
   const isPremium = currentModel === "Qurob 4";
+  const isImageOnly = currentModel === "ArticQuro";
   const displayModel = currentModel === "Qurob 2" ? "Qurob 3.2" : currentModel;
 
   const modelInfo = isUltimate
     ? {
         description: "Next-gen tuned agent with auto Web + Deep Search and live web grounding",
         features: ["Auto Web + Deep Search", "Most powerful reasoning", "Multi-step agent", "Live web grounding"],
+      }
+    : isImageOnly
+    ? {
+        description: "Image-only AI model for high-quality FLUX artwork generation",
+        features: ["Image prompts only", "FLUX schnell", "1024px output", "Fast rendering"],
       }
     : isPremium
     ? {
@@ -54,6 +60,22 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
                 </TooltipContent>
               </Tooltip>
               <span className="text-[10px] tracking-wider text-yellow-500 font-bold uppercase">Ultimate</span>
+            </>
+          ) : isImageOnly ? (
+            <>
+              <Image className="w-4 h-4 text-primary" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="default" className="font-semibold cursor-help">{displayModel}</Badge>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="font-medium mb-1">{modelInfo.description}</p>
+                  <ul className="text-xs text-muted-foreground">
+                    {modelInfo.features.map((f, i) => <li key={i}>• {f}</li>)}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+              <span className="text-[10px] tracking-wider text-primary font-semibold uppercase">Image</span>
             </>
           ) : isPremium ? (
             <>
@@ -122,7 +144,7 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
               <TooltipContent><p>Code Specialist AI for complex programming tasks</p></TooltipContent>
             </Tooltip>
           )}
-          {!isPremium && !isUltimate && (
+          {!isPremium && !isUltimate && !isImageOnly && (
             <Button size="sm" variant="outline" onClick={() => navigate("/subscribe")} className="text-xs">
               <Sparkles className="w-3 h-3 mr-1" />
               Upgrade to Qurob 5

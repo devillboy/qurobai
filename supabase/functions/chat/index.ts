@@ -392,6 +392,12 @@ function summarizeConversation(messages: any[]): any[] {
   return [...firstMessages, { role: "system", content: `[Earlier: User discussed ${summaryPoints.slice(0, 5).join("; ")}...]` }, ...recentMessages];
 }
 
+function isSimpleFastReply(message: string): boolean {
+  const clean = message.replace(/^\[(?:web|deep)\s*search\]\s*/i, "").trim();
+  if (clean.length <= 90 && !/https?:\/\//i.test(clean) && !/(latest|current|today|news|search|compare|code|build|analyze|research|explain in detail)/i.test(clean)) return true;
+  return /^(hi|hello|hey|yo|hii|kaise ho|kya haal|thanks?|ok|haan|na|yes|no|who are you|tum kaun ho)[\s!.?]*$/i.test(clean);
+}
+
 // Image generation — PRIMARY: Fireworks FLUX.1 schnell (fast + premium quality, no Lovable AI Gateway)
 async function generateImage(prompt: string, supabase: any, userId?: string): Promise<string> {
   const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
@@ -469,13 +475,14 @@ const MODEL_MAP: Record<string, string> = {
   "Qurob 3.2": "google/gemini-3-flash-preview",
   "Qurob 4": "google/gemini-3.1-pro-preview",
   "Q-06": "google/gemini-2.5-pro",
+  "ArticQuro": "image",
   // Qurob 5 uses Fireworks (handled separately, not via Lovable AI Gateway)
   "Qurob 5": "fireworks",
 };
 
 // Fireworks model id for Qurob 5 — latest top-tier tuned model
-// Use the instruct variant (faster + verified-available endpoint)
-const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507";
+// Keep Qwen 235B, but use the stable Fireworks slug (the previous instruct-2507 slug returns 404).
+const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b";
 
 // Per-model temperature tuning
 const MODEL_TEMPERATURE: Record<string, number> = {
@@ -484,6 +491,7 @@ const MODEL_TEMPERATURE: Record<string, number> = {
   "Qurob 4": 0.4,      // Pro: focused reasoning, less randomness
   "Q-06": 0.15,         // Code: very precise, minimal creativity
   "Qurob 5": 0.3,      // Ultimate Agent: focused, deep reasoning
+  "ArticQuro": 0.35,   // Image prompts: crisp visual direction
 };
 
 serve(async (req) => {
@@ -619,6 +627,20 @@ serve(async (req) => {
         const urlInfo = await checkUrl(urlMatch[0]);
         if (urlInfo) realtimeContext += urlInfo;
       }
+
+      if (modelName === "ArticQuro") {
+        const prompt = lastUserMessage.content.replace(/^(?:generate|create|make|draw)\s+(?:an?\s+)?(?:image|picture|art|photo)\s*(?:of|about)?\s*/i, "").trim();
+        const imageResponse = await generateImage(prompt || lastUserMessage.content || "premium artwork", supabase, userId);
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: imageResponse.replace("FLUX.1 [schnell]", "ArticQuro") } }] })}\n\n`));
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          }
+        });
+        return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+      }
       
       const queryType = detectQueryType(lastUserMessage.content);
       if (queryType) {
@@ -642,9 +664,12 @@ serve(async (req) => {
       } else {
         // No explicit query type detected — try auto web search silently
         // This kicks in when AI might not know the answer (latest events, specific facts, etc.)
-        // For Qurob 5: ALWAYS auto-search to back every answer with live web data.
-        if (modelName === "Qurob 5") {
-          const forced = await firecrawlSearch(lastUserMessage.content);
+          // Qurob 5 auto-searches only when freshness is needed; simple chats must answer instantly.
+          if (modelName === "Qurob 5" && !isSimpleFastReply(lastUserMessage.content)) {
+            const forced = await Promise.race([
+              firecrawlSearch(lastUserMessage.content),
+              new Promise<string>((resolve) => setTimeout(() => resolve(""), 1800)),
+            ]);
           if (forced) {
             realtimeContext += `\n\n## LIVE WEB CONTEXT (Qurob 5 auto-grounded — use these facts, cite sources naturally):\n${forced}`;
           }
@@ -817,7 +842,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
       if (FIREWORKS_API_KEY) {
         try {
           const ctrl = new AbortController();
-          const tId = setTimeout(() => ctrl.abort(), 8000); // 8s connect cap — fail fast to fallback
+          const tId = setTimeout(() => ctrl.abort(), 3500); // fail fast so users never wait 10–30s
           const fwResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -830,7 +855,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
               messages: allMessages,
               stream: true,
               temperature: 0.3,
-              max_tokens: 2048,    // smaller cap → faster TTFT + completion
+              max_tokens: 900,     // smaller cap → faster TTFT + completion for normal chat
               top_p: 0.9,
               top_k: 40,
             }),
@@ -851,9 +876,11 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         console.error("FIREWORKS_API_KEY not configured for Qurob 5");
       }
 
-      // FAST FALLBACK for Qurob 5: OpenRouter Qwen 2.5 72B (very fast TTFT)
+      // FAST FALLBACK for Qurob 5: OpenRouter Qwen 72B (very fast TTFT)
       if (OPENROUTER_API_KEY) {
         try {
+          const ctrl = new AbortController();
+          const tId = setTimeout(() => ctrl.abort(), 6000);
           const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -867,9 +894,11 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
               messages: allMessages,
               stream: true,
               temperature: 0.3,
-              max_tokens: 2048,
+              max_tokens: 900,
             }),
+            signal: ctrl.signal,
           });
+          clearTimeout(tId);
           if (orResp.ok && orResp.body) {
             console.log("Qurob 5 / OpenRouter Qwen fallback streaming");
             return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
@@ -878,9 +907,9 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
       }
     }
 
-    // PRIMARY: Lovable AI Gateway (skip for Qurob 5 if it already failed; use pro fallback model)
-    const effectiveGatewayModel = modelName === "Qurob 5" ? "openai/gpt-5" : gatewayModel;
-    if (LOVABLE_API_KEY) {
+    // PRIMARY: Lovable AI Gateway for non-Qurob-5 models. Qurob 5 stays on direct providers for lower latency.
+    const effectiveGatewayModel = gatewayModel;
+    if (LOVABLE_API_KEY && modelName !== "Qurob 5" && modelName !== "ArticQuro") {
       try {
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",

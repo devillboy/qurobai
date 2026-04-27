@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildPushHTTPRequest } from "npm:@pushforge/builder@2.0.1";
+import { buildPushHTTPRequest } from "https://esm.sh/@pushforge/builder@2.0.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -118,9 +118,8 @@ Deno.serve(async (req) => {
               },
               message: {
                 payload: pushPayload,
-                ttl: 86400,
+                adminContact: "mailto:sohamghosh679@gmail.com",
               },
-              adminContact: "mailto:sohamghosh679@gmail.com",
             });
 
             const resp = await fetch(endpoint, {
