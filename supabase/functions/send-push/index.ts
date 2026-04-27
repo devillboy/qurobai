@@ -118,7 +118,6 @@ Deno.serve(async (req) => {
               },
               message: {
                 payload: pushPayload,
-                ttl: 86400,
               },
               adminContact: "mailto:sohamghosh679@gmail.com",
             });
