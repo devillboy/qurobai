@@ -235,7 +235,7 @@ export default function ApiAccess() {
       // Test 1: chat endpoint
       const chatResp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${newlyCreatedKey}` },
+        headers: { "Content-Type": "application/json", "x-qurob-api-key": newlyCreatedKey },
         body: JSON.stringify({
           messages: [{ role: "user", content: "Reply with exactly: API working" }],
           model: selectedModel,
@@ -245,7 +245,7 @@ export default function ApiAccess() {
 
       // Test 2: agents listing
       const agentsResp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-agents`, {
-        headers: { "Authorization": `Bearer ${newlyCreatedKey}` },
+        headers: { "x-qurob-api-key": newlyCreatedKey },
       });
       const agentsData = await agentsResp.json();
 
