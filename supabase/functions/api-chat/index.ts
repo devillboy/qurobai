@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-qurob-api-key, x-api-key, accept",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -38,7 +38,7 @@ async function callFireworks(model: string, messages: ChatMsg[], systemPrompt: s
       temperature: 0.7,
       max_tokens: maxTokens,
     }),
-  }, 12000);
+  }, 7000);
   if (!r.ok) {
     console.error("Fireworks", r.status, await r.text().catch(() => ""));
     return null;
@@ -59,7 +59,7 @@ async function callGroq(model: string, messages: ChatMsg[], systemPrompt: string
       temperature: 0.7,
       max_tokens: maxTokens,
     }),
-  }, 10000);
+  }, 7000);
   if (!r.ok) {
     console.error("Groq", r.status, await r.text().catch(() => ""));
     return null;
@@ -85,7 +85,7 @@ async function callOpenRouter(model: string, messages: ChatMsg[], systemPrompt: 
       temperature: 0.7,
       max_tokens: maxTokens,
     }),
-  }, 15000);
+  }, 9000);
   if (!r.ok) {
     console.error("OpenRouter", r.status, await r.text().catch(() => ""));
     return null;
@@ -112,7 +112,7 @@ async function callGemini(model: string, messages: ChatMsg[], systemPrompt: stri
         generationConfig: { temperature: 0.7, maxOutputTokens: maxTokens },
       }),
     },
-    12000,
+    8000,
   );
   if (!r.ok) {
     console.error("Gemini", r.status, await r.text().catch(() => ""));
