@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-qurob-api-key, x-api-key, accept",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
@@ -24,7 +24,7 @@ async function callFireworks(model: string, messages: Msg[], systemPrompt: strin
   const r = await fetchWithTimeout("https://api.fireworks.ai/inference/v1/chat/completions", {
     method: "POST", headers: { Authorization: `Bearer ${k}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, ...messages], temperature: 0.7, max_tokens: maxTokens }),
-  }, 12000);
+  }, 7000);
   if (!r.ok) { console.error("FW", r.status); return null; }
   const d = await r.json(); return d.choices?.[0]?.message?.content || null;
 }
@@ -33,7 +33,7 @@ async function callGroq(model: string, messages: Msg[], systemPrompt: string, ma
   const r = await fetchWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST", headers: { Authorization: `Bearer ${k}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, ...messages], temperature: 0.7, max_tokens: maxTokens }),
-  }, 10000);
+  }, 7000);
   if (!r.ok) { console.error("GROQ", r.status); return null; }
   const d = await r.json(); return d.choices?.[0]?.message?.content || null;
 }
@@ -43,7 +43,7 @@ async function callOpenRouter(model: string, messages: Msg[], systemPrompt: stri
     method: "POST",
     headers: { Authorization: `Bearer ${k}`, "Content-Type": "application/json", "HTTP-Referer": "https://qurobai.lovable.app", "X-Title": "QurobAi Agents" },
     body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, ...messages], temperature: 0.7, max_tokens: maxTokens }),
-  }, 15000);
+  }, 9000);
   if (!r.ok) { console.error("OR", r.status); return null; }
   const d = await r.json(); return d.choices?.[0]?.message?.content || null;
 }
@@ -60,10 +60,11 @@ async function runChat(messages: Msg[], systemPrompt: string) {
 
 // ---- Auth helper ----
 async function authenticate(req: Request, supabase: any) {
-  const h = req.headers.get("Authorization");
-  if (!h || !h.startsWith("Bearer ")) return { error: json({ error: "Missing API key", code: "UNAUTHORIZED" }, 401) };
-  const apiKey = h.replace("Bearer ", "").trim();
-  if (!apiKey.startsWith("qai_")) return { error: json({ error: "Invalid key format", code: "INVALID_KEY" }, 401) };
+  const h = req.headers.get("Authorization") || "";
+  const headerKey = req.headers.get("x-qurob-api-key") || req.headers.get("x-api-key") || "";
+  const apiKey = (h.toLowerCase().startsWith("bearer ") ? h.slice(7) : headerKey).trim();
+  if (!apiKey) return { error: json({ error: "Missing API key. Send Authorization: Bearer qai_... or x-qurob-api-key.", code: "UNAUTHORIZED" }, 401) };
+  if (!apiKey.startsWith("qai_")) return { error: json({ error: "Invalid key format. Qurob API keys must start with 'qai_'.", code: "INVALID_KEY" }, 401) };
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(apiKey));
   const hash = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
   const { data, error } = await supabase.from("api_keys").select("*").eq("key_hash", hash).eq("is_active", true).single();

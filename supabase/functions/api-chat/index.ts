@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-qurob-api-key, x-api-key, accept",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -38,7 +38,7 @@ async function callFireworks(model: string, messages: ChatMsg[], systemPrompt: s
       temperature: 0.7,
       max_tokens: maxTokens,
     }),
-  }, 12000);
+  }, 7000);
   if (!r.ok) {
     console.error("Fireworks", r.status, await r.text().catch(() => ""));
     return null;
@@ -59,7 +59,7 @@ async function callGroq(model: string, messages: ChatMsg[], systemPrompt: string
       temperature: 0.7,
       max_tokens: maxTokens,
     }),
-  }, 10000);
+  }, 7000);
   if (!r.ok) {
     console.error("Groq", r.status, await r.text().catch(() => ""));
     return null;
@@ -85,7 +85,7 @@ async function callOpenRouter(model: string, messages: ChatMsg[], systemPrompt: 
       temperature: 0.7,
       max_tokens: maxTokens,
     }),
-  }, 15000);
+  }, 9000);
   if (!r.ok) {
     console.error("OpenRouter", r.status, await r.text().catch(() => ""));
     return null;
@@ -112,7 +112,7 @@ async function callGemini(model: string, messages: ChatMsg[], systemPrompt: stri
         generationConfig: { temperature: 0.7, maxOutputTokens: maxTokens },
       }),
     },
-    12000,
+    8000,
   );
   if (!r.ok) {
     console.error("Gemini", r.status, await r.text().catch(() => ""));
@@ -198,13 +198,16 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return json({ error: "Missing or invalid API key. Send 'Authorization: Bearer qai_...'", code: "UNAUTHORIZED" }, 401);
+    const authHeader = req.headers.get("Authorization") || "";
+    const headerKey = req.headers.get("x-qurob-api-key") || req.headers.get("x-api-key") || "";
+    const apiKey = (authHeader.toLowerCase().startsWith("bearer ")
+      ? authHeader.slice(7)
+      : headerKey).trim();
+    if (!apiKey) {
+      return json({ error: "Missing API key. Send Authorization: Bearer qai_... or x-qurob-api-key.", code: "UNAUTHORIZED" }, 401);
     }
-    const apiKey = authHeader.replace("Bearer ", "").trim();
     if (!apiKey.startsWith("qai_")) {
-      return json({ error: "Invalid API key format. Keys must start with 'qai_'", code: "INVALID_KEY" }, 401);
+      return json({ error: "Invalid API key format. Qurob API keys must start with 'qai_'.", code: "INVALID_KEY" }, 401);
     }
 
     const keyHashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(apiKey));
