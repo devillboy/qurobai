@@ -700,7 +700,7 @@ export default function ApiAccess() {
                       <pre className="p-4 bg-muted/50 rounded-xl text-sm overflow-x-auto border border-border font-mono">
 {`POST /api-chat
 Content-Type: application/json
-Authorization: Bearer YOUR_API_KEY
+x-qurob-api-key: YOUR_API_KEY
 
 {
   "model": "qurob-3.2",          // qurob-2 | qurob-3.2 | qurob-4 | q-06 (all unlocked during promo)
@@ -733,7 +733,7 @@ Authorization: Bearer YOUR_API_KEY
 {`curl -X POST \\
   ${baseUrl} \\
   -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer qai_your_key_here" \\
+  -H "x-qurob-api-key: qai_your_key_here" \\
   -d '{
     "messages": [
       {"role": "user", "content": "Hello!"}
@@ -749,7 +749,7 @@ Authorization: Bearer YOUR_API_KEY
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer qai_your_key_here'
+    'x-qurob-api-key': 'qai_your_key_here'
   },
   body: JSON.stringify({
     messages: [{ role: 'user', content: 'Hello!' }]
@@ -770,7 +770,7 @@ response = requests.post(
     '${baseUrl}',
     headers={
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer qai_your_key_here'
+        'x-qurob-api-key': 'qai_your_key_here'
     },
     json={
         'messages': [{'role': 'user', 'content': 'Hello!'}]
@@ -812,12 +812,12 @@ print(response.json()['message'])`}
                       <pre className="p-4 bg-muted/50 rounded-xl text-sm overflow-x-auto border border-border font-mono">
 {`# List agents
 curl ${agentsUrl} \\
-  -H "Authorization: Bearer qai_your_key_here"
+  -H "x-qurob-api-key: qai_your_key_here"
 
 # Invoke an agent (replace AGENT_ID)
 curl -X POST ${agentsUrl}/AGENT_ID/chat \\
   -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer qai_your_key_here" \\
+  -H "x-qurob-api-key: qai_your_key_here" \\
   -d '{ "messages": [{"role":"user","content":"Hi!"}] }'`}
                       </pre>
                     </div>
