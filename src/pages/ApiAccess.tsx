@@ -599,6 +599,71 @@ export default function ApiAccess() {
                 </div>
               </TabsContent>
 
+              <TabsContent value="agents" className="space-y-5">
+                <Card className="premium-card overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+                  <CardHeader className="relative z-10">
+                    <CardTitle className="flex items-center gap-2">
+                      <Bot className="w-5 h-5 text-primary" />
+                      Available Agents
+                    </CardTitle>
+                    <CardDescription>
+                      Specialised QurobAi agents you can call directly with your API key. Endpoint:{" "}
+                      <code className="text-primary font-mono">{agentsUrl}</code>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 relative z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{agents.length} agents available</span>
+                      <Button variant="outline" size="sm" onClick={loadAgents} disabled={loadingAgents}>
+                        {loadingAgents ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />}
+                        Refresh
+                      </Button>
+                    </div>
+
+                    {loadingAgents ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin" />
+                        Loading agents...
+                      </div>
+                    ) : agents.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Bot className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <p className="text-muted-foreground">No agents found. Create an API key to load the catalog.</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-3">
+                        {agents.map((a) => (
+                          <div key={a.id} className="p-4 rounded-xl border border-border bg-muted/30 space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold">{a.name}</span>
+                                  {a.official && <Badge variant="default" className="text-xs">Official</Badge>}
+                                  {a.category && <Badge variant="outline" className="text-xs">{a.category}</Badge>}
+                                  <span className="text-xs text-muted-foreground">{a.uses} uses</span>
+                                </div>
+                                {a.description && (
+                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 text-xs bg-background/60 px-2 py-1.5 rounded border border-border font-mono truncate">
+                                POST {a.invoke_url}
+                              </code>
+                              <Button variant="ghost" size="icon" onClick={() => copyKey(a.invoke_url)}>
+                                <Copy className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               <TabsContent value="docs" className="space-y-5">
                 <Card className="premium-card overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
@@ -638,6 +703,7 @@ Content-Type: application/json
 Authorization: Bearer YOUR_API_KEY
 
 {
+  "model": "qurob-3.2",          // qurob-2 | qurob-3.2 | qurob-4 | q-06 (all unlocked during promo)
   "messages": [
     {"role": "user", "content": "Hello!"}
   ]
@@ -732,6 +798,28 @@ print(response.json()['message'])`}
                           </div>
                         ))}
                       </div>
+                    </div>
+
+                    {/* Agents endpoint docs */}
+                    <div className="pt-4 border-t border-border">
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <Bot className="w-4 h-4 text-primary" />
+                        Agents API
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        List all available agents and invoke any one with the same API key.
+                      </p>
+                      <pre className="p-4 bg-muted/50 rounded-xl text-sm overflow-x-auto border border-border font-mono">
+{`# List agents
+curl ${agentsUrl} \\
+  -H "Authorization: Bearer qai_your_key_here"
+
+# Invoke an agent (replace AGENT_ID)
+curl -X POST ${agentsUrl}/AGENT_ID/chat \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer qai_your_key_here" \\
+  -d '{ "messages": [{"role":"user","content":"Hi!"}] }'`}
+                      </pre>
                     </div>
                   </CardContent>
                 </Card>
