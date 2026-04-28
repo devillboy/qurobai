@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-qurob-api-key, x-api-key, accept",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
@@ -24,7 +24,7 @@ async function callFireworks(model: string, messages: Msg[], systemPrompt: strin
   const r = await fetchWithTimeout("https://api.fireworks.ai/inference/v1/chat/completions", {
     method: "POST", headers: { Authorization: `Bearer ${k}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, ...messages], temperature: 0.7, max_tokens: maxTokens }),
-  }, 12000);
+  }, 7000);
   if (!r.ok) { console.error("FW", r.status); return null; }
   const d = await r.json(); return d.choices?.[0]?.message?.content || null;
 }
@@ -33,7 +33,7 @@ async function callGroq(model: string, messages: Msg[], systemPrompt: string, ma
   const r = await fetchWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST", headers: { Authorization: `Bearer ${k}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, ...messages], temperature: 0.7, max_tokens: maxTokens }),
-  }, 10000);
+  }, 7000);
   if (!r.ok) { console.error("GROQ", r.status); return null; }
   const d = await r.json(); return d.choices?.[0]?.message?.content || null;
 }
@@ -43,7 +43,7 @@ async function callOpenRouter(model: string, messages: Msg[], systemPrompt: stri
     method: "POST",
     headers: { Authorization: `Bearer ${k}`, "Content-Type": "application/json", "HTTP-Referer": "https://qurobai.lovable.app", "X-Title": "QurobAi Agents" },
     body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, ...messages], temperature: 0.7, max_tokens: maxTokens }),
-  }, 15000);
+  }, 9000);
   if (!r.ok) { console.error("OR", r.status); return null; }
   const d = await r.json(); return d.choices?.[0]?.message?.content || null;
 }
