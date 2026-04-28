@@ -334,6 +334,23 @@ export default function ApiAccess() {
               </p>
             </div>
 
+            {/* 🎉 Promo banner */}
+            {PROMO_ACTIVE && (
+              <Card className="mb-6 border-2 border-primary/40 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent overflow-hidden">
+                <CardContent className="p-4 flex flex-wrap items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <Gift className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <p className="font-semibold text-foreground">3 Months FREE — All Models + Agents Unlocked 🚀</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ek hi API key se Qurob 2, Qurob 3.2, Qurob 4 aur Q-06 — sab use karo. Saath mein agents API bhi free.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Current Plan & Limits */}
             <Card className="mb-6 premium-card overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
@@ -367,6 +384,10 @@ export default function ApiAccess() {
                 <TabsTrigger value="keys" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                   <Key className="w-4 h-4 mr-1.5" />
                   API Keys
+                </TabsTrigger>
+                <TabsTrigger value="agents" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+                  <Bot className="w-4 h-4 mr-1.5" />
+                  Agents
                 </TabsTrigger>
                 <TabsTrigger value="docs" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                   <Code className="w-4 h-4 mr-1.5" />
@@ -421,40 +442,16 @@ export default function ApiAccess() {
                           className="w-full mt-1 h-10 px-3 rounded-md border border-input bg-input/50 text-foreground"
                           disabled={!canCreateMoreKeys()}
                         >
-                          <option value="qurob-2">Qurob 2 (Free Tier)</option>
-                          <option value="qurob-4" disabled={!hasPremium}>
-                            Qurob 4 (Premium) {!hasPremium && "🔒"}
-                          </option>
-                          <option value="q-06" disabled={!hasQ06}>
-                            Q-06 (Code Specialist) {!hasQ06 && "🔒"}
-                          </option>
+                          <option value="qurob-3.2">Qurob 3.2 (default • fast)</option>
+                          <option value="qurob-2">Qurob 2 (legacy)</option>
+                          <option value="qurob-4">Qurob 4 (premium quality)</option>
+                          <option value="q-06">Q-06 (code specialist)</option>
                         </select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Promo active — har key se sab models chalenge. Runtime pe `model` field bhi pass kar sakte ho.
+                        </p>
                       </div>
                     </div>
-
-                    {selectedModel === "qurob-4" && !hasPremium && (
-                      <Alert className="animate-fade-in border-warning/30 bg-warning/10">
-                        <AlertTriangle className="w-4 h-4 text-warning" />
-                        <AlertDescription className="text-sm">
-                          <strong>Premium required</strong> - Qurob 4 API keys require an active Premium subscription (₹289/month).
-                          <Button size="sm" className="ml-2" onClick={() => navigate("/subscribe")}>
-                            Upgrade Now
-                          </Button>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {selectedModel === "q-06" && !hasQ06 && (
-                      <Alert className="animate-fade-in border-primary/30 bg-primary/10">
-                        <Code className="w-4 h-4 text-primary" />
-                        <AlertDescription className="text-sm">
-                          <strong>Q-06 subscription required</strong> - Code specialist API keys require Q-06 plan (₹320/month).
-                          <Button size="sm" className="ml-2" onClick={() => navigate("/subscribe")}>
-                            Get Q-06
-                          </Button>
-                        </AlertDescription>
-                      </Alert>
-                    )}
 
                     <Button 
                       onClick={generateApiKey} 
