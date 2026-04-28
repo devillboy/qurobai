@@ -1,100 +1,75 @@
-# Add Qurob 5 — Next-Gen Tuned Agent Model add more updates
+## API Platform Fix & Upgrade
 
-## Goal
+Bhai, problem clear hai. Issues mile:
 
-Launch **Qurob 5** as the new flagship premium model at **₹1289/month** with auto-enabled Deep Search + Web Search, the most powerful tuned agent in the QurobAi lineup. Optimize all existing models alongside it, with Qurob 5 positioned as the "Ultimate" tier above Qurob 4. Fix the api error not working dont use lovable ai. Change ai slnp web look
+1. **Connection error** → `api-chat` mein purane Gemini model use ho rahe hain (`gemini-2.5-pro-preview-06-05`, `gemini-2.0-flash`) jo ab Google ke direct API mein deprecated/unavailable hain → 404/400 → fallback OpenRouter bhi same models try karta hai → fail.
+2. **Single key se sare models** access nahi milta — model key creation time pe lock ho jata hai.
+3. **Agents (Qurob Bots)** API mein expose hi nahi hain — koi `/api-agents` endpoint nahi.
+4. **Docs** mein examples sirf chat ke hain, agents/listing ka mention nahi.
+5. User ne bola: **3 mahine sab free** + **Lovable AI Gateway use mat karo**.
 
-## What Qurob 5 Will Be
+---
 
-- **Name**: Qurob 5
-- **Tagline**: "Next-Gen Fully Tuned Agent"
-- **Price**: ₹1289/month
-- **Backend model**: `Fireworks latest model`
-- **Auto Web Search**: Always ON — no toggle needed, agent decides when to search
-- **Auto Deep Search**: Triggered automatically for research-heavy / multi-step queries
-- **Personality**: Senior autonomous agent — proactive, multi-step planner, tuned on QurobAi's India-first identity
-- **Badge**: "ULTIMATE" (gradient gold/purple)
-- **Icon**: Crown / Rocket     
+### What we'll build (no Lovable AI Gateway, direct providers only)
 
-## Database Changes (migration)
+#### 1. Fix `api-chat` edge function — connection error gone
+- **Primary provider: Fireworks AI** (already has `FIREWORKS_API_KEY`, OpenAI-compatible, fast):
+  - `qurob-2` / `qurob-3.2` → `qwen3-235b-a22b-instruct-2507`
+  - `qurob-4` → `qwen3-235b-a22b-instruct-2507` (premium-tuned params, higher max_tokens)
+  - `q-06` → `accounts/fireworks/models/qwen2p5-coder-32b-instruct`
+- **Fallback: OpenRouter** with currently-valid model IDs (`google/gemini-2.0-flash-exp:free`, `qwen/qwen-2.5-72b-instruct`).
+- **Second fallback: Groq** (`GROQ_API_KEY` already set) — `llama-3.3-70b-versatile`.
+- **Third fallback: Google Gemini direct** with current model IDs (`gemini-2.0-flash`, `gemini-2.5-flash`).
+- 8s timeout per provider, fail-fast chain. Detailed error logs so debugging easy.
 
-1. Insert new row into `subscription_plans`:
-  - `name`: "Ultimate Agent"
-  - `model_name`: "Qurob 5"
-  - `price_inr`: 1289
-  - `duration_days`: 30
-  - `features`: `["Next-gen tuned agent", "Auto Web + Deep Search", "Most powerful reasoning", "Multi-step task agent", "Priority infrastructure", "Unlimited tokens", "All Qurob 4 + Q-06 features"]`
-2. No schema changes needed — existing `get_user_model` RPC and gating already supports new model_name strings.
+#### 2. Single key → all models (3-month free promotion)
+- Add new column `api_keys.allowed_models text[]` (default `['qurob-2','qurob-3.2','qurob-4','q-06']`).
+- Add `api_keys.promo_expires_at timestamptz` — set to `now() + 90 days` for every new key created during promo window.
+- In `api-chat`: read `model` from request body (override key's default model). Validate it's in `allowed_models` OR `promo_expires_at > now()`.
+- Frontend: when promo active, show banner **"🎉 3 Months FREE — All Models Unlocked"** and remove the "model selector" lock — one key works for chat + agents + Q-06 + Qurob 4.
 
-## Backend Changes — `supabase/functions/chat/index.ts`
+#### 3. New `/api-agents` endpoints (list + invoke Qurob bots)
+- New edge function **`api-agents`**:
+  - `GET /api-agents` → returns all `is_public=true OR is_official=true` bots: `{ id, name, description, category, icon, system_prompt_preview }`.
+  - `POST /api-agents/:botId/chat` → runs chat using that bot's `system_prompt` injected as system message, then routes to same provider chain as `api-chat`.
+- Auth: same `qai_` API key check as `api-chat`.
+- Increment `qurob_bots.uses_count` on every invoke.
 
-1. **Model map**: add `"Qurob 5": "openai/gpt-5"`
-2. **Temperature map**: add `"Qurob 5": 0.3` (focused agent reasoning)
-3. **Subscription gating**: extend the `requestedModel === "Qurob 4" || requestedModel === "Q-06"` check to also include `"Qurob 5"`
-4. **Auto Web Search for Qurob 5**: when `modelName === "Qurob 5"`, force web-search context injection regardless of `[Web Search]` / `[Deep Search]` prefix — call `firecrawlSearch()` automatically for any factual / current-info query (use a lightweight intent check: contains years 2024+, "latest", "news", "today", question words, etc.)
-5. **Reasoning param**: when calling gateway with `openai/gpt-5`, add `reasoning: { effort: "high" }` to body
-6. **Personality entry** in `modelPersonality`:
-  ```
-   "Qurob 5": "You are Qurob 5 — QurobAi's flagship Ultimate Agent. You are autonomous, proactive, and operate like a senior multi-step agent. You plan before acting, verify with live web data automatically, break complex tasks into steps, and deliver complete solutions. You think deeply, cite sources when web-searched, and work like a tuned consultant who never gives shallow answers. You are India-first, warm, and precise."
-  ```
-7. **System-prompt updates**: add Qurob 5 row to the model overview (line 29-31) and pricing table (46-48)
+#### 4. ApiAccess.tsx UI improvements
+- Add **"Agents"** tab next to API Keys / Documentation / Pricing showing the live agent list (fetched from same endpoint user will use) + copy-buttons for each bot's invoke URL.
+- Add **promo banner** at top: "All API access free until [date]. One key, all models, all agents."
+- Update Documentation tab with:
+  - `GET /api-agents` example (curl + JS + Python)
+  - `POST /api-agents/{id}/chat` example
+  - `model` parameter docs for `/api-chat` (qurob-2 | qurob-3.2 | qurob-4 | q-06)
+- Remove "Premium required" / "Q-06 required" locks during promo period.
 
-## Frontend Changes
+#### 5. Database migration
+```sql
+ALTER TABLE api_keys
+  ADD COLUMN allowed_models text[] DEFAULT ARRAY['qurob-2','qurob-3.2','qurob-4','q-06'],
+  ADD COLUMN promo_expires_at timestamptz DEFAULT (now() + interval '90 days');
 
-### `src/components/ModelSelector.tsx`
-
-- Add new entry to `models` array:
-  ```ts
-  { id: "Qurob 5", name: "Qurob 5", description: "Ultimate Agent • ₹1289/mo", icon: Crown, free: false, badge: "ULTIMATE", color: "text-yellow-500" }
-  ```
-- Place at top of paid tier list (above Qurob 4)
-- Lock icon + redirect to /subscribe when not subscribed
-
-### `src/components/ModelIndicator.tsx`
-
-- Add `isUltimate` check for Qurob 5
-- Show gold/purple gradient badge with crown icon
-- Show description: "Next-gen tuned agent with auto deep web search"
-
-### `src/pages/Subscribe.tsx`
-
-- Add new card **above** the Qurob 4 card: "Qurob 5 — Ultimate Agent" at ₹1289
-- Highlight as "MOST POWERFUL" with gradient border
-- Lookup via `plans.find(p => p.model_name === "Qurob 5")`
-- Include in `selectedPlan` switching logic and final price display
-- Layout: 3 cards in a responsive grid (Qurob 5, Qurob 4, Q-06)
-
-### `src/components/ChatInputEnhanced.tsx`
-
-- When current model === "Qurob 5", show a small inline pill: "🔍 Auto Web + Deep Search Active" instead of the Web/Deep toggles (since they're automatic)
-- Hide manual toggles for Qurob 5 users
-
-### `src/hooks/useChat.ts`
-
-- No structural changes needed — model selection flows through existing path
-
-### Optimizations to existing models (light tuning)
-
-- `chat/index.ts` system prompt: tighten the model lineup section to clearly position the 4 tiers (Qurob 3.2 free → Qurob 4 → Q-06 → Qurob 5)
-- Update `WhatsNewPopup.tsx` with announcement: "🚀 Qurob 5 launched — Next-gen Ultimate Agent"
-- Update `LandingPage.tsx` model showcase to feature Qurob 5
-
-## Files to Edit
-
-```text
-supabase/migrations/<new>_add_qurob5_plan.sql      [NEW]
-supabase/functions/chat/index.ts                   [model map, gating, auto-search, personality, system prompt]
-src/components/ModelSelector.tsx                   [add Qurob 5 entry]
-src/components/ModelIndicator.tsx                  [Ultimate badge styling]
-src/components/ChatInputEnhanced.tsx               [hide toggles for Qurob 5, show auto-search pill]
-src/pages/Subscribe.tsx                            [add Qurob 5 plan card]
-src/components/WhatsNewPopup.tsx                   [launch announcement]
-src/components/LandingPage.tsx                     [feature Qurob 5]
+UPDATE api_keys SET
+  allowed_models = ARRAY['qurob-2','qurob-3.2','qurob-4','q-06'],
+  promo_expires_at = now() + interval '90 days'
+WHERE promo_expires_at IS NULL;
 ```
 
-## Notes
+#### 6. Diagnostic test endpoint
+- ApiAccess "Test API Key" button: extend it to also test `/api-agents` listing so user can see green ✅ on both endpoints immediately after key creation.
 
-- Firecrawl integration already exists in `chat/index.ts` — Qurob 5's auto-search reuses `firecrawlSearch()` and `firecrawlScrape()`
-- Subscription gating uses existing `get_user_model` RPC — no auth changes needed
-- Payment flow (UPI only) already works via `verify-payment` function — new plan will flow through unchanged
-- After deploy, existing Qurob 4 / Q-06 subscribers keep their plans; Qurob 5 requires separate purchase            
+---
+
+### Files touched
+- **Edit**: `supabase/functions/api-chat/index.ts` (provider chain fix, model-from-body, promo logic)
+- **Create**: `supabase/functions/api-agents/index.ts`
+- **Create**: migration for `allowed_models` + `promo_expires_at`
+- **Edit**: `src/pages/ApiAccess.tsx` (Agents tab, promo banner, removed locks, updated docs, dual test)
+
+### What stays the same
+- Key generation flow, hash storage, `qai_` prefix.
+- Existing usage tracking (`api_keys.requests_today/month/total`, `api_usage` table).
+- RLS policies.
+
+Approve karo toh implement kar deta hoon — connection error gone, ek key se sab kuch chalega, agents API live, 3 months sab free.
