@@ -12,7 +12,7 @@ import {
   ArrowLeft, Key, Copy, Eye, EyeOff, Trash2, Plus, 
   Code, Zap, Clock, BarChart3, ExternalLink, RefreshCw,
   Sparkles, Terminal, Shield, Rocket, CheckCircle2,
-  AlertTriangle, Play, Loader2
+  AlertTriangle, Play, Loader2, Bot, Gift
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThreeDText } from "@/components/ThreeDText";
@@ -33,14 +33,29 @@ interface ApiKey {
   last_used_at: string | null;
   is_active: boolean;
   created_at: string;
+  promo_expires_at?: string | null;
+  allowed_models?: string[] | null;
 }
 
-// API key limits per tier
+// 🎉 3-month free promo: every key unlocks every model + agents.
+const PROMO_ACTIVE = true;
+// API key limits per tier (during promo, daily limits are raised for everyone)
 const KEY_LIMITS = {
-  free: { maxKeys: 2, models: ["qurob-2"], dailyLimit: 1000, monthlyLimit: 10000 },
-  premium: { maxKeys: 5, models: ["qurob-2", "qurob-4"], dailyLimit: 10000, monthlyLimit: 100000 },
-  q06: { maxKeys: 10, models: ["qurob-2", "qurob-4", "q-06"], dailyLimit: 50000, monthlyLimit: null },
+  free:    { maxKeys: 5,  models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 5000,  monthlyLimit: 50000 },
+  premium: { maxKeys: 8,  models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 20000, monthlyLimit: 200000 },
+  q06:     { maxKeys: 15, models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 50000, monthlyLimit: null },
 };
+
+interface AgentItem {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  icon: string | null;
+  official: boolean;
+  uses: number;
+  invoke_url: string;
+}
 
 export default function ApiAccess() {
   const { user } = useAuth();
@@ -57,6 +72,8 @@ export default function ApiAccess() {
   const [userTier, setUserTier] = useState<"free" | "premium" | "q06">("free");
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
+  const [agents, setAgents] = useState<AgentItem[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -110,7 +127,7 @@ export default function ApiAccess() {
 
   const getCurrentLimits = () => KEY_LIMITS[userTier];
   const canCreateMoreKeys = () => apiKeys.length < getCurrentLimits().maxKeys;
-  const canSelectModel = (model: string) => getCurrentLimits().models.includes(model);
+  const canSelectModel = (_model: string) => true; // promo: all models unlocked
 
   const generateApiKey = async () => {
     if (!user) return;
@@ -164,7 +181,7 @@ export default function ApiAccess() {
           key_preview: fullKey.slice(0, 8) + "..." + fullKey.slice(-4),
           name: newKeyName || "My API Key",
           model: selectedModel,
-          is_trial: isTrial,
+          is_trial: false, // promo: no trial restriction
           trial_expires_at: trialExpiry,
         })
         .select()
@@ -215,26 +232,35 @@ export default function ApiAccess() {
     setTestResult(null);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${newlyCreatedKey}`,
-          },
-          body: JSON.stringify({
-            messages: [{ role: "user", content: "Hello! Say 'API working' in 5 words or less." }]
-          }),
-        }
-      );
+      // Test 1: chat endpoint
+      const chatResp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${newlyCreatedKey}` },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "Reply with exactly: API working" }],
+          model: selectedModel,
+        }),
+      });
+      const chatData = await chatResp.json();
 
-      const data = await response.json();
-      if (response.ok && data.message) {
-        setTestResult(`✅ Success! Response: "${data.message.slice(0, 100)}..."`);
+      // Test 2: agents listing
+      const agentsResp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-agents`, {
+        headers: { "Authorization": `Bearer ${newlyCreatedKey}` },
+      });
+      const agentsData = await agentsResp.json();
+
+      const lines: string[] = [];
+      if (chatResp.ok && chatData.message) {
+        lines.push(`✅ /api-chat OK (${chatData.provider}): "${String(chatData.message).slice(0, 80)}..."`);
       } else {
-        setTestResult(`❌ Error: ${data.error || "Unknown error"}`);
+        lines.push(`❌ /api-chat FAILED: ${chatData.error || chatResp.status}`);
       }
+      if (agentsResp.ok && Array.isArray(agentsData.agents)) {
+        lines.push(`✅ /api-agents OK — ${agentsData.count} agents available`);
+      } else {
+        lines.push(`❌ /api-agents FAILED: ${agentsData.error || agentsResp.status}`);
+      }
+      setTestResult(lines.join("\n"));
     } catch (e) {
       setTestResult(`❌ Connection failed: ${e instanceof Error ? e.message : "Unknown error"}`);
     } finally {
@@ -242,7 +268,42 @@ export default function ApiAccess() {
     }
   };
 
+  const loadAgents = async () => {
+    if (apiKeys.length === 0) {
+      toast.error("Create an API key first to view agents.");
+      return;
+    }
+    setLoadingAgents(true);
+    try {
+      // Use service-role-free public read of the bots table (RLS already permits public/official bots)
+      const { data, error } = await supabase
+        .from("qurob_bots")
+        .select("id,name,description,category,icon,is_official,uses_count")
+        .or("is_public.eq.true,is_official.eq.true")
+        .order("is_official", { ascending: false })
+        .order("uses_count", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-agents`;
+      setAgents((data || []).map((b: any) => ({
+        id: b.id, name: b.name, description: b.description, category: b.category,
+        icon: b.icon, official: b.is_official, uses: b.uses_count,
+        invoke_url: `${baseUrl}/${b.id}/chat`,
+      })));
+    } catch (e: any) {
+      toast.error("Failed to load agents: " + (e?.message || "unknown"));
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && apiKeys.length > 0) loadAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, apiKeys.length]);
+
   const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-chat`;
+  const agentsUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-agents`;
   const limits = getCurrentLimits();
 
   return (
@@ -272,6 +333,23 @@ export default function ApiAccess() {
                 Integrate QurobAi into your applications with our powerful API
               </p>
             </div>
+
+            {/* 🎉 Promo banner */}
+            {PROMO_ACTIVE && (
+              <Card className="mb-6 border-2 border-primary/40 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent overflow-hidden">
+                <CardContent className="p-4 flex flex-wrap items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <Gift className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <p className="font-semibold text-foreground">3 Months FREE — All Models + Agents Unlocked 🚀</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ek hi API key se Qurob 2, Qurob 3.2, Qurob 4 aur Q-06 — sab use karo. Saath mein agents API bhi free.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Current Plan & Limits */}
             <Card className="mb-6 premium-card overflow-hidden">
@@ -306,6 +384,10 @@ export default function ApiAccess() {
                 <TabsTrigger value="keys" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                   <Key className="w-4 h-4 mr-1.5" />
                   API Keys
+                </TabsTrigger>
+                <TabsTrigger value="agents" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+                  <Bot className="w-4 h-4 mr-1.5" />
+                  Agents
                 </TabsTrigger>
                 <TabsTrigger value="docs" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                   <Code className="w-4 h-4 mr-1.5" />
@@ -360,40 +442,16 @@ export default function ApiAccess() {
                           className="w-full mt-1 h-10 px-3 rounded-md border border-input bg-input/50 text-foreground"
                           disabled={!canCreateMoreKeys()}
                         >
-                          <option value="qurob-2">Qurob 2 (Free Tier)</option>
-                          <option value="qurob-4" disabled={!hasPremium}>
-                            Qurob 4 (Premium) {!hasPremium && "🔒"}
-                          </option>
-                          <option value="q-06" disabled={!hasQ06}>
-                            Q-06 (Code Specialist) {!hasQ06 && "🔒"}
-                          </option>
+                          <option value="qurob-3.2">Qurob 3.2 (default • fast)</option>
+                          <option value="qurob-2">Qurob 2 (legacy)</option>
+                          <option value="qurob-4">Qurob 4 (premium quality)</option>
+                          <option value="q-06">Q-06 (code specialist)</option>
                         </select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Promo active — har key se sab models chalenge. Runtime pe `model` field bhi pass kar sakte ho.
+                        </p>
                       </div>
                     </div>
-
-                    {selectedModel === "qurob-4" && !hasPremium && (
-                      <Alert className="animate-fade-in border-warning/30 bg-warning/10">
-                        <AlertTriangle className="w-4 h-4 text-warning" />
-                        <AlertDescription className="text-sm">
-                          <strong>Premium required</strong> - Qurob 4 API keys require an active Premium subscription (₹289/month).
-                          <Button size="sm" className="ml-2" onClick={() => navigate("/subscribe")}>
-                            Upgrade Now
-                          </Button>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {selectedModel === "q-06" && !hasQ06 && (
-                      <Alert className="animate-fade-in border-primary/30 bg-primary/10">
-                        <Code className="w-4 h-4 text-primary" />
-                        <AlertDescription className="text-sm">
-                          <strong>Q-06 subscription required</strong> - Code specialist API keys require Q-06 plan (₹320/month).
-                          <Button size="sm" className="ml-2" onClick={() => navigate("/subscribe")}>
-                            Get Q-06
-                          </Button>
-                        </AlertDescription>
-                      </Alert>
-                    )}
 
                     <Button 
                       onClick={generateApiKey} 
@@ -541,6 +599,71 @@ export default function ApiAccess() {
                 </div>
               </TabsContent>
 
+              <TabsContent value="agents" className="space-y-5">
+                <Card className="premium-card overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+                  <CardHeader className="relative z-10">
+                    <CardTitle className="flex items-center gap-2">
+                      <Bot className="w-5 h-5 text-primary" />
+                      Available Agents
+                    </CardTitle>
+                    <CardDescription>
+                      Specialised QurobAi agents you can call directly with your API key. Endpoint:{" "}
+                      <code className="text-primary font-mono">{agentsUrl}</code>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 relative z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{agents.length} agents available</span>
+                      <Button variant="outline" size="sm" onClick={loadAgents} disabled={loadingAgents}>
+                        {loadingAgents ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />}
+                        Refresh
+                      </Button>
+                    </div>
+
+                    {loadingAgents ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin" />
+                        Loading agents...
+                      </div>
+                    ) : agents.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Bot className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <p className="text-muted-foreground">No agents found. Create an API key to load the catalog.</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-3">
+                        {agents.map((a) => (
+                          <div key={a.id} className="p-4 rounded-xl border border-border bg-muted/30 space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold">{a.name}</span>
+                                  {a.official && <Badge variant="default" className="text-xs">Official</Badge>}
+                                  {a.category && <Badge variant="outline" className="text-xs">{a.category}</Badge>}
+                                  <span className="text-xs text-muted-foreground">{a.uses} uses</span>
+                                </div>
+                                {a.description && (
+                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 text-xs bg-background/60 px-2 py-1.5 rounded border border-border font-mono truncate">
+                                POST {a.invoke_url}
+                              </code>
+                              <Button variant="ghost" size="icon" onClick={() => copyKey(a.invoke_url)}>
+                                <Copy className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               <TabsContent value="docs" className="space-y-5">
                 <Card className="premium-card overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
@@ -580,6 +703,7 @@ Content-Type: application/json
 Authorization: Bearer YOUR_API_KEY
 
 {
+  "model": "qurob-3.2",          // qurob-2 | qurob-3.2 | qurob-4 | q-06 (all unlocked during promo)
   "messages": [
     {"role": "user", "content": "Hello!"}
   ]
@@ -674,6 +798,28 @@ print(response.json()['message'])`}
                           </div>
                         ))}
                       </div>
+                    </div>
+
+                    {/* Agents endpoint docs */}
+                    <div className="pt-4 border-t border-border">
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <Bot className="w-4 h-4 text-primary" />
+                        Agents API
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        List all available agents and invoke any one with the same API key.
+                      </p>
+                      <pre className="p-4 bg-muted/50 rounded-xl text-sm overflow-x-auto border border-border font-mono">
+{`# List agents
+curl ${agentsUrl} \\
+  -H "Authorization: Bearer qai_your_key_here"
+
+# Invoke an agent (replace AGENT_ID)
+curl -X POST ${agentsUrl}/AGENT_ID/chat \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer qai_your_key_here" \\
+  -d '{ "messages": [{"role":"user","content":"Hi!"}] }'`}
+                      </pre>
                     </div>
                   </CardContent>
                 </Card>

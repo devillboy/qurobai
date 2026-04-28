@@ -73,6 +73,7 @@ export type Database = {
       }
       api_keys: {
         Row: {
+          allowed_models: string[]
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -82,6 +83,7 @@ export type Database = {
           last_used_at: string | null
           model: string | null
           name: string | null
+          promo_expires_at: string
           requests_month: number | null
           requests_today: number | null
           total_requests: number | null
@@ -89,6 +91,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          allowed_models?: string[]
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -98,6 +101,7 @@ export type Database = {
           last_used_at?: string | null
           model?: string | null
           name?: string | null
+          promo_expires_at?: string
           requests_month?: number | null
           requests_today?: number | null
           total_requests?: number | null
@@ -105,6 +109,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          allowed_models?: string[]
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -114,6 +119,7 @@ export type Database = {
           last_used_at?: string | null
           model?: string | null
           name?: string | null
+          promo_expires_at?: string
           requests_month?: number | null
           requests_today?: number | null
           total_requests?: number | null
