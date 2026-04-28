@@ -60,10 +60,11 @@ async function runChat(messages: Msg[], systemPrompt: string) {
 
 // ---- Auth helper ----
 async function authenticate(req: Request, supabase: any) {
-  const h = req.headers.get("Authorization");
-  if (!h || !h.startsWith("Bearer ")) return { error: json({ error: "Missing API key", code: "UNAUTHORIZED" }, 401) };
-  const apiKey = h.replace("Bearer ", "").trim();
-  if (!apiKey.startsWith("qai_")) return { error: json({ error: "Invalid key format", code: "INVALID_KEY" }, 401) };
+  const h = req.headers.get("Authorization") || "";
+  const headerKey = req.headers.get("x-qurob-api-key") || req.headers.get("x-api-key") || "";
+  const apiKey = (h.toLowerCase().startsWith("bearer ") ? h.slice(7) : headerKey).trim();
+  if (!apiKey) return { error: json({ error: "Missing API key. Send Authorization: Bearer qai_... or x-qurob-api-key.", code: "UNAUTHORIZED" }, 401) };
+  if (!apiKey.startsWith("qai_")) return { error: json({ error: "Invalid key format. Qurob API keys must start with 'qai_'.", code: "INVALID_KEY" }, 401) };
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(apiKey));
   const hash = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
   const { data, error } = await supabase.from("api_keys").select("*").eq("key_hash", hash).eq("is_active", true).single();
