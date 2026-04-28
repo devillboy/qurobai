@@ -12,7 +12,7 @@ import {
   ArrowLeft, Key, Copy, Eye, EyeOff, Trash2, Plus, 
   Code, Zap, Clock, BarChart3, ExternalLink, RefreshCw,
   Sparkles, Terminal, Shield, Rocket, CheckCircle2,
-  AlertTriangle, Play, Loader2
+  AlertTriangle, Play, Loader2, Bot, Gift
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThreeDText } from "@/components/ThreeDText";
@@ -33,14 +33,29 @@ interface ApiKey {
   last_used_at: string | null;
   is_active: boolean;
   created_at: string;
+  promo_expires_at?: string | null;
+  allowed_models?: string[] | null;
 }
 
-// API key limits per tier
+// 🎉 3-month free promo: every key unlocks every model + agents.
+const PROMO_ACTIVE = true;
+// API key limits per tier (during promo, daily limits are raised for everyone)
 const KEY_LIMITS = {
-  free: { maxKeys: 2, models: ["qurob-2"], dailyLimit: 1000, monthlyLimit: 10000 },
-  premium: { maxKeys: 5, models: ["qurob-2", "qurob-4"], dailyLimit: 10000, monthlyLimit: 100000 },
-  q06: { maxKeys: 10, models: ["qurob-2", "qurob-4", "q-06"], dailyLimit: 50000, monthlyLimit: null },
+  free:    { maxKeys: 5,  models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 5000,  monthlyLimit: 50000 },
+  premium: { maxKeys: 8,  models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 20000, monthlyLimit: 200000 },
+  q06:     { maxKeys: 15, models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 50000, monthlyLimit: null },
 };
+
+interface AgentItem {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  icon: string | null;
+  official: boolean;
+  uses: number;
+  invoke_url: string;
+}
 
 export default function ApiAccess() {
   const { user } = useAuth();
@@ -57,6 +72,8 @@ export default function ApiAccess() {
   const [userTier, setUserTier] = useState<"free" | "premium" | "q06">("free");
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
+  const [agents, setAgents] = useState<AgentItem[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -110,7 +127,7 @@ export default function ApiAccess() {
 
   const getCurrentLimits = () => KEY_LIMITS[userTier];
   const canCreateMoreKeys = () => apiKeys.length < getCurrentLimits().maxKeys;
-  const canSelectModel = (model: string) => getCurrentLimits().models.includes(model);
+  const canSelectModel = (_model: string) => true; // promo: all models unlocked
 
   const generateApiKey = async () => {
     if (!user) return;
@@ -164,7 +181,7 @@ export default function ApiAccess() {
           key_preview: fullKey.slice(0, 8) + "..." + fullKey.slice(-4),
           name: newKeyName || "My API Key",
           model: selectedModel,
-          is_trial: isTrial,
+          is_trial: false, // promo: no trial restriction
           trial_expires_at: trialExpiry,
         })
         .select()
@@ -215,26 +232,35 @@ export default function ApiAccess() {
     setTestResult(null);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${newlyCreatedKey}`,
-          },
-          body: JSON.stringify({
-            messages: [{ role: "user", content: "Hello! Say 'API working' in 5 words or less." }]
-          }),
-        }
-      );
+      // Test 1: chat endpoint
+      const chatResp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${newlyCreatedKey}` },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "Reply with exactly: API working" }],
+          model: selectedModel,
+        }),
+      });
+      const chatData = await chatResp.json();
 
-      const data = await response.json();
-      if (response.ok && data.message) {
-        setTestResult(`✅ Success! Response: "${data.message.slice(0, 100)}..."`);
+      // Test 2: agents listing
+      const agentsResp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-agents`, {
+        headers: { "Authorization": `Bearer ${newlyCreatedKey}` },
+      });
+      const agentsData = await agentsResp.json();
+
+      const lines: string[] = [];
+      if (chatResp.ok && chatData.message) {
+        lines.push(`✅ /api-chat OK (${chatData.provider}): "${String(chatData.message).slice(0, 80)}..."`);
       } else {
-        setTestResult(`❌ Error: ${data.error || "Unknown error"}`);
+        lines.push(`❌ /api-chat FAILED: ${chatData.error || chatResp.status}`);
       }
+      if (agentsResp.ok && Array.isArray(agentsData.agents)) {
+        lines.push(`✅ /api-agents OK — ${agentsData.count} agents available`);
+      } else {
+        lines.push(`❌ /api-agents FAILED: ${agentsData.error || agentsResp.status}`);
+      }
+      setTestResult(lines.join("\n"));
     } catch (e) {
       setTestResult(`❌ Connection failed: ${e instanceof Error ? e.message : "Unknown error"}`);
     } finally {
@@ -242,7 +268,42 @@ export default function ApiAccess() {
     }
   };
 
+  const loadAgents = async () => {
+    if (apiKeys.length === 0) {
+      toast.error("Create an API key first to view agents.");
+      return;
+    }
+    setLoadingAgents(true);
+    try {
+      // Use service-role-free public read of the bots table (RLS already permits public/official bots)
+      const { data, error } = await supabase
+        .from("qurob_bots")
+        .select("id,name,description,category,icon,is_official,uses_count")
+        .or("is_public.eq.true,is_official.eq.true")
+        .order("is_official", { ascending: false })
+        .order("uses_count", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-agents`;
+      setAgents((data || []).map((b: any) => ({
+        id: b.id, name: b.name, description: b.description, category: b.category,
+        icon: b.icon, official: b.is_official, uses: b.uses_count,
+        invoke_url: `${baseUrl}/${b.id}/chat`,
+      })));
+    } catch (e: any) {
+      toast.error("Failed to load agents: " + (e?.message || "unknown"));
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && apiKeys.length > 0) loadAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, apiKeys.length]);
+
   const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-chat`;
+  const agentsUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-agents`;
   const limits = getCurrentLimits();
 
   return (
