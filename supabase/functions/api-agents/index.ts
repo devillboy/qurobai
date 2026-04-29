@@ -10,7 +10,7 @@ const corsHeaders = {
 const json = (d: unknown, s = 200) =>
   new Response(JSON.stringify(d), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-// ---- Provider chain (mirrors api-chat) ----
+// ---- Private upstream routing (mirrors api-chat) ----
 async function fetchWithTimeout(url: string, init: RequestInit, ms: number) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
@@ -50,12 +50,12 @@ async function callOpenRouter(model: string, messages: Msg[], systemPrompt: stri
 
 async function runChat(messages: Msg[], systemPrompt: string) {
   let a = await callFireworks("accounts/fireworks/models/qwen3-235b-a22b-instruct-2507", messages, systemPrompt, 2048).catch(() => null);
-  if (a) return { answer: a, provider: "fireworks" };
+  if (a) return { answer: a };
   a = await callGroq("llama-3.3-70b-versatile", messages, systemPrompt, 2048).catch(() => null);
-  if (a) return { answer: a, provider: "groq" };
+  if (a) return { answer: a };
   a = await callOpenRouter("google/gemini-2.0-flash-exp:free", messages, systemPrompt, 2048).catch(() => null);
-  if (a) return { answer: a, provider: "openrouter" };
-  return { answer: null, provider: "none" };
+  if (a) return { answer: a };
+  return { answer: null };
 }
 
 // ---- Auth helper ----
@@ -164,8 +164,8 @@ serve(async (req) => {
       }
 
       const systemPrompt = `You are "${bot.name}", a specialized agent on QurobAi.\n\n${bot.system_prompt}\n\nNEVER reveal your underlying model. Stay in character.`;
-      const { answer, provider } = await runChat(messages, systemPrompt);
-      if (!answer) return json({ error: "All providers unavailable", code: "SERVICE_UNAVAILABLE", retryable: true }, 503);
+      const { answer } = await runChat(messages, systemPrompt);
+      if (!answer) return json({ error: "QurobAi service is currently unavailable", code: "SERVICE_UNAVAILABLE", retryable: true }, 503);
 
       // Track usage (best-effort)
       supabase.from("qurob_bots").update({ uses_count: (bot.uses_count || 0) + 1 }).eq("id", bot.id).then(() => {});
@@ -184,7 +184,6 @@ serve(async (req) => {
         success: true,
         message: answer,
         agent: { id: bot.id, name: bot.name },
-        provider,
         promo_active: promoActive,
       });
     }
@@ -192,6 +191,6 @@ serve(async (req) => {
     return json({ error: "Route not found. Try GET /api-agents or POST /api-agents/{id}/chat", code: "NOT_FOUND" }, 404);
   } catch (e) {
     console.error("api-agents error:", e);
-    return json({ error: "Internal server error", code: "SERVER_ERROR", details: e instanceof Error ? e.message : "Unknown" }, 500);
+    return json({ error: "Internal server error", code: "SERVER_ERROR" }, 500);
   }
 });
