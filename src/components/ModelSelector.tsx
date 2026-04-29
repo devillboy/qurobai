@@ -81,6 +81,7 @@ const models: ModelOption[] = [
 export function ModelSelector({ currentModel, onModelChange }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   const [subscribedModel, setSubscribedModel] = useState<string>("Qurob 3.2");
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -89,6 +90,9 @@ export function ModelSelector({ currentModel, onModelChange }: ModelSelectorProp
       supabase.rpc("get_user_model", { user_id: user.id }).then(({ data }) => {
         setSubscribedModel(data || "Qurob 3.2");
       });
+      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
+        setIsAdmin(!!data);
+      });
     }
   }, [user]);
 
@@ -96,6 +100,7 @@ export function ModelSelector({ currentModel, onModelChange }: ModelSelectorProp
   const CurrentIcon = current.icon;
 
   const canUseModel = (model: ModelOption): boolean => {
+    if (isAdmin) return true; // admin = unlimited everything
     if (model.free) return true;
     return subscribedModel === model.id;
   };
