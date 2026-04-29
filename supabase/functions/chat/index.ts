@@ -567,10 +567,14 @@ serve(async (req) => {
             if (conv && typeof conv.memory_enabled === "boolean") brainMemoryActive = conv.memory_enabled;
           }
           
+          // Admin bypass: unlimited everything, skip all token / model gating
+          const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+          const adminUnlimited = !!isAdmin;
+
           const today = new Date().toISOString().split("T")[0];
           if (settings.tokens_reset_date !== today) {
             await supabase.from("user_settings").update({ tokens_used_today: 0, tokens_reset_date: today }).eq("user_id", userId);
-          } else {
+          } else if (!adminUnlimited) {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
             const isPremium = userModel === "Qurob 4" || userModel === "Q-06" || userModel === "Qurob 5";
             // Free: 350k tokens/month ≈ ~11,667/day; Paid: 1M/day
@@ -593,7 +597,8 @@ serve(async (req) => {
           else modelName = "Qurob 3.2";
         } else {
           // Per-model gating: validate requested model against specific subscription
-          if (requestedModel === "Qurob 4" || requestedModel === "Q-06" || requestedModel === "Qurob 5") {
+          // Admin (adminUnlimited) bypasses all gating.
+          if (!adminUnlimited && (requestedModel === "Qurob 4" || requestedModel === "Q-06" || requestedModel === "Qurob 5")) {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
             // User must have the exact model subscription to use it
             if (userModel !== requestedModel) {
