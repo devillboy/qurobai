@@ -1,4 +1,4 @@
-import { ArrowLeft, Sparkles, Rocket, Calendar, Tag, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Rocket, Calendar, Tag, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -26,7 +26,7 @@ const updates: Update[] = [
     type: "major",
     highlights: [
       "All 4 models (Qurob 2, 3.2, 4, Q-06) individually tuned with unique personalities & optimized temperatures",
-      "Qurob 4 upgraded to Gemini 3.1 Pro Preview — strongest reasoning yet",
+      "Qurob 4 upgraded with stronger reasoning and better precision",
       "AI no longer writes unnecessary code for simple messages",
       "Context-aware thinking indicators — different animations for search, code, links, images",
       "Message timestamps on every chat bubble",

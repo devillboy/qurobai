@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Zap, Code, Crown, Activity, Image } from "lucide-react";
+import { BadgeCheck, Zap, Code, Crown, Activity, Image, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -22,8 +22,8 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
       }
     : isImageOnly
     ? {
-        description: "Image-only AI model for high-quality FLUX artwork generation",
-        features: ["Image prompts only", "FLUX schnell", "1024px output", "Fast rendering"],
+        description: "Image-only QurobAi model for high-quality artwork generation",
+        features: ["Image prompts only", "1024px output", "Fast rendering", "Private QurobAi engine"],
       }
     : isPremium
     ? {
@@ -79,7 +79,7 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
             </>
           ) : isPremium ? (
             <>
-              <Sparkles className="w-4 h-4 text-primary" />
+              <BadgeCheck className="w-4 h-4 text-primary" />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge variant="default" className="font-semibold cursor-help">{displayModel}</Badge>
@@ -126,7 +126,7 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-500/15 text-yellow-600">
-                  <Sparkles className="w-3 h-3" />
+                  <Search className="w-3 h-3" />
                   <span className="text-xs font-medium">Auto Search</span>
                 </div>
               </TooltipTrigger>
@@ -146,7 +146,7 @@ export default function ModelIndicator({ currentModel }: ModelIndicatorProps) {
           )}
           {!isPremium && !isUltimate && !isImageOnly && (
             <Button size="sm" variant="outline" onClick={() => navigate("/subscribe")} className="text-xs">
-              <Sparkles className="w-3 h-3 mr-1" />
+               <Crown className="w-3 h-3 mr-1" />
               Upgrade to Qurob 5
             </Button>
           )}

@@ -11,8 +11,8 @@ import { toast } from "sonner";
 import { 
   ArrowLeft, Key, Copy, Eye, EyeOff, Trash2, Plus, 
   Code, Zap, Clock, BarChart3, ExternalLink, RefreshCw,
-  Sparkles, Terminal, Shield, Rocket, CheckCircle2,
-  AlertTriangle, Play, Loader2, Bot, Gift
+  Terminal, Shield, Rocket, CheckCircle2,
+  AlertTriangle, Play, Loader2, Gift, Boxes, Wand2
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThreeDText } from "@/components/ThreeDText";
@@ -251,7 +251,7 @@ export default function ApiAccess() {
 
       const lines: string[] = [];
       if (chatResp.ok && chatData.message) {
-        lines.push(`✅ /api-chat OK (${chatData.provider}): "${String(chatData.message).slice(0, 80)}..."`);
+        lines.push(`✅ /api-chat OK: "${String(chatData.message).slice(0, 80)}..."`);
       } else {
         lines.push(`❌ /api-chat FAILED: ${chatData.error || chatResp.status}`);
       }
@@ -386,7 +386,7 @@ export default function ApiAccess() {
                   API Keys
                 </TabsTrigger>
                 <TabsTrigger value="agents" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                  <Bot className="w-4 h-4 mr-1.5" />
+                  <Boxes className="w-4 h-4 mr-1.5" />
                   Agents
                 </TabsTrigger>
                 <TabsTrigger value="docs" className="data-[state=active]:bg-primary data-[state=active]:text-white">
@@ -445,8 +445,8 @@ export default function ApiAccess() {
                           <option value="qurob-3.2">Qurob 3.2 (default • fast)</option>
                           <option value="qurob-2">Qurob 2 (legacy)</option>
                           <option value="qurob-4">Qurob 4 (premium quality)</option>
-                          <option value="q-06">Q-06 (extreme coder • Qwen3-Coder-480B)</option>
-                          <option value="qurob-5">Qurob 5 (flagship • DeepSeek-V3 671B)</option>
+                          <option value="q-06">Q-06 (extreme coder)</option>
+                          <option value="qurob-5">Qurob 5 (flagship)</option>
                         </select>
                         <p className="text-xs text-muted-foreground mt-1">
                           Promo active — har key se sab models chalenge. Runtime pe `model` field bhi pass kar sakte ho.
@@ -459,7 +459,7 @@ export default function ApiAccess() {
                       disabled={creating || !canCreateMoreKeys() || !canSelectModel(selectedModel)} 
                       className="btn-premium"
                     >
-                      <Sparkles className="w-4 h-4 mr-2" />
+                      <Key className="w-4 h-4 mr-2" />
                       {creating ? "Creating..." : "Generate API Key"}
                     </Button>
                   </CardContent>
@@ -605,7 +605,7 @@ export default function ApiAccess() {
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
                   <CardHeader className="relative z-10">
                     <CardTitle className="flex items-center gap-2">
-                      <Bot className="w-5 h-5 text-primary" />
+                      <Boxes className="w-5 h-5 text-primary" />
                       Available Agents
                     </CardTitle>
                     <CardDescription>
@@ -629,7 +629,7 @@ export default function ApiAccess() {
                       </div>
                     ) : agents.length === 0 ? (
                       <div className="text-center py-12">
-                        <Bot className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <Boxes className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
                         <p className="text-muted-foreground">No agents found. Create an API key to load the catalog.</p>
                       </div>
                     ) : (
@@ -804,7 +804,7 @@ print(response.json()['message'])`}
                     {/* Agents endpoint docs */}
                     <div className="pt-4 border-t border-border">
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <Bot className="w-4 h-4 text-primary" />
+                        <Boxes className="w-4 h-4 text-primary" />
                         Agents API
                       </h4>
                       <p className="text-sm text-muted-foreground mb-3">
@@ -891,7 +891,7 @@ curl -X POST ${agentsUrl}/AGENT_ID/chat \\
                       </ul>
                       {userTier === "free" && (
                         <Button className="w-full mt-2" onClick={() => navigate("/subscribe")}>
-                          <Sparkles className="w-4 h-4 mr-2" />
+                          <Rocket className="w-4 h-4 mr-2" />
                           Upgrade
                         </Button>
                       )}

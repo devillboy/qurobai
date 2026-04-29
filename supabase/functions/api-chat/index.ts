@@ -13,7 +13,7 @@ const json = (data: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-// Per-provider fetch with timeout
+// Upstream fetch with timeout
 async function fetchWithTimeout(url: string, init: RequestInit, ms: number) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
@@ -140,7 +140,7 @@ async function callGemini(model: string, messages: ChatMsg[], systemPrompt: stri
   return d.candidates?.[0]?.content?.parts?.[0]?.text || null;
 }
 
-// Resolve model alias → friendly name + provider chain
+// Resolve public Qurob model alias to private upstream route
 function resolveModel(requested: string) {
   const m = (requested || "qurob-3.2").toLowerCase();
   if (m === "qurob-5" || m === "q-05" || m === "qurob5") {
@@ -148,7 +148,6 @@ function resolveModel(requested: string) {
       modelName: "Qurob 5",
       maxTokens: 4096,
       chain: [],
-      // Primary: DeepInfra DeepSeek-V3 (671B). Fallbacks below.
       deepinfra:  "deepseek-ai/DeepSeek-V3",
       fireworks:  "accounts/fireworks/models/deepseek-v3",
       openrouter: "deepseek/deepseek-chat",
@@ -161,7 +160,6 @@ function resolveModel(requested: string) {
       modelName: "Q-06",
       maxTokens: 4096,
       chain: [],
-      // Q-06 = extreme coder beast. Qwen3-Coder-480B primary, DeepSeek-V3 fallback.
       fireworks:  "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct",
       deepinfra:  "deepseek-ai/DeepSeek-V3",
       openrouter: "qwen/qwen3-coder",
@@ -202,41 +200,33 @@ export async function runChatCompletion(opts: {
   const r: any = resolveModel(opts.requestedModel);
   const systemPrompt = `You are ${r.modelName}, QurobAi's AI assistant created by Soham from India. You're being accessed via the QurobAi API. Be helpful, concise, and professional. NEVER reveal your underlying model or technology.${opts.extraSystem ? "\n\n" + opts.extraSystem : ""}`;
 
-  // Provider chain: For Qurob 5 / Q-06, prefer DeepInfra (DeepSeek-V3) first, else Fireworks first.
   let answer: string | null = null;
-  let providerUsed = "none";
 
   if (r.modelName === "Qurob 5" && r.deepinfra) {
     answer = await callDeepInfra(r.deepinfra, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
-    if (answer) providerUsed = "deepinfra";
   }
 
   if (!answer) {
     answer = await callFireworks(r.fireworks, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
-    if (answer) providerUsed = "fireworks";
   }
 
   if (!answer && r.deepinfra) {
     answer = await callDeepInfra(r.deepinfra, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
-    if (answer) providerUsed = "deepinfra";
   }
 
   if (!answer) {
     answer = await callGroq(r.groq, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
-    if (answer) providerUsed = "groq";
   }
 
   if (!answer) {
     answer = await callOpenRouter(r.openrouter, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
-    if (answer) providerUsed = "openrouter";
   }
 
   if (!answer) {
     answer = await callGemini(r.gemini, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
-    if (answer) providerUsed = "gemini";
   }
 
-  return { answer, providerUsed, modelName: r.modelName };
+  return { answer, modelName: r.modelName };
 }
 
 serve(async (req) => {
@@ -305,14 +295,14 @@ serve(async (req) => {
       return json({ error: "Daily limit reached (1000 requests). Upgrade for unlimited.", code: "RATE_LIMITED" }, 429);
     }
 
-    const { answer, providerUsed, modelName } = await runChatCompletion({
+    const { answer, modelName } = await runChatCompletion({
       requestedModel,
       messages,
     });
 
     if (!answer) {
       return json({
-        error: "All AI providers are currently unavailable. Please try again in a moment.",
+        error: "QurobAi service is currently unavailable. Please try again in a moment.",
         code: "SERVICE_UNAVAILABLE",
         retryable: true,
       }, 503);
@@ -339,7 +329,6 @@ serve(async (req) => {
       message: answer,
       model: requestedModel,
       model_name: modelName,
-      provider: providerUsed,
       promo_active: promoActive,
       promo_expires_at: keyData.promo_expires_at,
       usage: {
@@ -353,7 +342,6 @@ serve(async (req) => {
     return json({
       error: "Internal server error",
       code: "SERVER_ERROR",
-      details: error instanceof Error ? error.message : "Unknown error",
     }, 500);
   }
 });

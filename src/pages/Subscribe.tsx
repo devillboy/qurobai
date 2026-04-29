@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
  import {
-   ArrowLeft, Upload, Check, Sparkles, Code, Zap, Brain,
+   ArrowLeft, Upload, Check, BadgeCheck, Code, Zap,
    Smartphone, Copy, Gift, Wallet, QrCode,
    Building2, Crown, Shield, Star, Rocket, Terminal, Cpu
 } from "lucide-react";
@@ -342,7 +342,7 @@ export default function Subscribe() {
                 <div className="mt-4 p-2.5 rounded-lg bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-purple-600/10 border border-yellow-500/30">
                   <div className="flex items-center gap-2">
                     <Rocket className="w-3.5 h-3.5 text-yellow-500" />
-                    <span className="text-xs font-medium">Fireworks AI • Tuned for India-first agentic workflows</span>
+                    <span className="text-xs font-medium">QurobAi tuned engine • India-first agentic workflows</span>
                   </div>
                 </div>
               </CardContent>
@@ -397,13 +397,13 @@ export default function Subscribe() {
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/5" />
              <div className="absolute top-0 right-0 bg-gradient-to-r from-primary to-accent text-white px-3 py-1 text-xs font-semibold rounded-bl-lg flex items-center gap-1">
-               <Sparkles className="w-3 h-3" />
+               <BadgeCheck className="w-3 h-3" />
                POPULAR
              </div>
             <CardHeader className="pb-3 relative z-10 pt-8">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg gradient-primary">
-                  <Brain className="w-5 h-5 text-white" />
+                  <BadgeCheck className="w-5 h-5 text-white" />
                 </div>
                  <CardTitle className="text-lg">Qurob 4</CardTitle>
               </div>
@@ -679,7 +679,7 @@ export default function Subscribe() {
                   >
                     {loading ? "Processing..." : (
                       <>
-                        <Sparkles className="w-4 h-4 mr-2" />
+                        <BadgeCheck className="w-4 h-4 mr-2" />
                         Submit
                       </>
                     )}

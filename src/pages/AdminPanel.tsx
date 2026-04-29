@@ -774,7 +774,7 @@ export default function AdminPanel() {
             <CardHeader className="pb-3"><CardTitle className="text-base">System Health</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-2">
-                {["AI Gateway", "Database", "Storage"].map(s => (
+                {["Qurob Engine", "Database", "Storage"].map(s => (
                   <div key={s} className="p-2.5 bg-green-500/10 border border-green-500/20 rounded-lg">
                     <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /><span className="text-xs font-medium">{s}</span></div>
                     <div className="text-[10px] text-muted-foreground mt-0.5">Operational</div>

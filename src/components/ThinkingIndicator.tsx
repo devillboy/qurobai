@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Brain, Globe, Code2, Sparkles, Search, Link } from "lucide-react";
+import { CircleGauge, Globe, Code2, Image, Search, Link } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ThinkingIndicatorProps {
@@ -11,7 +11,7 @@ type ThinkingMode = "general" | "search" | "code" | "link" | "image" | "deep";
 
 const modeConfig: Record<ThinkingMode, { icon: React.ElementType; phrases: string[]; color: string }> = {
   general: {
-    icon: Brain,
+    icon: CircleGauge,
     color: "text-primary",
     phrases: [
       "Thinking...",
@@ -61,7 +61,7 @@ const modeConfig: Record<ThinkingMode, { icon: React.ElementType; phrases: strin
     ],
   },
   image: {
-    icon: Sparkles,
+    icon: Image,
     color: "text-pink-400",
     phrases: [
       "Generating image",

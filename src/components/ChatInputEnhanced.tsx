@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Paperclip, Mic, MicOff, X, Loader2, Sparkles, Globe, Search, Square } from "lucide-react";
+import { Send, Paperclip, Mic, MicOff, X, Loader2, Image, Globe, Search, Square, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -150,7 +150,7 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector, cu
         {isArticQuro ? (
           <div className="flex items-center gap-1.5 mb-2">
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border bg-primary/10 text-primary border-primary/30">
-              <Sparkles className="w-3 h-3" />
+              <Image className="w-3 h-3" />
               ArticQuro Image Mode Active
             </div>
           </div>
@@ -220,7 +220,7 @@ export function ChatInputEnhanced({ onSend, isLoading, onStop, modelSelector, cu
           <input ref={fileInputRef} type="file" multiple accept="*/*" onChange={handleFileUpload} className="hidden" />
 
           <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-xl touch-manipulation" onClick={() => setShowTemplates(!showTemplates)}>
-            <Sparkles className="w-4 h-4" />
+            <LayoutTemplate className="w-4 h-4" />
           </Button>
 
           <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-xl touch-manipulation" onClick={() => fileInputRef.current?.click()} disabled={isLoading || uploading}>
