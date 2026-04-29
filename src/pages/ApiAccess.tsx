@@ -605,7 +605,7 @@ export default function ApiAccess() {
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
                   <CardHeader className="relative z-10">
                     <CardTitle className="flex items-center gap-2">
-                      <Bot className="w-5 h-5 text-primary" />
+                      <Boxes className="w-5 h-5 text-primary" />
                       Available Agents
                     </CardTitle>
                     <CardDescription>
@@ -629,7 +629,7 @@ export default function ApiAccess() {
                       </div>
                     ) : agents.length === 0 ? (
                       <div className="text-center py-12">
-                        <Bot className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <Boxes className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
                         <p className="text-muted-foreground">No agents found. Create an API key to load the catalog.</p>
                       </div>
                     ) : (
@@ -804,7 +804,7 @@ print(response.json()['message'])`}
                     {/* Agents endpoint docs */}
                     <div className="pt-4 border-t border-border">
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <Bot className="w-4 h-4 text-primary" />
+                        <Boxes className="w-4 h-4 text-primary" />
                         Agents API
                       </h4>
                       <p className="text-sm text-muted-foreground mb-3">
@@ -891,7 +891,7 @@ curl -X POST ${agentsUrl}/AGENT_ID/chat \\
                       </ul>
                       {userTier === "free" && (
                         <Button className="w-full mt-2" onClick={() => navigate("/subscribe")}>
-                          <Sparkles className="w-4 h-4 mr-2" />
+                          <Rocket className="w-4 h-4 mr-2" />
                           Upgrade
                         </Button>
                       )}
