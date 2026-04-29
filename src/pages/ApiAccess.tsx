@@ -41,9 +41,9 @@ interface ApiKey {
 const PROMO_ACTIVE = true;
 // API key limits per tier (during promo, daily limits are raised for everyone)
 const KEY_LIMITS = {
-  free:    { maxKeys: 5,  models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 5000,  monthlyLimit: 50000 },
-  premium: { maxKeys: 8,  models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 20000, monthlyLimit: 200000 },
-  q06:     { maxKeys: 15, models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 50000, monthlyLimit: null },
+ free:    { maxKeys: 5,  models: ["qurob-2","qurob-3.2","qurob-4","q-06","qurob-5"], dailyLimit: 5000,  monthlyLimit: 50000 },
+ premium: { maxKeys: 8,  models: ["qurob-2","qurob-3.2","qurob-4","q-06","qurob-5"], dailyLimit: 20000, monthlyLimit: 200000 },
+ q06:     { maxKeys: 15, models: ["qurob-2","qurob-3.2","qurob-4","q-06","qurob-5"], dailyLimit: 50000, monthlyLimit: null },
 };
 
 interface AgentItem {
