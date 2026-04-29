@@ -966,11 +966,11 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           });
           clearTimeout(tId);
           if (fwResp.ok && fwResp.body) {
-            console.log("Q-06 / Fireworks Qwen3-Coder-480B streaming started");
+            console.log("Q-06 streaming started");
             return new Response(fwResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
-          console.error("Fireworks Q-06 error:", fwResp.status, await fwResp.text().catch(() => ""));
-        } catch (e) { console.error("Fireworks Q-06 failed:", e); }
+          console.error("Q-06 route error:", fwResp.status, await fwResp.text().catch(() => ""));
+        } catch (e) { console.error("Q-06 route failed:", e); }
       }
 
       const DEEPINFRA_API_KEY = Deno.env.get("DEEPINFRA_API_KEY");
@@ -995,10 +995,10 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           });
           clearTimeout(tId);
           if (diResp.ok && diResp.body) {
-            console.log("Q-06 / DeepInfra DeepSeek-V3 fallback streaming");
+            console.log("Q-06 fallback streaming");
             return new Response(diResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
-        } catch (e) { console.error("DeepInfra Q-06 failed:", e); }
+        } catch (e) { console.error("Q-06 fallback failed:", e); }
       }
 
       if (OPENROUTER_API_KEY) {
@@ -1020,15 +1020,13 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
             }),
           });
           if (orResp.ok && orResp.body) {
-            console.log("Q-06 / OpenRouter Qwen3-Coder fallback streaming");
+            console.log("Q-06 final fallback streaming");
             return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
-        } catch (e) { console.error("OpenRouter Q-06 failed:", e); }
+        } catch (e) { console.error("Q-06 final fallback failed:", e); }
       }
-      // If all coder providers fail, fall through to gateway path below.
     }
 
-    // PRIMARY: Lovable AI Gateway for non-Qurob-5 models. Qurob 5 stays on direct providers for lower latency.
     const effectiveGatewayModel = gatewayModel;
     if (LOVABLE_API_KEY && modelName !== "Qurob 5" && modelName !== "Q-06" && modelName !== "ArticQuro") {
       try {
@@ -1048,26 +1046,25 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         });
 
         if (response.ok && response.body) {
-          console.log("Lovable AI Gateway streaming started");
+          console.log("QurobAi streaming started");
           return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
 
         if (response.status === 429) {
-          console.log("Gateway rate limited, trying fallback...");
+          console.log("Primary route busy, trying fallback...");
         } else if (response.status === 402) {
           return new Response(JSON.stringify({ error: "AI usage limit reached. Please try again later." }), {
             status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         } else {
           const errorText = await response.text();
-          console.error("Gateway error:", response.status, errorText);
+          console.error("Primary route error:", response.status, errorText);
         }
       } catch (e) {
-        console.error("Gateway call failed:", e);
+        console.error("Primary route failed:", e);
       }
     }
 
-    // FALLBACK: Google Gemini API directly
     if (GOOGLE_GEMINI_API_KEY) {
       try {
         const geminiModel = modelName === "Qurob 4" || modelName === "Q-06" ? "gemini-2.5-pro-preview-06-05" : "gemini-2.0-flash";
@@ -1090,7 +1087,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         });
         
         if (geminiResponse.ok && geminiResponse.body) {
-          console.log("Gemini fallback streaming started");
+          console.log("Fallback streaming started");
           const reader = geminiResponse.body.getReader();
           const encoder = new TextEncoder();
           const decoder = new TextDecoder();
@@ -1125,13 +1122,12 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           });
           return new Response(convertedStream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
-        console.error("Gemini fallback error:", geminiResponse.status);
+        console.error("Fallback route error:", geminiResponse.status);
       } catch (e) {
-        console.error("Gemini fallback failed:", e);
+        console.error("Fallback route failed:", e);
       }
     }
 
-    // FALLBACK 2: OpenRouter
     if (OPENROUTER_API_KEY) {
       try {
         const orModel = modelName === "Qurob 4" || modelName === "Q-06" ? "google/gemini-2.5-pro-preview" : "google/gemini-2.0-flash-001";
@@ -1147,12 +1143,12 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         });
         
         if (orResponse.ok) {
-          console.log("OpenRouter fallback streaming started");
+          console.log("Final fallback streaming started");
           return new Response(orResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
-        console.error("OpenRouter error:", orResponse.status);
+        console.error("Final fallback error:", orResponse.status);
       } catch (e) {
-        console.error("OpenRouter failed:", e);
+        console.error("Final fallback failed:", e);
       }
     }
 
