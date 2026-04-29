@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowRight, Download, Sparkles, Shield, Zap, Code, Globe, Brain, Image, MessageSquare } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowRight, Download, Shield, Zap, Code, Globe, Image, MessageSquare, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,7 @@ const emailSchema = z.string().email("Please enter a valid email");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const capabilities = [
-  { icon: Brain, title: "Intelligent AI", desc: "Advanced reasoning with deep understanding" },
+  { icon: BadgeCheck, title: "Intelligent Assistant", desc: "Advanced reasoning with deep understanding" },
   { icon: Code, title: "Code Expert", desc: "Write, debug & explain in 100+ languages" },
   { icon: Globe, title: "Real-time Search", desc: "Web search & deep research instantly" },
   { icon: Image, title: "Vision & Create", desc: "Analyze images & generate visuals" },
@@ -315,7 +315,7 @@ const Auth = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
               className="lg:hidden mt-6 flex flex-wrap justify-center gap-2">
               {[
-                { icon: Brain, label: "AI Chat" },
+                { icon: MessageSquare, label: "Chat" },
                 { icon: Code, label: "Code" },
                 { icon: Globe, label: "Search" },
                 { icon: Image, label: "Vision" },
