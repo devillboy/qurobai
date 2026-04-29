@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useMemo } from "react";
-import { Bot, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2, Maximize2, Pencil, ThumbsUp, ThumbsDown, Heart, X, Timer } from "lucide-react";
+import { BadgeCheck, User, Copy, Check, Download, RefreshCw, Pin, PinOff, MoreHorizontal, Share2, Maximize2, Pencil, ThumbsUp, ThumbsDown, Heart, X, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -461,7 +461,7 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
             ? "bg-muted border border-border/40" 
             : "bg-primary/10 border border-primary/15"
         )}>
-          {isUser ? <User className="w-4 h-4 text-foreground/80" /> : <Bot className="w-4 h-4 text-primary-foreground" />}
+          {isUser ? <User className="w-4 h-4 text-foreground/80" /> : <BadgeCheck className="w-4 h-4 text-primary" />}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -585,7 +585,7 @@ export const TypingIndicator = memo(() => (
   <div className="py-5 px-4 md:px-6 rounded-2xl bg-card/40 border border-border/10 animate-fade-in">
     <div className="max-w-3xl mx-auto flex gap-4">
       <div className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 border border-primary/15">
-        <Bot className="w-4 h-4 text-primary-foreground" />
+        <BadgeCheck className="w-4 h-4 text-primary" />
       </div>
       <div className="flex items-center gap-1.5 pt-2">
         <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
