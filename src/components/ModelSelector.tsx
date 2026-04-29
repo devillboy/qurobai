@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, Sparkles, Zap, Code, Lock, Check, Clock, Crown, Image } from "lucide-react";
+import { ChevronDown, BadgeCheck, Zap, Code, Lock, Check, Clock, Crown, Image } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,7 +52,7 @@ const models: ModelOption[] = [
   {
     id: "ArticQuro",
     name: "ArticQuro",
-    description: "Image creation only • FLUX schnell",
+    description: "Image creation only • Qurob render",
     icon: Image,
     free: true,
     badge: "IMAGE",
@@ -62,7 +62,7 @@ const models: ModelOption[] = [
     id: "Qurob 4",
     name: "Qurob 4",
     description: "Deep reasoning • ₹289/mo",
-    icon: Sparkles,
+    icon: BadgeCheck,
     free: false,
     badge: "PRO",
     color: "text-primary",
