@@ -41,9 +41,9 @@ interface ApiKey {
 const PROMO_ACTIVE = true;
 // API key limits per tier (during promo, daily limits are raised for everyone)
 const KEY_LIMITS = {
-  free:    { maxKeys: 5,  models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 5000,  monthlyLimit: 50000 },
-  premium: { maxKeys: 8,  models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 20000, monthlyLimit: 200000 },
-  q06:     { maxKeys: 15, models: ["qurob-2","qurob-3.2","qurob-4","q-06"], dailyLimit: 50000, monthlyLimit: null },
+ free:    { maxKeys: 5,  models: ["qurob-2","qurob-3.2","qurob-4","q-06","qurob-5"], dailyLimit: 5000,  monthlyLimit: 50000 },
+ premium: { maxKeys: 8,  models: ["qurob-2","qurob-3.2","qurob-4","q-06","qurob-5"], dailyLimit: 20000, monthlyLimit: 200000 },
+ q06:     { maxKeys: 15, models: ["qurob-2","qurob-3.2","qurob-4","q-06","qurob-5"], dailyLimit: 50000, monthlyLimit: null },
 };
 
 interface AgentItem {
@@ -445,7 +445,8 @@ export default function ApiAccess() {
                           <option value="qurob-3.2">Qurob 3.2 (default • fast)</option>
                           <option value="qurob-2">Qurob 2 (legacy)</option>
                           <option value="qurob-4">Qurob 4 (premium quality)</option>
-                          <option value="q-06">Q-06 (code specialist)</option>
+                          <option value="q-06">Q-06 (extreme coder • Qwen3-Coder-480B)</option>
+                          <option value="qurob-5">Qurob 5 (flagship • DeepSeek-V3 671B)</option>
                         </select>
                         <p className="text-xs text-muted-foreground mt-1">
                           Promo active — har key se sab models chalenge. Runtime pe `model` field bhi pass kar sakte ho.

@@ -480,9 +480,15 @@ const MODEL_MAP: Record<string, string> = {
   "Qurob 5": "fireworks",
 };
 
-// Fireworks model id for Qurob 5 — latest top-tier tuned model
-// Keep Qwen 235B, but use the stable Fireworks slug (the previous instruct-2507 slug returns 404).
-const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b";
+// Qurob 5 — next-gen flagship: DeepSeek-V3.1 671B (DeepInfra primary, Fireworks fallback)
+const DEEPINFRA_QUROB5_MODEL  = "deepseek-ai/DeepSeek-V3";
+const FIREWORKS_QUROB5_MODEL  = "accounts/fireworks/models/deepseek-v3";
+const OPENROUTER_QUROB5_MODEL = "deepseek/deepseek-chat";
+
+// Q-06 — extreme coder: Qwen3-Coder-480B (Fireworks primary), DeepSeek-V3 (DeepInfra fallback)
+const FIREWORKS_Q06_MODEL  = "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct";
+const DEEPINFRA_Q06_MODEL  = "deepseek-ai/DeepSeek-V3";
+const OPENROUTER_Q06_MODEL = "qwen/qwen3-coder";
 
 // Per-model temperature tuning
 const MODEL_TEMPERATURE: Record<string, number> = {
@@ -528,8 +534,13 @@ serve(async (req) => {
 
     let userQurobId = "";
     let brainMemoryActive = false; // resolved from global setting + per-chat override
+    let adminUnlimited = false;
     if (userId) {
       try {
+        // Admin bypass: unlimited everything, skip all token / model gating
+        const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+        adminUnlimited = !!isAdmin;
+
         // Fetch user's Qurob ID
         const { data: profileData } = await supabase
           .from("profiles")
@@ -564,7 +575,7 @@ serve(async (req) => {
           const today = new Date().toISOString().split("T")[0];
           if (settings.tokens_reset_date !== today) {
             await supabase.from("user_settings").update({ tokens_used_today: 0, tokens_reset_date: today }).eq("user_id", userId);
-          } else {
+          } else if (!adminUnlimited) {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
             const isPremium = userModel === "Qurob 4" || userModel === "Q-06" || userModel === "Qurob 5";
             // Free: 350k tokens/month ≈ ~11,667/day; Paid: 1M/day
@@ -587,7 +598,8 @@ serve(async (req) => {
           else modelName = "Qurob 3.2";
         } else {
           // Per-model gating: validate requested model against specific subscription
-          if (requestedModel === "Qurob 4" || requestedModel === "Q-06" || requestedModel === "Qurob 5") {
+          // Admin (adminUnlimited) bypasses all gating.
+          if (!adminUnlimited && (requestedModel === "Qurob 4" || requestedModel === "Q-06" || requestedModel === "Qurob 5")) {
             const { data: userModel } = await supabase.rpc("get_user_model", { user_id: userId });
             // User must have the exact model subscription to use it
             if (userModel !== requestedModel) {
@@ -835,14 +847,44 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
 
     console.log("Using model:", modelName, "gateway:", gatewayModel);
 
-    // PRIMARY for Qurob 5: Fireworks AI (most powerful tuned agent backend)
-    // Tuned for speed: lower max_tokens, faster top_p, tight temperature, short connect timeout
+    // PRIMARY for Qurob 5: DeepInfra DeepSeek-V3 (671B MoE flagship reasoning + code beast)
+    // Fallback chain: DeepInfra → Fireworks → OpenRouter
     if (modelName === "Qurob 5") {
+      const DEEPINFRA_API_KEY = Deno.env.get("DEEPINFRA_API_KEY");
+      if (DEEPINFRA_API_KEY) {
+        try {
+          const ctrl = new AbortController();
+          const tId = setTimeout(() => ctrl.abort(), 4500);
+          const diResp = await fetch("https://api.deepinfra.com/v1/openai/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${DEEPINFRA_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: DEEPINFRA_QUROB5_MODEL,
+              messages: allMessages,
+              stream: true,
+              temperature: 0.3,
+              max_tokens: 1200,
+              top_p: 0.95,
+            }),
+            signal: ctrl.signal,
+          });
+          clearTimeout(tId);
+          if (diResp.ok && diResp.body) {
+            console.log("Qurob 5 / DeepInfra DeepSeek-V3 streaming started");
+            return new Response(diResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          }
+          console.error("DeepInfra Qurob5 error:", diResp.status, await diResp.text().catch(() => ""));
+        } catch (e) { console.error("DeepInfra Qurob5 failed:", e); }
+      }
+
       const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
       if (FIREWORKS_API_KEY) {
         try {
           const ctrl = new AbortController();
-          const tId = setTimeout(() => ctrl.abort(), 3500); // fail fast so users never wait 10–30s
+          const tId = setTimeout(() => ctrl.abort(), 4500);
           const fwResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -855,7 +897,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
               messages: allMessages,
               stream: true,
               temperature: 0.3,
-              max_tokens: 900,     // smaller cap → faster TTFT + completion for normal chat
+              max_tokens: 1200,
               top_p: 0.9,
               top_k: 40,
             }),
@@ -863,20 +905,17 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           });
           clearTimeout(tId);
           if (fwResponse.ok && fwResponse.body) {
-            console.log("Qurob 5 / Fireworks streaming started");
+            console.log("Qurob 5 / Fireworks DeepSeek-V3 fallback streaming");
             return new Response(fwResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
           const errTxt = await fwResponse.text();
           console.error("Fireworks error:", fwResponse.status, errTxt);
-          // Fall through to OpenRouter for fast Qwen fallback
         } catch (e) {
           console.error("Fireworks call failed (timeout or error):", e);
         }
-      } else {
-        console.error("FIREWORKS_API_KEY not configured for Qurob 5");
       }
 
-      // FAST FALLBACK for Qurob 5: OpenRouter Qwen 72B (very fast TTFT)
+      // Final fallback: OpenRouter DeepSeek
       if (OPENROUTER_API_KEY) {
         try {
           const ctrl = new AbortController();
@@ -890,26 +929,113 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
               "X-Title": "QurobAi",
             },
             body: JSON.stringify({
-              model: "qwen/qwen-2.5-72b-instruct",
+              model: OPENROUTER_QUROB5_MODEL,
               messages: allMessages,
               stream: true,
               temperature: 0.3,
-              max_tokens: 900,
+              max_tokens: 1200,
             }),
             signal: ctrl.signal,
           });
           clearTimeout(tId);
           if (orResp.ok && orResp.body) {
-            console.log("Qurob 5 / OpenRouter Qwen fallback streaming");
+            console.log("Qurob 5 / OpenRouter DeepSeek fallback streaming");
             return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("OpenRouter Qurob5 fallback failed:", e); }
       }
     }
 
+    // Q-06: Extreme Coder — Fireworks Qwen3-Coder-480B → DeepInfra DeepSeek-V3 fallback
+    if (modelName === "Q-06") {
+      const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
+      if (FIREWORKS_API_KEY) {
+        try {
+          const ctrl = new AbortController();
+          const tId = setTimeout(() => ctrl.abort(), 5000);
+          const fwResp = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: FIREWORKS_Q06_MODEL,
+              messages: allMessages,
+              stream: true,
+              temperature: 0.15,
+              max_tokens: 4096,
+              top_p: 0.95,
+            }),
+            signal: ctrl.signal,
+          });
+          clearTimeout(tId);
+          if (fwResp.ok && fwResp.body) {
+            console.log("Q-06 / Fireworks Qwen3-Coder-480B streaming started");
+            return new Response(fwResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          }
+          console.error("Fireworks Q-06 error:", fwResp.status, await fwResp.text().catch(() => ""));
+        } catch (e) { console.error("Fireworks Q-06 failed:", e); }
+      }
+
+      const DEEPINFRA_API_KEY = Deno.env.get("DEEPINFRA_API_KEY");
+      if (DEEPINFRA_API_KEY) {
+        try {
+          const ctrl = new AbortController();
+          const tId = setTimeout(() => ctrl.abort(), 5000);
+          const diResp = await fetch("https://api.deepinfra.com/v1/openai/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${DEEPINFRA_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: DEEPINFRA_Q06_MODEL,
+              messages: allMessages,
+              stream: true,
+              temperature: 0.15,
+              max_tokens: 4096,
+            }),
+            signal: ctrl.signal,
+          });
+          clearTimeout(tId);
+          if (diResp.ok && diResp.body) {
+            console.log("Q-06 / DeepInfra DeepSeek-V3 fallback streaming");
+            return new Response(diResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          }
+        } catch (e) { console.error("DeepInfra Q-06 failed:", e); }
+      }
+
+      if (OPENROUTER_API_KEY) {
+        try {
+          const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://qurobai.lovable.app",
+              "X-Title": "QurobAi",
+            },
+            body: JSON.stringify({
+              model: OPENROUTER_Q06_MODEL,
+              messages: allMessages,
+              stream: true,
+              temperature: 0.15,
+              max_tokens: 4096,
+            }),
+          });
+          if (orResp.ok && orResp.body) {
+            console.log("Q-06 / OpenRouter Qwen3-Coder fallback streaming");
+            return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          }
+        } catch (e) { console.error("OpenRouter Q-06 failed:", e); }
+      }
+      // If all coder providers fail, fall through to gateway path below.
+    }
+
     // PRIMARY: Lovable AI Gateway for non-Qurob-5 models. Qurob 5 stays on direct providers for lower latency.
     const effectiveGatewayModel = gatewayModel;
-    if (LOVABLE_API_KEY && modelName !== "Qurob 5" && modelName !== "ArticQuro") {
+    if (LOVABLE_API_KEY && modelName !== "Qurob 5" && modelName !== "Q-06" && modelName !== "ArticQuro") {
       try {
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
