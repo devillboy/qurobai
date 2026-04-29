@@ -445,7 +445,8 @@ export default function ApiAccess() {
                           <option value="qurob-3.2">Qurob 3.2 (default • fast)</option>
                           <option value="qurob-2">Qurob 2 (legacy)</option>
                           <option value="qurob-4">Qurob 4 (premium quality)</option>
-                          <option value="q-06">Q-06 (code specialist)</option>
+                          <option value="q-06">Q-06 (extreme coder • Qwen3-Coder-480B)</option>
+                          <option value="qurob-5">Qurob 5 (flagship • DeepSeek-V3 671B)</option>
                         </select>
                         <p className="text-xs text-muted-foreground mt-1">
                           Promo active — har key se sab models chalenge. Runtime pe `model` field bhi pass kar sakte ho.
