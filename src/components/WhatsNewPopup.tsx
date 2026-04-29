@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { BadgeCheck, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const CURRENT_VERSION = "5.0.0";
@@ -10,9 +10,9 @@ const CURRENT_VERSION = "5.0.0";
 const highlights = [
   "👑 Qurob 5 launched — Next-Gen Ultimate Agent (₹1289/mo)",
   "🔍 Auto Web + Deep Search built into Qurob 5",
-  "🚀 Powered by Fireworks AI — most powerful tuned reasoning",
-  "🧠 Multi-step autonomous agent with live web grounding",
-  "✨ All existing models optimized — Qurob 4 + Q-06 sharper",
+  "🚀 Powered by QurobAi tuned engine — strongest reasoning yet",
+  "⚙️ Multi-step autonomous agent with live web grounding",
+  "✅ All existing models optimized — Qurob 4 + Q-06 sharper",
   "🎨 Refreshed UI with Ultimate badge and gradient highlights",
 ];
 
@@ -43,7 +43,7 @@ export const WhatsNewPopup = () => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
+            <BadgeCheck className="w-5 h-5 text-primary" />
             What's New in QurobAi
             <Badge className="text-[10px]">v{CURRENT_VERSION}</Badge>
           </DialogTitle>
