@@ -679,7 +679,7 @@ export default function Subscribe() {
                   >
                     {loading ? "Processing..." : (
                       <>
-                        <Sparkles className="w-4 h-4 mr-2" />
+                        <BadgeCheck className="w-4 h-4 mr-2" />
                         Submit
                       </>
                     )}
