@@ -534,8 +534,13 @@ serve(async (req) => {
 
     let userQurobId = "";
     let brainMemoryActive = false; // resolved from global setting + per-chat override
+    let adminUnlimited = false;
     if (userId) {
       try {
+        // Admin bypass: unlimited everything, skip all token / model gating
+        const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+        adminUnlimited = !!isAdmin;
+
         // Fetch user's Qurob ID
         const { data: profileData } = await supabase
           .from("profiles")
@@ -567,10 +572,6 @@ serve(async (req) => {
             if (conv && typeof conv.memory_enabled === "boolean") brainMemoryActive = conv.memory_enabled;
           }
           
-          // Admin bypass: unlimited everything, skip all token / model gating
-          const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-          const adminUnlimited = !!isAdmin;
-
           const today = new Date().toISOString().split("T")[0];
           if (settings.tokens_reset_date !== today) {
             await supabase.from("user_settings").update({ tokens_used_today: 0, tokens_reset_date: today }).eq("user_id", userId);
