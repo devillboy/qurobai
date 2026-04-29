@@ -30,12 +30,12 @@ serve(async (req) => {
       );
     }
 
-    // Default to FLUX.1 schnell (ultra-fast, high quality). Allow `sd3` for higher quality.
+    // Private QurobAi image routing. Keep upstream labels out of responses and logs.
     const fwEndpoint = model === "sd3"
       ? "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/stable-diffusion-3-medium/text_to_image"
       : "https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell-fp8/text_to_image";
 
-    console.log("Generating image via Fireworks (FLUX schnell):", prompt.slice(0, 100));
+    console.log("Generating image via QurobAi renderer:", prompt.slice(0, 100));
 
     const response = await fetch(fwEndpoint, {
       method: "POST",
@@ -56,7 +56,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Fireworks image error:", response.status, errorText);
+      console.error("QurobAi image renderer error:", response.status, errorText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Image generation rate limited. Please try again shortly." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -74,7 +74,7 @@ serve(async (req) => {
       binary += String.fromCharCode.apply(null, Array.from(imgBuf.subarray(i, i + chunk)) as any);
     }
     const base64Image = btoa(binary);
-    console.log("Fireworks image bytes:", imgBuf.length);
+    console.log("QurobAi image bytes:", imgBuf.length);
 
     const imageDataUri = `data:${mimeType};base64,${base64Image}`;
 
