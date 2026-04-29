@@ -295,14 +295,14 @@ serve(async (req) => {
       return json({ error: "Daily limit reached (1000 requests). Upgrade for unlimited.", code: "RATE_LIMITED" }, 429);
     }
 
-    const { answer, providerUsed, modelName } = await runChatCompletion({
+    const { answer, modelName } = await runChatCompletion({
       requestedModel,
       messages,
     });
 
     if (!answer) {
       return json({
-        error: "All AI providers are currently unavailable. Please try again in a moment.",
+        error: "QurobAi service is currently unavailable. Please try again in a moment.",
         code: "SERVICE_UNAVAILABLE",
         retryable: true,
       }, 503);
@@ -329,7 +329,6 @@ serve(async (req) => {
       message: answer,
       model: requestedModel,
       model_name: modelName,
-      provider: providerUsed,
       promo_active: promoActive,
       promo_expires_at: keyData.promo_expires_at,
       usage: {
@@ -343,7 +342,6 @@ serve(async (req) => {
     return json({
       error: "Internal server error",
       code: "SERVER_ERROR",
-      details: error instanceof Error ? error.message : "Unknown error",
     }, 500);
   }
 });
