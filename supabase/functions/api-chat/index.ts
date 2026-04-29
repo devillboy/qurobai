@@ -169,7 +169,6 @@ function resolveModel(requested: string) {
       gemini:     "gemini-2.5-pro",
     } as const;
   }
-  }
   if (m === "qurob-4") {
     return {
       modelName: "Qurob 4",
