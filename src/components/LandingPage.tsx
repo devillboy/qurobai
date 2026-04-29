@@ -331,10 +331,10 @@ export const LandingPage = () => {
         <div className="max-w-4xl mx-auto">
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="flex flex-wrap justify-center gap-6 md:gap-12">
             {[
-              { label: "vs ChatGPT", detail: "Free & faster" },
-              { label: "vs Gemini", detail: "Real-time data" },
-              { label: "vs Claude", detail: "Made in India 🇮🇳" },
-              { label: "vs Perplexity", detail: "Code + Search" },
+              { label: "Free tier", detail: "Fast access" },
+              { label: "Live data", detail: "Real-time answers" },
+              { label: "India-first", detail: "Made in India 🇮🇳" },
+              { label: "All-in-one", detail: "Code + Search" },
             ].map((item) => (
               <div key={item.label} className="text-center">
                 <p className="text-sm font-semibold">{item.label}</p>
@@ -403,7 +403,7 @@ export const LandingPage = () => {
             {[
               {
                 title: "Best Free AI Chatbot in India 2026",
-                excerpt: "Looking for the best free AI chatbot in India? QurobAi offers unlimited conversations, real-time data, web search, and code generation — all without a credit card. Compare ChatGPT, Gemini, and QurobAi features for Indian users.",
+                excerpt: "Looking for the best free AI chatbot in India? QurobAi offers unlimited conversations, real-time data, web search, and code generation — all without a credit card.",
                 tag: "Comparison",
               },
               {
@@ -412,8 +412,8 @@ export const LandingPage = () => {
                 tag: "Education",
               },
               {
-                title: "ChatGPT vs QurobAi: Which is Better for Indians?",
-                excerpt: "While ChatGPT requires paid plans for advanced features, QurobAi provides free access to powerful AI models with real-time cricket scores, weather, stocks, and UPI payments — built specifically for India.",
+                title: "Why QurobAi is Built Better for Indians",
+                excerpt: "QurobAi provides powerful models with real-time cricket scores, weather, stocks, and UPI payments — built specifically for India.",
                 tag: "VS",
               },
               {
