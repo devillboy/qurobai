@@ -1,4 +1,4 @@
-import { Brain } from "lucide-react";
+import { DatabaseZap } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -24,12 +24,12 @@ export function BrainMemoryToggle({ enabled, onToggle }: BrainMemoryToggleProps)
             )}
             aria-label="Toggle Brain Memory"
           >
-            <Brain className={cn("w-3 h-3", isOn && "animate-pulse")} />
+            <DatabaseZap className={cn("w-3 h-3", isOn && "animate-pulse")} />
             <span>Memory {isOn ? "On" : "Off"}</span>
           </button>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          <p className="font-medium mb-1">Brain Memory</p>
+          <p className="font-medium mb-1">Memory</p>
           <p className="text-xs text-muted-foreground">
             When ON, AI remembers your preferences and key facts from past conversations to give better, more personal answers in this chat.
           </p>
