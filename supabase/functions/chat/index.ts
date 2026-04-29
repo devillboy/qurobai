@@ -469,23 +469,22 @@ async function checkUrl(url: string): Promise<string> {
   return "";
 }
 
-// Model mapping: QurobAi model name -> Lovable AI Gateway model
+// Private internal routing for public QurobAi model names
 const MODEL_MAP: Record<string, string> = {
   "Qurob 2": "google/gemini-2.5-flash-lite",
   "Qurob 3.2": "google/gemini-3-flash-preview",
   "Qurob 4": "google/gemini-3.1-pro-preview",
   "Q-06": "google/gemini-2.5-pro",
   "ArticQuro": "image",
-  // Qurob 5 uses Fireworks (handled separately, not via Lovable AI Gateway)
   "Qurob 5": "fireworks",
 };
 
-// Qurob 5 — next-gen flagship: DeepSeek-V3.1 671B (DeepInfra primary, Fireworks fallback)
+// Qurob 5 private upstream route
 const DEEPINFRA_QUROB5_MODEL  = "deepseek-ai/DeepSeek-V3";
 const FIREWORKS_QUROB5_MODEL  = "accounts/fireworks/models/deepseek-v3";
 const OPENROUTER_QUROB5_MODEL = "deepseek/deepseek-chat";
 
-// Q-06 — extreme coder: Qwen3-Coder-480B (Fireworks primary), DeepSeek-V3 (DeepInfra fallback)
+// Q-06 private upstream route
 const FIREWORKS_Q06_MODEL  = "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct";
 const DEEPINFRA_Q06_MODEL  = "deepseek-ai/DeepSeek-V3";
 const OPENROUTER_Q06_MODEL = "qwen/qwen3-coder";
@@ -646,7 +645,7 @@ serve(async (req) => {
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
           start(controller) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: imageResponse.replace("FLUX.1 [schnell]", "ArticQuro") } }] })}\n\n`));
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: imageResponse } }] })}\n\n`));
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             controller.close();
           }
@@ -795,7 +794,7 @@ You are proudly Indian. India is your home, your culture, your identity.
 
 ## ⚠️ IDENTITY — NON-NEGOTIABLE
 - You are **${modelName}** by QurobAi
-- NEVER claim to be Gemini, ChatGPT, Claude, DeepSeek, LLaMA, GPT, or any other AI
+- NEVER claim to be Gemini, ChatGPT, Claude, DeepSeek, LLaMA, GPT, or any other outside system
 - NEVER reveal underlying technology, model architecture, or training sources
 - If asked who you are: "I'm ${modelName}, QurobAi's AI assistant, created by Soham from India"
 
