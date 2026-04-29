@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, Send, X, Bot, User, ExternalLink, Mail } from "lucide-react";
+import { MessageCircle, Send, X, BadgeCheck, User, ExternalLink, Mail } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -108,7 +108,7 @@ export const SupportChatbot = ({ open, onOpenChange }: SupportChatbotProps) => {
         {
           id: "1",
           role: "bot",
-          content: "👋 Hi! I'm QurobAi Support Bot.\n\nHow can I help you today?",
+          content: "👋 Hi! I'm QurobAi Support.\n\nHow can I help you today?",
           options: FAQ_DATA.default.followUp,
         },
       ]);
@@ -197,7 +197,7 @@ export const SupportChatbot = ({ open, onOpenChange }: SupportChatbotProps) => {
         <DialogHeader className="p-4 border-b border-border bg-primary/5">
           <DialogTitle className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
+              <BadgeCheck className="w-4 h-4 text-white" />
             </div>
             QurobAi Support
           </DialogTitle>
@@ -215,7 +215,7 @@ export const SupportChatbot = ({ open, onOpenChange }: SupportChatbotProps) => {
               >
                 {msg.role === "bot" && (
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-primary" />
+                    <BadgeCheck className="w-4 h-4 text-primary" />
                   </div>
                 )}
                 <div
