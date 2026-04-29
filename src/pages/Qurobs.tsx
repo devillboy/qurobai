@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Sparkles, Code, BookOpen, Lightbulb, GraduationCap, Pen, Briefcase, Search } from "lucide-react";
+import { ArrowLeft, Plus, BadgeCheck, Code, BookOpen, Lightbulb, GraduationCap, Pen, Briefcase, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,7 +25,7 @@ interface QurobBot {
 }
 
 const iconMap: Record<string, any> = {
-  sparkles: Sparkles, code: Code, "book-open": BookOpen, lightbulb: Lightbulb,
+  sparkles: BadgeCheck, code: Code, "book-open": BookOpen, lightbulb: Lightbulb,
   "graduation-cap": GraduationCap, pen: Pen, briefcase: Briefcase,
 };
 
@@ -61,7 +61,7 @@ export default function Qurobs() {
   const allPublic = filteredBots.filter(b => b.is_public || b.user_id === user?.id);
 
   const BotCard = ({ bot }: { bot: QurobBot }) => {
-    const IconComponent = iconMap[bot.icon] || Sparkles;
+    const IconComponent = iconMap[bot.icon] || BadgeCheck;
     return (
       <motion.div
         whileHover={{ scale: 1.02 }}
@@ -129,7 +129,7 @@ export default function Qurobs() {
                 <div className="text-center py-12 text-muted-foreground">Loading...</div>
               ) : allPublic.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <BadgeCheck className="w-8 h-8 mx-auto mb-2 opacity-40" />
                   <p>No Qurobs yet. Create your first one!</p>
                 </div>
               ) : (
