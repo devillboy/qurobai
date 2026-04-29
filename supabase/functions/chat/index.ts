@@ -844,10 +844,8 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
     const temperature = MODEL_TEMPERATURE[modelName] || 0.55;
     const gatewayModel = MODEL_MAP[modelName] || "google/gemini-3-flash-preview";
 
-    console.log("Using model:", modelName, "gateway:", gatewayModel);
+    console.log("Using QurobAi model:", modelName);
 
-    // PRIMARY for Qurob 5: DeepInfra DeepSeek-V3 (671B MoE flagship reasoning + code beast)
-    // Fallback chain: DeepInfra → Fireworks → OpenRouter
     if (modelName === "Qurob 5") {
       const DEEPINFRA_API_KEY = Deno.env.get("DEEPINFRA_API_KEY");
       if (DEEPINFRA_API_KEY) {
@@ -872,11 +870,11 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           });
           clearTimeout(tId);
           if (diResp.ok && diResp.body) {
-            console.log("Qurob 5 / DeepInfra DeepSeek-V3 streaming started");
+            console.log("Qurob 5 streaming started");
             return new Response(diResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
-          console.error("DeepInfra Qurob5 error:", diResp.status, await diResp.text().catch(() => ""));
-        } catch (e) { console.error("DeepInfra Qurob5 failed:", e); }
+          console.error("Qurob 5 route error:", diResp.status, await diResp.text().catch(() => ""));
+        } catch (e) { console.error("Qurob 5 route failed:", e); }
       }
 
       const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
@@ -904,17 +902,16 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           });
           clearTimeout(tId);
           if (fwResponse.ok && fwResponse.body) {
-            console.log("Qurob 5 / Fireworks DeepSeek-V3 fallback streaming");
+            console.log("Qurob 5 fallback streaming");
             return new Response(fwResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
           const errTxt = await fwResponse.text();
-          console.error("Fireworks error:", fwResponse.status, errTxt);
+          console.error("Qurob 5 fallback error:", fwResponse.status, errTxt);
         } catch (e) {
-          console.error("Fireworks call failed (timeout or error):", e);
+          console.error("Qurob 5 fallback failed:", e);
         }
       }
 
-      // Final fallback: OpenRouter DeepSeek
       if (OPENROUTER_API_KEY) {
         try {
           const ctrl = new AbortController();
@@ -938,14 +935,13 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           });
           clearTimeout(tId);
           if (orResp.ok && orResp.body) {
-            console.log("Qurob 5 / OpenRouter DeepSeek fallback streaming");
+            console.log("Qurob 5 final fallback streaming");
             return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
-        } catch (e) { console.error("OpenRouter Qurob5 fallback failed:", e); }
+        } catch (e) { console.error("Qurob 5 final fallback failed:", e); }
       }
     }
 
-    // Q-06: Extreme Coder — Fireworks Qwen3-Coder-480B → DeepInfra DeepSeek-V3 fallback
     if (modelName === "Q-06") {
       const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
       if (FIREWORKS_API_KEY) {
