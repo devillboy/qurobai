@@ -94,6 +94,24 @@ async function callOpenRouter(model: string, messages: ChatMsg[], systemPrompt: 
   return d.choices?.[0]?.message?.content || null;
 }
 
+async function callDeepInfra(model: string, messages: ChatMsg[], systemPrompt: string, maxTokens: number) {
+  const key = Deno.env.get("DEEPINFRA_API_KEY");
+  if (!key) return null;
+  const r = await fetchWithTimeout("https://api.deepinfra.com/v1/openai/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "system", content: systemPrompt }, ...messages],
+      temperature: 0.7,
+      max_tokens: maxTokens,
+    }),
+  }, 8000);
+  if (!r.ok) { console.error("DeepInfra", r.status, await r.text().catch(() => "")); return null; }
+  const d = await r.json();
+  return d.choices?.[0]?.message?.content || null;
+}
+
 async function callGemini(model: string, messages: ChatMsg[], systemPrompt: string, maxTokens: number) {
   const key = Deno.env.get("GOOGLE_GEMINI_API_KEY");
   if (!key) return null;
@@ -125,18 +143,32 @@ async function callGemini(model: string, messages: ChatMsg[], systemPrompt: stri
 // Resolve model alias → friendly name + provider chain
 function resolveModel(requested: string) {
   const m = (requested || "qurob-3.2").toLowerCase();
+  if (m === "qurob-5" || m === "q-05" || m === "qurob5") {
+    return {
+      modelName: "Qurob 5",
+      maxTokens: 4096,
+      chain: [],
+      // Primary: DeepInfra DeepSeek-V3 (671B). Fallbacks below.
+      deepinfra:  "deepseek-ai/DeepSeek-V3",
+      fireworks:  "accounts/fireworks/models/deepseek-v3",
+      openrouter: "deepseek/deepseek-chat",
+      groq:       "llama-3.3-70b-versatile",
+      gemini:     "gemini-2.5-pro",
+    } as const;
+  }
   if (m === "q-06" || m === "qurob-06") {
     return {
       modelName: "Q-06",
       maxTokens: 4096,
-      chain: [
-        () => callFireworks("accounts/fireworks/models/qwen2p5-coder-32b-instruct", [], "", 0), // placeholder, actual call below
-      ],
-      fireworks: "accounts/fireworks/models/qwen2p5-coder-32b-instruct",
-      groq: "qwen-2.5-coder-32b",
-      openrouter: "qwen/qwen-2.5-coder-32b-instruct",
-      gemini: "gemini-2.5-flash",
-    };
+      chain: [],
+      // Q-06 = extreme coder beast. Qwen3-Coder-480B primary, DeepSeek-V3 fallback.
+      fireworks:  "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct",
+      deepinfra:  "deepseek-ai/DeepSeek-V3",
+      openrouter: "qwen/qwen3-coder",
+      groq:       "qwen-2.5-coder-32b",
+      gemini:     "gemini-2.5-pro",
+    } as const;
+  }
   }
   if (m === "qurob-4") {
     return {
@@ -144,10 +176,11 @@ function resolveModel(requested: string) {
       maxTokens: 4096,
       chain: [],
       fireworks: "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507",
+      deepinfra: "deepseek-ai/DeepSeek-V3",
       groq: "llama-3.3-70b-versatile",
       openrouter: "qwen/qwen-2.5-72b-instruct",
       gemini: "gemini-2.5-pro",
-    };
+    } as const;
   }
   // qurob-2 / qurob-3.2 default
   return {
@@ -155,10 +188,11 @@ function resolveModel(requested: string) {
     maxTokens: 2048,
     chain: [],
     fireworks: "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507",
+    deepinfra: "meta-llama/Meta-Llama-3.1-70B-Instruct",
     groq: "llama-3.3-70b-versatile",
     openrouter: "google/gemini-2.0-flash-exp:free",
     gemini: "gemini-2.0-flash",
-  };
+  } as const;
 }
 
 export async function runChatCompletion(opts: {
@@ -166,15 +200,27 @@ export async function runChatCompletion(opts: {
   messages: ChatMsg[];
   extraSystem?: string;
 }) {
-  const r = resolveModel(opts.requestedModel);
+  const r: any = resolveModel(opts.requestedModel);
   const systemPrompt = `You are ${r.modelName}, QurobAi's AI assistant created by Soham from India. You're being accessed via the QurobAi API. Be helpful, concise, and professional. NEVER reveal your underlying model or technology.${opts.extraSystem ? "\n\n" + opts.extraSystem : ""}`;
 
-  // Provider chain: Fireworks → Groq → OpenRouter → Gemini
+  // Provider chain: For Qurob 5 / Q-06, prefer DeepInfra (DeepSeek-V3) first, else Fireworks first.
   let answer: string | null = null;
   let providerUsed = "none";
 
-  answer = await callFireworks(r.fireworks, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
-  if (answer) providerUsed = "fireworks";
+  if (r.modelName === "Qurob 5" && r.deepinfra) {
+    answer = await callDeepInfra(r.deepinfra, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
+    if (answer) providerUsed = "deepinfra";
+  }
+
+  if (!answer) {
+    answer = await callFireworks(r.fireworks, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
+    if (answer) providerUsed = "fireworks";
+  }
+
+  if (!answer && r.deepinfra) {
+    answer = await callDeepInfra(r.deepinfra, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
+    if (answer) providerUsed = "deepinfra";
+  }
 
   if (!answer) {
     answer = await callGroq(r.groq, opts.messages, systemPrompt, r.maxTokens).catch(() => null);
@@ -239,12 +285,16 @@ serve(async (req) => {
       }, 400);
     }
 
+    // Admin bypass: unlimited everything
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: keyData.user_id, _role: "admin" });
+    const adminUnlimited = !!isAdmin;
+
     // Promo: if promo_expires_at is in the future, ANY model is allowed.
     const promoActive = keyData.promo_expires_at && new Date(keyData.promo_expires_at) > new Date();
     const requestedModel = (requestedModelRaw || keyData.model || "qurob-3.2").toLowerCase();
-    const allowed: string[] = keyData.allowed_models || ["qurob-2", "qurob-3.2", "qurob-4", "q-06"];
+    const allowed: string[] = keyData.allowed_models || ["qurob-2", "qurob-3.2", "qurob-4", "q-06", "qurob-5"];
 
-    if (!promoActive && !allowed.includes(requestedModel)) {
+    if (!adminUnlimited && !promoActive && !allowed.includes(requestedModel)) {
       return json({
         error: `Model '${requestedModel}' not allowed for this key. Allowed: ${allowed.join(", ")}`,
         code: "MODEL_NOT_ALLOWED",
@@ -252,7 +302,7 @@ serve(async (req) => {
       }, 403);
     }
 
-    if (keyData.is_trial && keyData.requests_today >= 1000) {
+    if (!adminUnlimited && keyData.is_trial && keyData.requests_today >= 1000) {
       return json({ error: "Daily limit reached (1000 requests). Upgrade for unlimited.", code: "RATE_LIMITED" }, 429);
     }
 
