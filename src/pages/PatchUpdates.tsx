@@ -1,4 +1,4 @@
-import { ArrowLeft, BadgeCheck, Rocket, Calendar, Tag, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Rocket, Calendar, Tag, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
