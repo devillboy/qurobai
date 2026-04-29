@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Smartphone, Apple, Shield, Zap, Brain, MessageCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Download, Smartphone, Apple, Shield, Zap, MessageCircle, BadgeCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { SEOHead } from "@/components/SEOHead";
 import { motion } from "framer-motion";
@@ -12,7 +12,7 @@ export default function DownloadPage() {
   const navigate = useNavigate();
 
   const features = [
-    { icon: Brain, label: "AI Chat", desc: "Advanced AI at your fingertips" },
+    { icon: BadgeCheck, label: "Qurob Chat", desc: "Advanced assistant at your fingertips" },
     { icon: Zap, label: "Real-time", desc: "Weather, crypto, stocks & more" },
     { icon: MessageCircle, label: "Voice", desc: "Speak to AI with voice input" },
     { icon: Shield, label: "Secure", desc: "Encrypted conversations always" },
