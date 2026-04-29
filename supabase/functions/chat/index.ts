@@ -480,9 +480,15 @@ const MODEL_MAP: Record<string, string> = {
   "Qurob 5": "fireworks",
 };
 
-// Fireworks model id for Qurob 5 — latest top-tier tuned model
-// Keep Qwen 235B, but use the stable Fireworks slug (the previous instruct-2507 slug returns 404).
-const FIREWORKS_QUROB5_MODEL = "accounts/fireworks/models/qwen3-235b-a22b";
+// Qurob 5 — next-gen flagship: DeepSeek-V3.1 671B (DeepInfra primary, Fireworks fallback)
+const DEEPINFRA_QUROB5_MODEL  = "deepseek-ai/DeepSeek-V3";
+const FIREWORKS_QUROB5_MODEL  = "accounts/fireworks/models/deepseek-v3";
+const OPENROUTER_QUROB5_MODEL = "deepseek/deepseek-chat";
+
+// Q-06 — extreme coder: Qwen3-Coder-480B (Fireworks primary), DeepSeek-V3 (DeepInfra fallback)
+const FIREWORKS_Q06_MODEL  = "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct";
+const DEEPINFRA_Q06_MODEL  = "deepseek-ai/DeepSeek-V3";
+const OPENROUTER_Q06_MODEL = "qwen/qwen3-coder";
 
 // Per-model temperature tuning
 const MODEL_TEMPERATURE: Record<string, number> = {
