@@ -601,6 +601,12 @@ serve(async (req) => {
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Invalid request format" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // Reset per-request collected sources
+    lastSearchSources = [];
+    const phaseEvents: QurobEvent[] = [
+      { qurob_event: "connecting", model: requestedModel || "Qurob 3.2" },
+    ];
     
     console.log("QurobAi request:", messages.length, "messages, userId:", userId ? "yes" : "no", "requestedModel:", requestedModel);
 
@@ -733,15 +739,13 @@ serve(async (req) => {
 
       if (modelName === "ArticQuro") {
         const prompt = lastUserMessage.content.replace(/^(?:generate|create|make|draw)\s+(?:an?\s+)?(?:image|picture|art|photo)\s*(?:of|about)?\s*/i, "").trim();
+        phaseEvents.push({ qurob_event: "image_starting", label: "Generating image", query: prompt });
         const imageResponse = await generateImage(prompt || lastUserMessage.content || "premium artwork", supabase, userId);
-        const encoder = new TextEncoder();
-        const stream = new ReadableStream({
-          start(controller) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: imageResponse } }] })}\n\n`));
-            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-            controller.close();
-          }
-        });
+        const stream = streamSingleMessage(imageResponse, [
+          ...phaseEvents,
+          { qurob_event: "image_done" },
+          { qurob_event: "answering" },
+        ]);
         return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
       }
       
@@ -750,40 +754,55 @@ serve(async (req) => {
         console.log("Detected query:", queryType.type, queryType.query);
         
         if (queryType.type === "image_generation") {
+          // Auto-route: user mentioned image — silently switch to image renderer
+          phaseEvents.push({ qurob_event: "image_starting", label: "Generating image", query: queryType.query });
           const imageResponse = await generateImage(queryType.query || "beautiful artwork", supabase, userId);
-          const encoder = new TextEncoder();
-          const stream = new ReadableStream({
-            start(controller) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: imageResponse } }] })}\n\n`));
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              controller.close();
-            }
-          });
+          const stream = streamSingleMessage(imageResponse, [
+            ...phaseEvents,
+            { qurob_event: "image_done" },
+            { qurob_event: "answering" },
+          ]);
           return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
         
+        if (queryType.type === "websearch" || queryType.type === "deepsearch") {
+          phaseEvents.push({ qurob_event: "searching", label: queryType.type === "deepsearch" ? "Deep searching" : "Web search", query: queryType.query });
+        }
         const data = await fetchRealtimeData(queryType.type, queryType.query);
         if (data) realtimeContext += `\n\n## REAL-TIME DATA (Present this to user):\n${data}`;
+        if ((queryType.type === "websearch" || queryType.type === "deepsearch") && lastSearchSources.length) {
+          phaseEvents.push({ qurob_event: "searching", sources: lastSearchSources.slice(0, 6) });
+        }
       } else {
         // No explicit query type detected — try auto web search silently
         // This kicks in when AI might not know the answer (latest events, specific facts, etc.)
           // Qurob 5 auto-searches only when freshness is needed; simple chats must answer instantly.
           if (modelName === "Qurob 5" && !isSimpleFastReply(lastUserMessage.content)) {
+            phaseEvents.push({ qurob_event: "searching", label: "Live web grounding", query: lastUserMessage.content.slice(0, 80) });
             const forced = await Promise.race([
               firecrawlSearch(lastUserMessage.content),
               new Promise<string>((resolve) => setTimeout(() => resolve(""), 1800)),
             ]);
           if (forced) {
             realtimeContext += `\n\n## LIVE WEB CONTEXT (Qurob 5 auto-grounded — use these facts, cite sources naturally):\n${forced}`;
+            if (lastSearchSources.length) phaseEvents.push({ qurob_event: "searching", sources: lastSearchSources.slice(0, 6) });
           }
         } else {
           const autoResult = await autoWebSearch(lastUserMessage.content);
           if (autoResult) {
             realtimeContext += `\n\n## SUPPLEMENTARY WEB CONTEXT (Use this info to give accurate answers, do NOT mention you searched the web):\n${autoResult}`;
+            if (lastSearchSources.length) phaseEvents.push({ qurob_event: "searching", sources: lastSearchSources.slice(0, 6) });
           }
         }
       }
+
+      // URL scrape phase event
+      if (urlMatchEmitted(lastUserMessage.content)) {
+        // already pushed below by checkUrl path; we add a marker event upstream
+      }
     }
+    // Always push answering phase before LLM stream begins
+    phaseEvents.push({ qurob_event: "answering" });
 
     // Vision handling via Lovable AI Gateway (supports multimodal)
     if (hasImage && imageUrl) {
