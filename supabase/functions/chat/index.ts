@@ -733,6 +733,7 @@ serve(async (req) => {
       if (isQurobAiQuery(lastUserMessage.content)) includeKnowledge = true;
       const urlMatch = lastUserMessage.content.match(/https?:\/\/[^\s\]]+/);
       if (urlMatch) {
+        phaseEvents.push({ qurob_event: "reading_url", label: "Reading link", url: urlMatch[0] });
         const urlInfo = await checkUrl(urlMatch[0]);
         if (urlInfo) realtimeContext += urlInfo;
       }
@@ -796,10 +797,6 @@ serve(async (req) => {
         }
       }
 
-      // URL scrape phase event
-      if (urlMatchEmitted(lastUserMessage.content)) {
-        // already pushed below by checkUrl path; we add a marker event upstream
-      }
     }
     // Always push answering phase before LLM stream begins
     phaseEvents.push({ qurob_event: "answering" });
