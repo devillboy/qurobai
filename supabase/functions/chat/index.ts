@@ -1136,8 +1136,16 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
     }
 
     const effectiveGatewayModel = gatewayModel;
-    if (LOVABLE_API_KEY && modelName !== "Qurob 5" && modelName !== "Q-06" && modelName !== "ArticQuro") {
+    // Final safety net: if specialized Q-06 / Qurob 5 routes all failed,
+    // fall back to Lovable AI Gateway with a high-quality default so user
+    // never sees a dead 500. ArticQuro stays excluded (it's image-only).
+    if (LOVABLE_API_KEY && modelName !== "ArticQuro") {
       try {
+        const fallbackModel = (modelName === "Q-06")
+          ? "google/gemini-2.5-pro"   // strongest text+code reasoner available on gateway
+          : (modelName === "Qurob 5")
+            ? "google/gemini-2.5-pro"
+            : effectiveGatewayModel;
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -1145,7 +1153,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: effectiveGatewayModel,
+            model: fallbackModel,
             messages: allMessages,
             stream: true,
             temperature,
