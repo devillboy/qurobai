@@ -544,6 +544,53 @@ const MODEL_TEMPERATURE: Record<string, number> = {
   "ArticQuro": 0.35,   // Image prompts: crisp visual direction
 };
 
+/**
+ * Wrap an upstream SSE body so we can prepend our own phase events
+ * (and optionally append a `done` event). The upstream stream is forwarded
+ * verbatim — we only inject extra `data: {"qurob_event":...}` lines.
+ */
+function wrapStreamWithEvents(
+  upstream: ReadableStream<Uint8Array>,
+  prelude: QurobEvent[],
+  finalEvent?: QurobEvent,
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const reader = upstream.getReader();
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      for (const ev of prelude) controller.enqueue(encoder.encode(encodeEvent(ev)));
+    },
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          if (finalEvent) controller.enqueue(encoder.encode(encodeEvent(finalEvent)));
+          controller.enqueue(encoder.encode(encodeEvent({ qurob_event: "done" })));
+          controller.close();
+          return;
+        }
+        if (value) controller.enqueue(value);
+      } catch (e) {
+        controller.error(e);
+      }
+    },
+    cancel() { try { reader.cancel(); } catch { /* noop */ } },
+  });
+}
+
+function streamSingleMessage(content: string, prelude: QurobEvent[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      for (const ev of prelude) controller.enqueue(encoder.encode(encodeEvent(ev)));
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`));
+      controller.enqueue(encoder.encode(encodeEvent({ qurob_event: "done" })));
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
