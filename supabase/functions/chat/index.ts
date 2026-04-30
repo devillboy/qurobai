@@ -6,6 +6,42 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ============================================================================
+// Real-time activity events — emitted as SSE alongside content tokens.
+// Frontend parses lines starting with `data: {"qurob_event":...}` to drive
+// the live thinking indicator and source citations.
+// ============================================================================
+type QurobPhase =
+  | "connecting"      // request received, planning
+  | "searching"       // hitting web search providers
+  | "reading_url"     // scraping a user-provided URL
+  | "image_starting"  // about to call image renderer
+  | "image_done"      // image bytes returned
+  | "answering"       // tokens are flowing from the LLM
+  | "done";
+
+interface QurobEvent {
+  qurob_event: QurobPhase;
+  label?: string;
+  query?: string;
+  sources?: { title: string; url: string; favicon: string }[];
+  url?: string;
+  model?: string;
+}
+
+function encodeEvent(ev: QurobEvent): string {
+  return `data: ${JSON.stringify(ev)}\n\n`;
+}
+
+function faviconFor(url: string): string {
+  try {
+    const u = new URL(url);
+    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
+  } catch {
+    return "";
+  }
+}
+
 const TONE_STYLES: Record<string, string> = {
   default: "balanced and adaptable",
   professional: "polished, precise, and formal",
@@ -123,6 +159,9 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
   return null;
 }
 
+// Collected sources from the last search — surfaced to the client via SSE event.
+let lastSearchSources: { title: string; url: string; favicon: string }[] = [];
+
 // Firecrawl-powered web search (primary)
 async function firecrawlSearch(query: string): Promise<string> {
   const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
@@ -140,6 +179,7 @@ async function firecrawlSearch(query: string): Promise<string> {
     for (const r of data.data.slice(0, 6)) {
       const snippet = r.markdown ? r.markdown.slice(0, 300).replace(/\n/g, " ").trim() : r.description || "";
       result += `• **${r.title || r.url}** — ${snippet}\n  ${r.url}\n`;
+      if (r.url) lastSearchSources.push({ title: r.title || r.url, url: r.url, favicon: faviconFor(r.url) });
     }
     return result;
   } catch (e) { console.error("Firecrawl search error:", e); return ""; }
@@ -188,6 +228,7 @@ async function serperSearch(query: string): Promise<string> {
       result += "**Search Results:**\n";
       for (const r of data.organic.slice(0, 6)) {
         result += `• **${r.title}** — ${r.snippet || ""}\n  ${r.link}\n`;
+        if (r.link) lastSearchSources.push({ title: r.title || r.link, url: r.link, favicon: faviconFor(r.link) });
       }
     }
     return result;
