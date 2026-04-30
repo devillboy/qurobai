@@ -10,16 +10,29 @@ export interface Message {
   timestamp: Date;
   isPinned?: boolean;
   latencyMs?: number;
+  sources?: { title: string; url: string; favicon: string }[];
+}
+
+export type ChatPhase = "idle" | "connecting" | "searching" | "reading_url" | "image_starting" | "image_done" | "answering" | "done";
+
+export interface LiveActivity {
+  phase: ChatPhase;
+  label?: string;
+  query?: string;
+  url?: string;
+  sources: { title: string; url: string; favicon: string }[];
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 async function streamChat({
-  messages, userId, model, conversationId, memoryEnabled, onDelta, onDone, onError, signal,
+  messages, userId, model, conversationId, memoryEnabled, onDelta, onEvent, onDone, onError, signal,
 }: {
   messages: Array<{ role: string; content: string }>;
   userId?: string; model?: string; conversationId?: string; memoryEnabled?: boolean;
-  onDelta: (deltaText: string) => void; onDone: () => void; onError: (error: Error) => void; signal?: AbortSignal;
+  onDelta: (deltaText: string) => void;
+  onEvent?: (ev: { qurob_event: ChatPhase; label?: string; query?: string; url?: string; sources?: { title: string; url: string; favicon: string }[]; model?: string }) => void;
+  onDone: () => void; onError: (error: Error) => void; signal?: AbortSignal;
 }) {
   try {
     const resp = await fetch(CHAT_URL, {
@@ -55,6 +68,7 @@ async function streamChat({
         if (jsonStr === "[DONE]") { streamDone = true; break; }
         try {
           const parsed = JSON.parse(jsonStr);
+          if (parsed.qurob_event && onEvent) { onEvent(parsed); continue; }
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) onDelta(content);
         } catch { textBuffer = line + "\n" + textBuffer; break; }
@@ -70,6 +84,7 @@ async function streamChat({
         if (jsonStr === "[DONE]") continue;
         try {
           const parsed = JSON.parse(jsonStr);
+          if (parsed.qurob_event && onEvent) { onEvent(parsed); continue; }
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) onDelta(content);
         } catch {}
@@ -88,6 +103,7 @@ export const useChat = (conversationId: string | null) => {
   const [currentModel, setCurrentModel] = useState<string>("Qurob 3.2");
   const [selectedModel, setSelectedModel] = useState<string>("Qurob 3.2");
   const [memoryEnabled, setMemoryEnabled] = useState<boolean | undefined>(undefined);
+  const [activity, setActivity] = useState<LiveActivity>({ phase: "idle", sources: [] });
   const { user } = useAuth();
   
   const messagesRef = useRef<Message[]>([]);
@@ -165,10 +181,12 @@ export const useChat = (conversationId: string | null) => {
   const doStream = useCallback(async (messageHistory: Array<{ role: string; content: string }>, convId: string) => {
     const assistantMessageId = crypto.randomUUID();
     let assistantContent = "";
+    let collectedSources: { title: string; url: string; favicon: string }[] = [];
     let hasAddedAssistantMessage = true;
     let firstTokenLatencyMs: number | undefined;
     const streamStartedAt = performance.now();
     setIsLoading(true);
+    setActivity({ phase: "connecting", sources: [] });
     setMessages((prev) => [...prev, { id: assistantMessageId, role: "assistant", content: "", timestamp: new Date() }]);
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -181,6 +199,24 @@ export const useChat = (conversationId: string | null) => {
 
     await streamChat({
       messages: messageHistory, userId: user?.id, model: selectedModelRef.current, conversationId: convId, memoryEnabled: memoryEnabledRef.current, signal: abortController.signal,
+      onEvent: (ev) => {
+        // Merge sources progressively (dedupe by URL)
+        if (ev.sources?.length) {
+          const existing = new Set(collectedSources.map((s) => s.url));
+          for (const s of ev.sources) if (!existing.has(s.url)) collectedSources.push(s);
+        }
+        setActivity({
+          phase: ev.qurob_event,
+          label: ev.label,
+          query: ev.query,
+          url: ev.url,
+          sources: [...collectedSources],
+        });
+        // Attach sources to the in-flight assistant message so they render under it
+        if (collectedSources.length) {
+          setMessages((prev) => prev.map((m) => m.id === assistantMessageId ? { ...m, sources: [...collectedSources] } : m));
+        }
+      },
       onDelta: (delta) => {
         assistantContent += delta;
         if (firstTokenLatencyMs === undefined) firstTokenLatencyMs = Math.max(1, Math.round(performance.now() - streamStartedAt));
@@ -203,16 +239,16 @@ export const useChat = (conversationId: string | null) => {
         setMessages((prev) => {
           if (!assistantContent.trim()) return prev.filter((msg) => msg.id !== assistantMessageId);
           const lastMsg = prev[prev.length - 1];
-          if (lastMsg?.id === assistantMessageId) return prev.map((msg) => msg.id === assistantMessageId ? { ...msg, content: assistantContent, latencyMs: finalLatency } : msg);
-          else if (!hasAddedAssistantMessage && assistantContent) return [...prev, { id: assistantMessageId, role: "assistant" as const, content: assistantContent, timestamp: new Date(), latencyMs: finalLatency }];
+          if (lastMsg?.id === assistantMessageId) return prev.map((msg) => msg.id === assistantMessageId ? { ...msg, content: assistantContent, latencyMs: finalLatency, sources: collectedSources.length ? collectedSources : msg.sources } : msg);
+          else if (!hasAddedAssistantMessage && assistantContent) return [...prev, { id: assistantMessageId, role: "assistant" as const, content: assistantContent, timestamp: new Date(), latencyMs: finalLatency, sources: collectedSources.length ? collectedSources : undefined }];
           return prev;
         });
-        setIsLoading(false); abortControllerRef.current = null;
+        setIsLoading(false); abortControllerRef.current = null; setActivity({ phase: "idle", sources: [] });
         if (assistantContent) await saveMessage(convId, "assistant", assistantContent);
         loadUserModel();
       },
       onError: (error) => {
-        console.error("Chat error:", error); setIsLoading(false); abortControllerRef.current = null;
+        console.error("Chat error:", error); setIsLoading(false); abortControllerRef.current = null; setActivity({ phase: "idle", sources: [] });
         setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
         toast({ title: "Error", description: error.message, variant: "destructive" });
       },
@@ -271,6 +307,6 @@ export const useChat = (conversationId: string | null) => {
   const clearMessages = useCallback(() => { setMessages([]); }, []);
 
   return useMemo(() => ({
-    messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage, memoryEnabled, toggleMemory,
-  }), [messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage, memoryEnabled, toggleMemory]);
+    messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage, memoryEnabled, toggleMemory, activity,
+  }), [messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage, memoryEnabled, toggleMemory, activity]);
 };
