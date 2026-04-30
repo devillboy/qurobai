@@ -6,6 +6,42 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ============================================================================
+// Real-time activity events — emitted as SSE alongside content tokens.
+// Frontend parses lines starting with `data: {"qurob_event":...}` to drive
+// the live thinking indicator and source citations.
+// ============================================================================
+type QurobPhase =
+  | "connecting"      // request received, planning
+  | "searching"       // hitting web search providers
+  | "reading_url"     // scraping a user-provided URL
+  | "image_starting"  // about to call image renderer
+  | "image_done"      // image bytes returned
+  | "answering"       // tokens are flowing from the LLM
+  | "done";
+
+interface QurobEvent {
+  qurob_event: QurobPhase;
+  label?: string;
+  query?: string;
+  sources?: { title: string; url: string; favicon: string }[];
+  url?: string;
+  model?: string;
+}
+
+function encodeEvent(ev: QurobEvent): string {
+  return `data: ${JSON.stringify(ev)}\n\n`;
+}
+
+function faviconFor(url: string): string {
+  try {
+    const u = new URL(url);
+    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
+  } catch {
+    return "";
+  }
+}
+
 const TONE_STYLES: Record<string, string> = {
   default: "balanced and adaptable",
   professional: "polished, precise, and formal",
@@ -84,6 +120,10 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
     /(?:generate|create|make|draw)\s+(?:a\s+)?(?:pic|photo|picture|image)\s+(?:of|about)/i,
     /(?:give\s+me|show\s+me|i\s+want)\s+(?:an?\s+)?(?:image|picture|photo)/i,
     /(?:paint|sketch|illustrate)\s+/i,
+    // Smart visual-creation hints
+    /(?:design|make|create|generate)\s+(?:a\s+|an\s+|the\s+)?(?:logo|poster|banner|wallpaper|icon|avatar|thumbnail|cover|flyer|sticker|emoji|illustration|portrait|landscape|render|artwork|painting)/i,
+    /(?:logo|poster|banner|wallpaper|icon|avatar|thumbnail|cover|flyer|sticker|illustration|artwork|painting)\s+(?:design|create|generate|banao|bana\s+do|de\s+do)/i,
+    /(?:show\s+me|dikhao)\s+(?:a\s+|an\s+|ek\s+)?(?:visual|design|render|scene|3d|wallpaper)/i,
   ];
   if (imagePatterns.some(p => p.test(lower))) {
     let prompt = message.replace(/(?:please\s+)?(?:can\s+you\s+)?(?:mujhe\s+)?(?:ek\s+)?(?:generate|create|draw|make|imagine|banao|bana|banado|banaao|paint|sketch|illustrate|dikhao|dikha|chahiye)\s*(?:an?\s+)?(?:me\s+)?(?:ek\s+)?(?:image|picture|art|tasveer|photo|pic)?\s*(?:of|about|for|ka|ki|ke|mein)?\s*/gi, "").trim();
@@ -123,6 +163,9 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
   return null;
 }
 
+// Collected sources from the last search — surfaced to the client via SSE event.
+let lastSearchSources: { title: string; url: string; favicon: string }[] = [];
+
 // Firecrawl-powered web search (primary)
 async function firecrawlSearch(query: string): Promise<string> {
   const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
@@ -140,6 +183,7 @@ async function firecrawlSearch(query: string): Promise<string> {
     for (const r of data.data.slice(0, 6)) {
       const snippet = r.markdown ? r.markdown.slice(0, 300).replace(/\n/g, " ").trim() : r.description || "";
       result += `• **${r.title || r.url}** — ${snippet}\n  ${r.url}\n`;
+      if (r.url) lastSearchSources.push({ title: r.title || r.url, url: r.url, favicon: faviconFor(r.url) });
     }
     return result;
   } catch (e) { console.error("Firecrawl search error:", e); return ""; }
@@ -188,6 +232,7 @@ async function serperSearch(query: string): Promise<string> {
       result += "**Search Results:**\n";
       for (const r of data.organic.slice(0, 6)) {
         result += `• **${r.title}** — ${r.snippet || ""}\n  ${r.link}\n`;
+        if (r.link) lastSearchSources.push({ title: r.title || r.link, url: r.link, favicon: faviconFor(r.link) });
       }
     }
     return result;
@@ -499,6 +544,53 @@ const MODEL_TEMPERATURE: Record<string, number> = {
   "ArticQuro": 0.35,   // Image prompts: crisp visual direction
 };
 
+/**
+ * Wrap an upstream SSE body so we can prepend our own phase events
+ * (and optionally append a `done` event). The upstream stream is forwarded
+ * verbatim — we only inject extra `data: {"qurob_event":...}` lines.
+ */
+function wrapStreamWithEvents(
+  upstream: ReadableStream<Uint8Array>,
+  prelude: QurobEvent[],
+  finalEvent?: QurobEvent,
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const reader = upstream.getReader();
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      for (const ev of prelude) controller.enqueue(encoder.encode(encodeEvent(ev)));
+    },
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          if (finalEvent) controller.enqueue(encoder.encode(encodeEvent(finalEvent)));
+          controller.enqueue(encoder.encode(encodeEvent({ qurob_event: "done" })));
+          controller.close();
+          return;
+        }
+        if (value) controller.enqueue(value);
+      } catch (e) {
+        controller.error(e);
+      }
+    },
+    cancel() { try { reader.cancel(); } catch { /* noop */ } },
+  });
+}
+
+function streamSingleMessage(content: string, prelude: QurobEvent[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      for (const ev of prelude) controller.enqueue(encoder.encode(encodeEvent(ev)));
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`));
+      controller.enqueue(encoder.encode(encodeEvent({ qurob_event: "done" })));
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -509,6 +601,12 @@ serve(async (req) => {
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Invalid request format" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // Reset per-request collected sources
+    lastSearchSources = [];
+    const phaseEvents: QurobEvent[] = [
+      { qurob_event: "connecting", model: requestedModel || "Qurob 3.2" },
+    ];
     
     console.log("QurobAi request:", messages.length, "messages, userId:", userId ? "yes" : "no", "requestedModel:", requestedModel);
 
@@ -635,21 +733,20 @@ serve(async (req) => {
       if (isQurobAiQuery(lastUserMessage.content)) includeKnowledge = true;
       const urlMatch = lastUserMessage.content.match(/https?:\/\/[^\s\]]+/);
       if (urlMatch) {
+        phaseEvents.push({ qurob_event: "reading_url", label: "Reading link", url: urlMatch[0] });
         const urlInfo = await checkUrl(urlMatch[0]);
         if (urlInfo) realtimeContext += urlInfo;
       }
 
       if (modelName === "ArticQuro") {
         const prompt = lastUserMessage.content.replace(/^(?:generate|create|make|draw)\s+(?:an?\s+)?(?:image|picture|art|photo)\s*(?:of|about)?\s*/i, "").trim();
+        phaseEvents.push({ qurob_event: "image_starting", label: "Generating image", query: prompt });
         const imageResponse = await generateImage(prompt || lastUserMessage.content || "premium artwork", supabase, userId);
-        const encoder = new TextEncoder();
-        const stream = new ReadableStream({
-          start(controller) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: imageResponse } }] })}\n\n`));
-            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-            controller.close();
-          }
-        });
+        const stream = streamSingleMessage(imageResponse, [
+          ...phaseEvents,
+          { qurob_event: "image_done" },
+          { qurob_event: "answering" },
+        ]);
         return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
       }
       
@@ -658,40 +755,51 @@ serve(async (req) => {
         console.log("Detected query:", queryType.type, queryType.query);
         
         if (queryType.type === "image_generation") {
+          // Auto-route: user mentioned image — silently switch to image renderer
+          phaseEvents.push({ qurob_event: "image_starting", label: "Generating image", query: queryType.query });
           const imageResponse = await generateImage(queryType.query || "beautiful artwork", supabase, userId);
-          const encoder = new TextEncoder();
-          const stream = new ReadableStream({
-            start(controller) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: imageResponse } }] })}\n\n`));
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              controller.close();
-            }
-          });
+          const stream = streamSingleMessage(imageResponse, [
+            ...phaseEvents,
+            { qurob_event: "image_done" },
+            { qurob_event: "answering" },
+          ]);
           return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
         
+        if (queryType.type === "websearch" || queryType.type === "deepsearch") {
+          phaseEvents.push({ qurob_event: "searching", label: queryType.type === "deepsearch" ? "Deep searching" : "Web search", query: queryType.query });
+        }
         const data = await fetchRealtimeData(queryType.type, queryType.query);
         if (data) realtimeContext += `\n\n## REAL-TIME DATA (Present this to user):\n${data}`;
+        if ((queryType.type === "websearch" || queryType.type === "deepsearch") && lastSearchSources.length) {
+          phaseEvents.push({ qurob_event: "searching", sources: lastSearchSources.slice(0, 6) });
+        }
       } else {
         // No explicit query type detected — try auto web search silently
         // This kicks in when AI might not know the answer (latest events, specific facts, etc.)
           // Qurob 5 auto-searches only when freshness is needed; simple chats must answer instantly.
           if (modelName === "Qurob 5" && !isSimpleFastReply(lastUserMessage.content)) {
+            phaseEvents.push({ qurob_event: "searching", label: "Live web grounding", query: lastUserMessage.content.slice(0, 80) });
             const forced = await Promise.race([
               firecrawlSearch(lastUserMessage.content),
               new Promise<string>((resolve) => setTimeout(() => resolve(""), 1800)),
             ]);
           if (forced) {
             realtimeContext += `\n\n## LIVE WEB CONTEXT (Qurob 5 auto-grounded — use these facts, cite sources naturally):\n${forced}`;
+            if (lastSearchSources.length) phaseEvents.push({ qurob_event: "searching", sources: lastSearchSources.slice(0, 6) });
           }
         } else {
           const autoResult = await autoWebSearch(lastUserMessage.content);
           if (autoResult) {
             realtimeContext += `\n\n## SUPPLEMENTARY WEB CONTEXT (Use this info to give accurate answers, do NOT mention you searched the web):\n${autoResult}`;
+            if (lastSearchSources.length) phaseEvents.push({ qurob_event: "searching", sources: lastSearchSources.slice(0, 6) });
           }
         }
       }
+
     }
+    // Always push answering phase before LLM stream begins
+    phaseEvents.push({ qurob_event: "answering" });
 
     // Vision handling via Lovable AI Gateway (supports multimodal)
     if (hasImage && imageUrl) {
@@ -732,7 +840,7 @@ CRITICAL RULES FOR IMAGE ANALYSIS:
             }),
           });
           if (visionResponse.ok) {
-            return new Response(visionResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(visionResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("Vision gateway error:", e); }
       }
@@ -749,7 +857,7 @@ CRITICAL RULES FOR IMAGE ANALYSIS:
           }),
         });
         if (visionResponse.ok) {
-          return new Response(visionResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          return new Response(wrapStreamWithEvents(visionResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
       }
     }
@@ -871,7 +979,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (diResp.ok && diResp.body) {
             console.log("Qurob 5 streaming started");
-            return new Response(diResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(diResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
           console.error("Qurob 5 route error:", diResp.status, await diResp.text().catch(() => ""));
         } catch (e) { console.error("Qurob 5 route failed:", e); }
@@ -903,7 +1011,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (fwResponse.ok && fwResponse.body) {
             console.log("Qurob 5 fallback streaming");
-            return new Response(fwResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(fwResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
           const errTxt = await fwResponse.text();
           console.error("Qurob 5 fallback error:", fwResponse.status, errTxt);
@@ -936,7 +1044,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (orResp.ok && orResp.body) {
             console.log("Qurob 5 final fallback streaming");
-            return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(orResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("Qurob 5 final fallback failed:", e); }
       }
@@ -967,7 +1075,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (fwResp.ok && fwResp.body) {
             console.log("Q-06 streaming started");
-            return new Response(fwResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(fwResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
           console.error("Q-06 route error:", fwResp.status, await fwResp.text().catch(() => ""));
         } catch (e) { console.error("Q-06 route failed:", e); }
@@ -996,7 +1104,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (diResp.ok && diResp.body) {
             console.log("Q-06 fallback streaming");
-            return new Response(diResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(diResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("Q-06 fallback failed:", e); }
       }
@@ -1021,15 +1129,23 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           });
           if (orResp.ok && orResp.body) {
             console.log("Q-06 final fallback streaming");
-            return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(orResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("Q-06 final fallback failed:", e); }
       }
     }
 
     const effectiveGatewayModel = gatewayModel;
-    if (LOVABLE_API_KEY && modelName !== "Qurob 5" && modelName !== "Q-06" && modelName !== "ArticQuro") {
+    // Final safety net: if specialized Q-06 / Qurob 5 routes all failed,
+    // fall back to Lovable AI Gateway with a high-quality default so user
+    // never sees a dead 500. ArticQuro stays excluded (it's image-only).
+    if (LOVABLE_API_KEY && modelName !== "ArticQuro") {
       try {
+        const fallbackModel = (modelName === "Q-06")
+          ? "google/gemini-2.5-pro"   // strongest text+code reasoner available on gateway
+          : (modelName === "Qurob 5")
+            ? "google/gemini-2.5-pro"
+            : effectiveGatewayModel;
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -1037,7 +1153,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: effectiveGatewayModel,
+            model: fallbackModel,
             messages: allMessages,
             stream: true,
             temperature,
@@ -1047,7 +1163,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
 
         if (response.ok && response.body) {
           console.log("QurobAi streaming started");
-          return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          return new Response(wrapStreamWithEvents(response.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
 
         if (response.status === 429) {
@@ -1120,7 +1236,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
               } catch (e) { controller.error(e); }
             },
           });
-          return new Response(convertedStream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          return new Response(wrapStreamWithEvents(convertedStream, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
         console.error("Fallback route error:", geminiResponse.status);
       } catch (e) {
@@ -1144,7 +1260,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         
         if (orResponse.ok) {
           console.log("Final fallback streaming started");
-          return new Response(orResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          return new Response(wrapStreamWithEvents(orResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
         console.error("Final fallback error:", orResponse.status);
       } catch (e) {
