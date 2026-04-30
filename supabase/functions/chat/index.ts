@@ -840,7 +840,7 @@ CRITICAL RULES FOR IMAGE ANALYSIS:
             }),
           });
           if (visionResponse.ok) {
-            return new Response(visionResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(visionResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("Vision gateway error:", e); }
       }
@@ -857,7 +857,7 @@ CRITICAL RULES FOR IMAGE ANALYSIS:
           }),
         });
         if (visionResponse.ok) {
-          return new Response(visionResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          return new Response(wrapStreamWithEvents(visionResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
       }
     }
@@ -979,7 +979,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (diResp.ok && diResp.body) {
             console.log("Qurob 5 streaming started");
-            return new Response(diResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(diResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
           console.error("Qurob 5 route error:", diResp.status, await diResp.text().catch(() => ""));
         } catch (e) { console.error("Qurob 5 route failed:", e); }
@@ -1011,7 +1011,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (fwResponse.ok && fwResponse.body) {
             console.log("Qurob 5 fallback streaming");
-            return new Response(fwResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(fwResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
           const errTxt = await fwResponse.text();
           console.error("Qurob 5 fallback error:", fwResponse.status, errTxt);
@@ -1044,7 +1044,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (orResp.ok && orResp.body) {
             console.log("Qurob 5 final fallback streaming");
-            return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(orResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("Qurob 5 final fallback failed:", e); }
       }
@@ -1075,7 +1075,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (fwResp.ok && fwResp.body) {
             console.log("Q-06 streaming started");
-            return new Response(fwResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(fwResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
           console.error("Q-06 route error:", fwResp.status, await fwResp.text().catch(() => ""));
         } catch (e) { console.error("Q-06 route failed:", e); }
@@ -1104,7 +1104,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           clearTimeout(tId);
           if (diResp.ok && diResp.body) {
             console.log("Q-06 fallback streaming");
-            return new Response(diResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(diResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("Q-06 fallback failed:", e); }
       }
@@ -1129,7 +1129,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
           });
           if (orResp.ok && orResp.body) {
             console.log("Q-06 final fallback streaming");
-            return new Response(orResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+            return new Response(wrapStreamWithEvents(orResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("Q-06 final fallback failed:", e); }
       }
@@ -1155,7 +1155,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
 
         if (response.ok && response.body) {
           console.log("QurobAi streaming started");
-          return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          return new Response(wrapStreamWithEvents(response.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
 
         if (response.status === 429) {
@@ -1228,7 +1228,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
               } catch (e) { controller.error(e); }
             },
           });
-          return new Response(convertedStream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          return new Response(wrapStreamWithEvents(convertedStream, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
         console.error("Fallback route error:", geminiResponse.status);
       } catch (e) {
@@ -1252,7 +1252,7 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
         
         if (orResponse.ok) {
           console.log("Final fallback streaming started");
-          return new Response(orResponse.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          return new Response(wrapStreamWithEvents(orResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
         console.error("Final fallback error:", orResponse.status);
       } catch (e) {
