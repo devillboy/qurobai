@@ -120,6 +120,10 @@ function detectQueryType(message: string): { type: string; query?: string } | nu
     /(?:generate|create|make|draw)\s+(?:a\s+)?(?:pic|photo|picture|image)\s+(?:of|about)/i,
     /(?:give\s+me|show\s+me|i\s+want)\s+(?:an?\s+)?(?:image|picture|photo)/i,
     /(?:paint|sketch|illustrate)\s+/i,
+    // Smart visual-creation hints
+    /(?:design|make|create|generate)\s+(?:a\s+|an\s+|the\s+)?(?:logo|poster|banner|wallpaper|icon|avatar|thumbnail|cover|flyer|sticker|emoji|illustration|portrait|landscape|render|artwork|painting)/i,
+    /(?:logo|poster|banner|wallpaper|icon|avatar|thumbnail|cover|flyer|sticker|illustration|artwork|painting)\s+(?:design|create|generate|banao|bana\s+do|de\s+do)/i,
+    /(?:show\s+me|dikhao)\s+(?:a\s+|an\s+|ek\s+)?(?:visual|design|render|scene|3d|wallpaper)/i,
   ];
   if (imagePatterns.some(p => p.test(lower))) {
     let prompt = message.replace(/(?:please\s+)?(?:can\s+you\s+)?(?:mujhe\s+)?(?:ek\s+)?(?:generate|create|draw|make|imagine|banao|bana|banado|banaao|paint|sketch|illustrate|dikhao|dikha|chahiye)\s*(?:an?\s+)?(?:me\s+)?(?:ek\s+)?(?:image|picture|art|tasveer|photo|pic)?\s*(?:of|about|for|ka|ki|ke|mein)?\s*/gi, "").trim();
