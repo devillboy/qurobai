@@ -836,7 +836,7 @@ CRITICAL RULES FOR IMAGE ANALYSIS:
             method: "POST",
             headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
+              model: "google/gemini-3.5-flash",
               messages: [{ role: "system", content: visionSystemPrompt }, ...visionMessages],
               stream: true, temperature: 0.7, max_tokens: 2048,
             }),
@@ -845,22 +845,22 @@ CRITICAL RULES FOR IMAGE ANALYSIS:
             return new Response(wrapStreamWithEvents(visionResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
           }
         } catch (e) { console.error("Vision gateway error:", e); }
-      }
-      
-      // Fallback to OpenRouter for vision
-      if (OPENROUTER_API_KEY) {
-        const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://qurobai.lovable.app", "X-Title": "QurobAi" },
-          body: JSON.stringify({
-            model: "qwen/qwen-2-vl-72b-instruct",
-            messages: [{ role: "system", content: visionSystemPrompt }, ...visionMessages],
-            stream: true, temperature: 0.7, max_tokens: 2048,
-          }),
-        });
-        if (visionResponse.ok) {
-          return new Response(wrapStreamWithEvents(visionResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-        }
+
+        // Vision fallback — different gateway model, same auth
+        try {
+          const visionFallback = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [{ role: "system", content: visionSystemPrompt }, ...visionMessages],
+              stream: true, temperature: 0.7, max_tokens: 2048,
+            }),
+          });
+          if (visionFallback.ok) {
+            return new Response(wrapStreamWithEvents(visionFallback.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+          }
+        } catch (e) { console.error("Vision fallback error:", e); }
       }
     }
 
