@@ -30,7 +30,7 @@ const Index = () => {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [activeQurob, setActiveQurob] = useState<any>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
-  const { messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage, memoryEnabled, toggleMemory } = useChat(currentConversationId);
+  const { messages, isLoading, sendMessage, clearMessages, currentModel, selectedModel, changeModel, regenerateLastMessage, togglePinMessage, stopGeneration, editMessage, memoryEnabled, toggleMemory, activity } = useChat(currentConversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -180,6 +180,7 @@ const Index = () => {
                         role={message.role} content={message.content} messageId={message.id} isPinned={message.isPinned}
                         timestamp={message.timestamp}
                         latencyMs={message.latencyMs}
+                        sources={message.sources}
                         isStreaming={isLoading && message.role === "assistant" && message.id === messages[messages.length - 1]?.id}
                         onRegenerate={message.role === "assistant" && index === messages.length - 1 && currentConversationId ? () => regenerateLastMessage(currentConversationId) : undefined}
                         onPin={() => togglePinMessage(message.id)}
@@ -194,6 +195,9 @@ const Index = () => {
                       <ThinkingIndicator
                         isThinking={showThinking}
                         context={lastUserMsg}
+                        phase={activity.phase === "idle" ? undefined : activity.phase}
+                        label={activity.label}
+                        detail={activity.query || activity.url}
                         hasFirstToken={
                           messages[messages.length - 1]?.role === "assistant" &&
                           (messages[messages.length - 1]?.content?.length ?? 0) > 0

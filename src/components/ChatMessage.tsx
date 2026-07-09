@@ -22,6 +22,7 @@ interface ChatMessageProps {
   onPin?: () => void;
   onEdit?: (newContent: string) => void;
   messageId?: string;
+  sources?: { title: string; url: string; favicon: string }[];
 }
 
 // Loading skeleton component for messages
@@ -381,7 +382,7 @@ const ReactionButton = memo(({ emoji, count, active, onClick }: { emoji: string;
 ));
 ReactionButton.displayName = "ReactionButton";
 
-export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, timestamp, latencyMs, onRegenerate, onPin, onEdit, messageId }: ChatMessageProps) => {
+export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false, timestamp, latencyMs, onRegenerate, onPin, onEdit, messageId, sources }: ChatMessageProps) => {
   const [copied, setCopied] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -518,6 +519,27 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
             </div>
           )}
 
+          {/* Source citation chips */}
+          {!isUser && sources && sources.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {sources.slice(0, 8).map((s, i) => (
+                <a
+                  key={`${s.url}-${i}`}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/40 border border-border/40 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors max-w-[220px]"
+                  title={s.title}
+                >
+                  {s.favicon ? (
+                    <img src={s.favicon} alt="" className="w-3.5 h-3.5 rounded-sm" loading="lazy" />
+                  ) : null}
+                  <span className="truncate">{s.title || new URL(s.url).hostname}</span>
+                </a>
+              ))}
+            </div>
+          )}
+
           {/* Action bar — assistant */}
           {!isUser && !isStreaming && (
             <div className={cn(
@@ -575,6 +597,7 @@ export const ChatMessage = memo(({ role, content, isStreaming, isPinned = false,
     prevProps.messageId === nextProps.messageId &&
     prevProps.latencyMs === nextProps.latencyMs &&
     prevProps.onEdit === nextProps.onEdit &&
+    (prevProps.sources?.length ?? 0) === (nextProps.sources?.length ?? 0) &&
     prevProps.timestamp?.getTime() === nextProps.timestamp?.getTime()
   );
 });
