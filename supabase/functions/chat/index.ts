@@ -956,321 +956,62 @@ ${customInstructions ? `## USER INSTRUCTIONS\n${customInstructions}` : ""}${real
 
     console.log("Using QurobAi model:", modelName);
 
-    if (modelName === "Qurob 5") {
-      const DEEPINFRA_API_KEY = Deno.env.get("DEEPINFRA_API_KEY");
-      if (DEEPINFRA_API_KEY) {
-        try {
-          const ctrl = new AbortController();
-          const tId = setTimeout(() => ctrl.abort(), 4500);
-          const diResp = await fetch("https://api.deepinfra.com/v1/openai/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${DEEPINFRA_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: DEEPINFRA_QUROB5_MODEL,
-              messages: allMessages,
-              stream: true,
-              temperature: 0.3,
-              max_tokens: 1200,
-              top_p: 0.95,
-            }),
-            signal: ctrl.signal,
-          });
-          clearTimeout(tId);
-          if (diResp.ok && diResp.body) {
-            console.log("Qurob 5 streaming started");
-            return new Response(wrapStreamWithEvents(diResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-          }
-          console.error("Qurob 5 route error:", diResp.status, await diResp.text().catch(() => ""));
-        } catch (e) { console.error("Qurob 5 route failed:", e); }
-      }
-
-      const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
-      if (FIREWORKS_API_KEY) {
-        try {
-          const ctrl = new AbortController();
-          const tId = setTimeout(() => ctrl.abort(), 4500);
-          const fwResponse = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-            },
-            body: JSON.stringify({
-              model: FIREWORKS_QUROB5_MODEL,
-              messages: allMessages,
-              stream: true,
-              temperature: 0.3,
-              max_tokens: 1200,
-              top_p: 0.9,
-              top_k: 40,
-            }),
-            signal: ctrl.signal,
-          });
-          clearTimeout(tId);
-          if (fwResponse.ok && fwResponse.body) {
-            console.log("Qurob 5 fallback streaming");
-            return new Response(wrapStreamWithEvents(fwResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-          }
-          const errTxt = await fwResponse.text();
-          console.error("Qurob 5 fallback error:", fwResponse.status, errTxt);
-        } catch (e) {
-          console.error("Qurob 5 fallback failed:", e);
-        }
-      }
-
-      if (OPENROUTER_API_KEY) {
-        try {
-          const ctrl = new AbortController();
-          const tId = setTimeout(() => ctrl.abort(), 6000);
-          const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": "https://qurobai.lovable.app",
-              "X-Title": "QurobAi",
-            },
-            body: JSON.stringify({
-              model: OPENROUTER_QUROB5_MODEL,
-              messages: allMessages,
-              stream: true,
-              temperature: 0.3,
-              max_tokens: 1200,
-            }),
-            signal: ctrl.signal,
-          });
-          clearTimeout(tId);
-          if (orResp.ok && orResp.body) {
-            console.log("Qurob 5 final fallback streaming");
-            return new Response(wrapStreamWithEvents(orResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-          }
-        } catch (e) { console.error("Qurob 5 final fallback failed:", e); }
-      }
+    // ============================================================
+    // Single primary route: Lovable AI Gateway.
+    // Latest, fastest models for every tier. Priority (fast mode)
+    // is enabled automatically on eligible OpenAI models.
+    // On failure we fall back to a strong Gemini model — still on
+    // the same gateway. No third-party providers.
+    // ============================================================
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "AI service not configured." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (modelName === "Q-06") {
-      const FIREWORKS_API_KEY = Deno.env.get("FIREWORKS_API_KEY");
-      if (FIREWORKS_API_KEY) {
-        try {
-          const ctrl = new AbortController();
-          const tId = setTimeout(() => ctrl.abort(), 5000);
-          const fwResp = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${FIREWORKS_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: FIREWORKS_Q06_MODEL,
-              messages: allMessages,
-              stream: true,
-              temperature: 0.15,
-              max_tokens: 4096,
-              top_p: 0.95,
-            }),
-            signal: ctrl.signal,
-          });
-          clearTimeout(tId);
-          if (fwResp.ok && fwResp.body) {
-            console.log("Q-06 streaming started");
-            return new Response(wrapStreamWithEvents(fwResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-          }
-          console.error("Q-06 route error:", fwResp.status, await fwResp.text().catch(() => ""));
-        } catch (e) { console.error("Q-06 route failed:", e); }
-      }
-
-      const DEEPINFRA_API_KEY = Deno.env.get("DEEPINFRA_API_KEY");
-      if (DEEPINFRA_API_KEY) {
-        try {
-          const ctrl = new AbortController();
-          const tId = setTimeout(() => ctrl.abort(), 5000);
-          const diResp = await fetch("https://api.deepinfra.com/v1/openai/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${DEEPINFRA_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: DEEPINFRA_Q06_MODEL,
-              messages: allMessages,
-              stream: true,
-              temperature: 0.15,
-              max_tokens: 4096,
-            }),
-            signal: ctrl.signal,
-          });
-          clearTimeout(tId);
-          if (diResp.ok && diResp.body) {
-            console.log("Q-06 fallback streaming");
-            return new Response(wrapStreamWithEvents(diResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-          }
-        } catch (e) { console.error("Q-06 fallback failed:", e); }
-      }
-
-      if (OPENROUTER_API_KEY) {
-        try {
-          const orResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": "https://qurobai.lovable.app",
-              "X-Title": "QurobAi",
-            },
-            body: JSON.stringify({
-              model: OPENROUTER_Q06_MODEL,
-              messages: allMessages,
-              stream: true,
-              temperature: 0.15,
-              max_tokens: 4096,
-            }),
-          });
-          if (orResp.ok && orResp.body) {
-            console.log("Q-06 final fallback streaming");
-            return new Response(wrapStreamWithEvents(orResp.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-          }
-        } catch (e) { console.error("Q-06 final fallback failed:", e); }
-      }
+    async function callGateway(model: string): Promise<Response> {
+      const body: Record<string, unknown> = {
+        model,
+        messages: allMessages,
+        stream: true,
+        temperature,
+        max_tokens: 8192,
+      };
+      if (PRIORITY_MODELS.has(model)) body.service_tier = "priority";
+      return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
     }
 
-    const effectiveGatewayModel = gatewayModel;
-    // Final safety net: if specialized Q-06 / Qurob 5 routes all failed,
-    // fall back to Lovable AI Gateway with a high-quality default so user
-    // never sees a dead 500. ArticQuro stays excluded (it's image-only).
-    if (LOVABLE_API_KEY && modelName !== "ArticQuro") {
+    // Try primary, then per-tier fallback — all on Lovable AI Gateway.
+    const attemptModels = [gatewayModel];
+    const fallback = FALLBACK_MODEL[modelName];
+    if (fallback && fallback !== gatewayModel) attemptModels.push(fallback);
+
+    for (const model of attemptModels) {
       try {
-        const fallbackModel = (modelName === "Q-06")
-          ? "google/gemini-2.5-pro"   // strongest text+code reasoner available on gateway
-          : (modelName === "Qurob 5")
-            ? "google/gemini-2.5-pro"
-            : effectiveGatewayModel;
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: fallbackModel,
-            messages: allMessages,
-            stream: true,
-            temperature,
-            max_tokens: 8192,
-          }),
-        });
-
-        if (response.ok && response.body) {
-          console.log("QurobAi streaming started");
-          return new Response(wrapStreamWithEvents(response.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+        const resp = await callGateway(model);
+        if (resp.ok && resp.body) {
+          console.log(`QurobAi gateway streaming (${modelName} → ${model})`);
+          return new Response(wrapStreamWithEvents(resp.body, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
         }
-
-        if (response.status === 429) {
-          console.log("Primary route busy, trying fallback...");
-        } else if (response.status === 402) {
-          return new Response(JSON.stringify({ error: "AI usage limit reached. Please try again later." }), {
+        if (resp.status === 402) {
+          return new Response(JSON.stringify({ error: "AI usage limit reached. Please try again later or contact support." }), {
             status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
-        } else {
-          const errorText = await response.text();
-          console.error("Primary route error:", response.status, errorText);
         }
+        const errTxt = await resp.text().catch(() => "");
+        console.error(`Gateway model ${model} failed:`, resp.status, errTxt.slice(0, 300));
+        // 429 or 5xx → try next fallback
       } catch (e) {
-        console.error("Primary route failed:", e);
+        console.error(`Gateway call for ${model} threw:`, e);
       }
     }
 
-    if (GOOGLE_GEMINI_API_KEY) {
-      try {
-        const geminiModel = modelName === "Qurob 4" || modelName === "Q-06" ? "gemini-2.5-pro-preview-06-05" : "gemini-2.0-flash";
-        const systemInstruction = allMessages.find((m: any) => m.role === "system")?.content || "";
-        const contents = allMessages
-          .filter((m: any) => m.role !== "system")
-          .map((m: any) => ({
-            role: m.role === "assistant" ? "model" : "user",
-            parts: [{ text: m.content }],
-          }));
-
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
-        const body: any = { contents, generationConfig: { temperature, maxOutputTokens: 8192 } };
-        if (systemInstruction) body.systemInstruction = { parts: [{ text: systemInstruction }] };
-
-        const geminiResponse = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        
-        if (geminiResponse.ok && geminiResponse.body) {
-          console.log("Fallback streaming started");
-          const reader = geminiResponse.body.getReader();
-          const encoder = new TextEncoder();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          const convertedStream = new ReadableStream({
-            async pull(controller) {
-              try {
-                const { done, value } = await reader.read();
-                if (done) {
-                  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                  controller.close();
-                  return;
-                }
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() || "";
-                for (const line of lines) {
-                  if (line.startsWith("data: ")) {
-                    const jsonStr = line.slice(6).trim();
-                    if (!jsonStr) continue;
-                    try {
-                      const geminiData = JSON.parse(jsonStr);
-                      const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                      if (text) {
-                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`));
-                      }
-                    } catch { /* skip */ }
-                  }
-                }
-              } catch (e) { controller.error(e); }
-            },
-          });
-          return new Response(wrapStreamWithEvents(convertedStream, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-        }
-        console.error("Fallback route error:", geminiResponse.status);
-      } catch (e) {
-        console.error("Fallback route failed:", e);
-      }
-    }
-
-    if (OPENROUTER_API_KEY) {
-      try {
-        const orModel = modelName === "Qurob 4" || modelName === "Q-06" ? "google/gemini-2.5-pro-preview" : "google/gemini-2.0-flash-001";
-        const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://qurobai.lovable.app",
-            "X-Title": "QurobAi",
-          },
-          body: JSON.stringify({ model: orModel, messages: allMessages, stream: true, temperature, max_tokens: 4096 }),
-        });
-        
-        if (orResponse.ok) {
-          console.log("Final fallback streaming started");
-          return new Response(wrapStreamWithEvents(orResponse.body!, phaseEvents), { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
-        }
-        console.error("Final fallback error:", orResponse.status);
-      } catch (e) {
-        console.error("Final fallback failed:", e);
-      }
-    }
-
-    return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again in a moment." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again in a moment." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("QurobAi error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Something went wrong." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
