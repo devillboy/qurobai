@@ -180,6 +180,7 @@ const Index = () => {
                         role={message.role} content={message.content} messageId={message.id} isPinned={message.isPinned}
                         timestamp={message.timestamp}
                         latencyMs={message.latencyMs}
+                        sources={message.sources}
                         isStreaming={isLoading && message.role === "assistant" && message.id === messages[messages.length - 1]?.id}
                         onRegenerate={message.role === "assistant" && index === messages.length - 1 && currentConversationId ? () => regenerateLastMessage(currentConversationId) : undefined}
                         onPin={() => togglePinMessage(message.id)}
