@@ -1,75 +1,61 @@
-## API Platform Fix & Upgrade
+## Goal
 
-Bhai, problem clear hai. Issues mile:
+Fix the crashed app, finish the real-time streaming wiring, upgrade all models to latest + fast defaults, and make the project reliably deployable to Vercel.
 
-1. **Connection error** → `api-chat` mein purane Gemini model use ho rahe hain (`gemini-2.5-pro-preview-06-05`, `gemini-2.0-flash`) jo ab Google ke direct API mein deprecated/unavailable hain → 404/400 → fallback OpenRouter bhi same models try karta hai → fail.
-2. **Single key se sare models** access nahi milta — model key creation time pe lock ho jata hai.
-3. **Agents (Qurob Bots)** API mein expose hi nahi hain — koi `/api-agents` endpoint nahi.
-4. **Docs** mein examples sirf chat ke hain, agents/listing ka mention nahi.
-5. User ne bola: **3 mahine sab free** + **Lovable AI Gateway use mat karo**.
+## 1. Emergency triage — get the app running again
 
----
+- Read `supabase/functions/chat/index.ts`, `src/hooks/useChat.ts`, `src/components/ThinkingIndicator.tsx`, `src/pages/Index.tsx`, `src/components/ChatMessage.tsx` to find what the last streaming/SSE refactor broke.
+- Check edge function logs for `chat`, `api-chat`, `api-agents`, `generate-image` to identify runtime errors (bad model IDs, missing fallbacks, malformed SSE).
+- Fix any TypeScript / import / runtime errors preventing responses. Ensure `useChat` gracefully handles both plain-text streams and `qurob_event` JSON lines (no crash if event parse fails).
 
-### What we'll build (no Lovable AI Gateway, direct providers only)
+## 2. Finish real-time activity wiring (from last turn)
 
-#### 1. Fix `api-chat` edge function — connection error gone
-- **Primary provider: Fireworks AI** (already has `FIREWORKS_API_KEY`, OpenAI-compatible, fast):
-  - `qurob-2` / `qurob-3.2` → `qwen3-235b-a22b-instruct-2507`
-  - `qurob-4` → `qwen3-235b-a22b-instruct-2507` (premium-tuned params, higher max_tokens)
-  - `q-06` → `accounts/fireworks/models/qwen2p5-coder-32b-instruct`
-- **Fallback: OpenRouter** with currently-valid model IDs (`google/gemini-2.0-flash-exp:free`, `qwen/qwen-2.5-72b-instruct`).
-- **Second fallback: Groq** (`GROQ_API_KEY` already set) — `llama-3.3-70b-versatile`.
-- **Third fallback: Google Gemini direct** with current model IDs (`gemini-2.0-flash`, `gemini-2.5-flash`).
-- 8s timeout per provider, fail-fast chain. Detailed error logs so debugging easy.
+- Wire the `activity` state from `useChat` into `Index.tsx` and pass it into `ThinkingIndicator` so phase changes (connecting → searching → answering) render live.
+- Render source-citation chips (favicon + title + link) under assistant messages in `ChatMessage.tsx` using the `sources` array already attached in `useChat`.
+- Remove/replace the old typing indicator with the lightweight live-phase pill (no fake "thinking…" delays, no artificial timers — stream tokens the instant they arrive).
 
-#### 2. Single key → all models (3-month free promotion)
-- Add new column `api_keys.allowed_models text[]` (default `['qurob-2','qurob-3.2','qurob-4','q-06']`).
-- Add `api_keys.promo_expires_at timestamptz` — set to `now() + 90 days` for every new key created during promo window.
-- In `api-chat`: read `model` from request body (override key's default model). Validate it's in `allowed_models` OR `promo_expires_at > now()`.
-- Frontend: when promo active, show banner **"🎉 3 Months FREE — All Models Unlocked"** and remove the "model selector" lock — one key works for chat + agents + Q-06 + Qurob 4.
+## 3. Model upgrades (latest + fastest)
 
-#### 3. New `/api-agents` endpoints (list + invoke Qurob bots)
-- New edge function **`api-agents`**:
-  - `GET /api-agents` → returns all `is_public=true OR is_official=true` bots: `{ id, name, description, category, icon, system_prompt_preview }`.
-  - `POST /api-agents/:botId/chat` → runs chat using that bot's `system_prompt` injected as system message, then routes to same provider chain as `api-chat`.
-- Auth: same `qai_` API key check as `api-chat`.
-- Increment `qurob_bots.uses_count` on every invoke.
+We will  dont use lovable ai gateway ai provider (OpenRouter/Groq/DeepInfra/Fireworks) as fallback we will use lovable ai. We there are model i had provided we will use same models like similar there 
 
-#### 4. ApiAccess.tsx UI improvements
-- Add **"Agents"** tab next to API Keys / Documentation / Pricing showing the live agent list (fetched from same endpoint user will use) + copy-buttons for each bot's invoke URL.
-- Add **promo banner** at top: "All API access free until [date]. One key, all models, all agents."
-- Update Documentation tab with:
-  - `GET /api-agents` example (curl + JS + Python)
-  - `POST /api-agents/{id}/chat` example
-  - `model` parameter docs for `/api-chat` (qurob-2 | qurob-3.2 | qurob-4 | q-06)
-- Remove "Premium required" / "Q-06 required" locks during promo period.
+- **Qurob 3.2 (free)** → `google/gemini-3.1-flash-lite`
+- **Qurob 4 (Premium)** → `google/gemini-3.5-flash`
+- **Q-06 (Code)** → `openai/gpt-5.4-mini` with `service_tier: "priority"` (fast mode), fallback `google/gemini-3.5-flash`
+- **Qurob 5 (Admin/top)** → `openai/gpt-5.5` with priority, fallback `google/gemini-3.1-pro-preview`
+- **ArticQuro (images)** → `google/gemini-3.1-flash-image` (fast) with `google/gemini-2.5-flash-image` fallback
+- Add per-request timeout + single retry on 5xx/429 only; surface 402 (credits) with clear UI toast.
+  &nbsp;
 
-#### 5. Database migration
-```sql
-ALTER TABLE api_keys
-  ADD COLUMN allowed_models text[] DEFAULT ARRAY['qurob-2','qurob-3.2','qurob-4','q-06'],
-  ADD COLUMN promo_expires_at timestamptz DEFAULT (now() + interval '90 days');
+## 4. Speed / latency
 
-UPDATE api_keys SET
-  allowed_models = ARRAY['qurob-2','qurob-3.2','qurob-4','q-06'],
-  promo_expires_at = now() + interval '90 days'
-WHERE promo_expires_at IS NULL;
-```
+- Kill artificial delays (any `setTimeout` "thinking" pauses in chat send path).
+- Stream tokens directly to the UI as they arrive; no debounce > 16ms.
+- Preconnect to `ai.gateway.lovable.dev` and Supabase in `index.html`.
+- Route-level `React.lazy` is already in place — verify no eager heavy imports in `Index.tsx` chain.
 
-#### 6. Diagnostic test endpoint
-- ApiAccess "Test API Key" button: extend it to also test `/api-agents` listing so user can see green ✅ on both endpoints immediately after key creation.
+## 5. Real-time web search (tool-calling, already scaffolded)
 
----
+- Keep AI-decides-when tool calling. Ensure Firecrawl + Serper fallback chain works; emit `searching` / `reading_url` phase events; return sources to client for chip rendering.
 
-### Files touched
-- **Edit**: `supabase/functions/api-chat/index.ts` (provider chain fix, model-from-body, promo logic)
-- **Create**: `supabase/functions/api-agents/index.ts`
-- **Create**: migration for `allowed_models` + `promo_expires_at`
-- **Edit**: `src/pages/ApiAccess.tsx` (Agents tab, promo banner, removed locks, updated docs, dual test)
+## 6. Image auto-routing
 
-### What stays the same
-- Key generation flow, hash storage, `qai_` prefix.
-- Existing usage tracking (`api_keys.requests_today/month/total`, `api_usage` table).
-- RLS policies.
+- Smart intent detection in `chat/index.ts` (already added) — verify it triggers ArticQuro without user needing to switch models, and emits `image_starting` / `image_done` events.
 
-Approve karo toh implement kar deta hoon — connection error gone, ek key se sab kuch chalega, agents API live, 3 months sab free.
+## 7. Vercel-ready
+
+- Verify `vercel.json` (already present) — SPA rewrite, cache headers, security headers ✅.
+- Confirm `vite build` output goes to `dist/`, no server-only code imported client-side, `.env` uses only `VITE_*` public keys.
+- Add `preconnect`/`dns-prefetch` in `index.html` for Supabase + AI gateway.
+- Document that Supabase edge functions stay on Lovable Cloud (Vercel hosts frontend only) — no changes needed to functions for Vercel.
+
+## 8. Verify
+
+- Build check, then Playwright smoke: load `/`, sign-in flow (skip if no test creds), send a chat message on each model, confirm streaming tokens + phase pill + sources render, confirm image prompt auto-routes.
+- Tail edge logs for the chat function during the smoke test.
+
+## Technical notes
+
+- No schema changes.
+- Only server files touched: `supabase/functions/chat/index.ts`, `api-chat/index.ts`, `api-agents/index.ts`, `generate-image/index.ts`.
+- Client files touched: `src/hooks/useChat.ts`, `src/pages/Index.tsx`, `src/components/ChatMessage.tsx`, `src/components/ThinkingIndicator.tsx`, `src/components/ModelSelector.tsx` (label refresh), `index.html` (preconnect).
+- Brand rule preserved: UI never names external providers — only "Qurob" model tiers.
