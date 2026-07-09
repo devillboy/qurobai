@@ -516,23 +516,25 @@ async function checkUrl(url: string): Promise<string> {
 
 // Private internal routing for public QurobAi model names
 const MODEL_MAP: Record<string, string> = {
-  "Qurob 2": "google/gemini-2.5-flash-lite",
-  "Qurob 3.2": "google/gemini-3-flash-preview",
-  "Qurob 4": "google/gemini-3.1-pro-preview",
-  "Q-06": "google/gemini-2.5-pro",
+  "Qurob 2":   "google/gemini-2.5-flash-lite",
+  "Qurob 3.2": "google/gemini-3.1-flash-lite",
+  "Qurob 4":   "google/gemini-3.5-flash",
+  "Q-06":      "openai/gpt-5.4-mini",
+  "Qurob 5":   "openai/gpt-5.5",
   "ArticQuro": "image",
-  "Qurob 5": "fireworks",
 };
 
-// Qurob 5 private upstream route
-const DEEPINFRA_QUROB5_MODEL  = "deepseek-ai/DeepSeek-V3";
-const FIREWORKS_QUROB5_MODEL  = "accounts/fireworks/models/deepseek-v3";
-const OPENROUTER_QUROB5_MODEL = "deepseek/deepseek-chat";
+// Per-tier fallback models (Lovable AI Gateway only — no third-party providers)
+const FALLBACK_MODEL: Record<string, string> = {
+  "Q-06":      "google/gemini-3.5-flash",
+  "Qurob 5":   "google/gemini-3.1-pro-preview",
+  "Qurob 4":   "google/gemini-3-flash-preview",
+  "Qurob 3.2": "google/gemini-3-flash-preview",
+  "Qurob 2":   "google/gemini-2.5-flash-lite",
+};
 
-// Q-06 private upstream route
-const FIREWORKS_Q06_MODEL  = "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct";
-const DEEPINFRA_Q06_MODEL  = "deepseek-ai/DeepSeek-V3";
-const OPENROUTER_Q06_MODEL = "qwen/qwen3-coder";
+// Models eligible for OpenAI priority serving (fast mode)
+const PRIORITY_MODELS = new Set(["openai/gpt-5.4-mini", "openai/gpt-5.5", "openai/gpt-5", "openai/gpt-5-mini", "openai/gpt-5.4"]);
 
 // Per-model temperature tuning
 const MODEL_TEMPERATURE: Record<string, number> = {
